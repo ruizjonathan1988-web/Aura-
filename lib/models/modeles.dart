@@ -82,6 +82,7 @@ class Film {
     this.genres = const [],
     this.pays = const [],
     this.realisateur,
+    this.synopsis,
     this.dejaVu = false,
     this.serveurId,
     this.source = SourceFilm.demo,
@@ -98,6 +99,9 @@ class Film {
   final List<String> genres;
   final List<String> pays;
   final String? realisateur;
+
+  /// Le résumé du film (Jellyfin « Overview »), utile au Bluff.
+  final String? synopsis;
   final bool dejaVu;
 
   /// Identifiant du serveur Jellyfin, utile au lien profond VJOD.

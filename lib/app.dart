@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'screens/ce_soir.dart';
 import 'screens/ligue.dart';
 import 'screens/plateau.dart';
+import 'screens/premier_soir.dart';
 import 'screens/profil.dart';
 import 'screens/semaine.dart';
 import 'services/etat.dart';
@@ -39,10 +40,19 @@ class AuraApp extends StatelessWidget {
           ...WidgetsApp.defaultShortcuts,
           const SingleActivator(LogicalKeyboardKey.select): const ActivateIntent(),
         },
-        home: const Coquille(),
+        home: const _Depart(),
       ),
     );
   }
+}
+
+/// Le premier lancement passe par le premier soir ; ensuite, le jeu.
+class _Depart extends StatelessWidget {
+  const _Depart();
+
+  @override
+  Widget build(BuildContext context) =>
+      PorteeEtat.of(context).accueilFait ? const Coquille() : const PremierSoirEcran();
 }
 
 enum Onglet {

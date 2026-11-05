@@ -134,6 +134,15 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         ],
         _CartePlanDuJour(resultat: etat.planDuJour),
         const SizedBox(height: 18),
+        if (etat.jokerBluff) ...[
+          Panneau(
+            couleur: AuraCouleurs.vert,
+            inclinaison: 0.012,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Text('Joker du Bluff en main : +1 case sur ta prochaine séance.', style: AuraTexte.corps(14, poids: FontWeight.w900)),
+          ),
+          const SizedBox(height: 18),
+        ],
         SizedBox(
           height: 150,
           child: Stack(

@@ -204,6 +204,22 @@ class EtatJeu extends ChangeNotifier {
       .where((b) => b.date.year == d.year && b.date.month == d.month && b.date.day == d.day)
       .fold(0, (s, b) => s + b.cases);
 
+  // Le premier soir : test, figurine, Bluff contre Pop.
+
+  /// Vrai une fois le parcours d'accueil terminé (ou passé).
+  bool get accueilFait => _prefs.getBool('accueil_fait') ?? false;
+
+  /// Le Joker gagné au Bluff du premier soir : +1 case sur la prochaine
+  /// séance, dans la limite des 3 cases du jour.
+  bool get jokerBluff => _prefs.getBool('joker_bluff') ?? false;
+
+  Future<void> terminerAccueil({Profil? profil, bool bluffGagne = false}) async {
+    if (profil != null) await choisirProfil(profil);
+    if (bluffGagne) await _prefs.setBool('joker_bluff', true);
+    await _prefs.setBool('accueil_fait', true);
+    notifyListeners();
+  }
+
   Future<void> choisirProfil(Profil p) async {
     profil = p;
     await _prefs.setString('profil', p.name);
@@ -250,7 +266,9 @@ class EtatJeu extends ChangeNotifier {
     _nouveauMois();
     final maintenant = DateTime.now();
     final ceMois = moisDe(date) == moisDe(maintenant);
-    final cases = ceMois ? Regles.casesAccordees(demandees: demandees, dejaGagneesAujourdhui: casesLe(date)) : 0;
+    final joker = jokerBluff && ceMois;
+    final cases = ceMois ? Regles.casesAccordees(demandees: demandees + (joker ? 1 : 0), dejaGagneesAujourdhui: casesLe(date)) : 0;
+    if (joker) await _prefs.setBool('joker_bluff', false);
     final pariAvant = Pop.parisPerdus(maintenant, billets);
     billets = [
       Billet(titre: titre, type: type, pronostic: pronostic, cases: cases, date: date, verdict: verdict, note: note, auto: auto),

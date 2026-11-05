@@ -3,11 +3,14 @@
 // Une règle nouvelle = un test nouveau ici. Si un test casse, c'est qu'une
 // règle a changé : on le décide exprès, jamais par accident.
 
+import 'dart:math';
+
 import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
 import 'package:aura/services/etat.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/pop.dart';
+import 'package:aura/services/premier_soir.dart';
 import 'package:aura/services/sources.dart';
 import 'package:aura/services/tirage.dart';
 import 'package:aura/widgets/aura_widgets.dart';
@@ -262,6 +265,57 @@ void main() {
       expect(estLargeurTele(390), isFalse);
       expect(estLargeurTele(960), isTrue);
       expect(estLargeurTele(1920), isTrue);
+    });
+  });
+
+  group('R11 Le premier soir', () {
+    test('R11 le test est équilibré : chaque profil revient trois fois', () {
+      final compte = <Profil, int>{};
+      for (final q in TestSpectateur.questions) {
+        expect(q.reponses, hasLength(4));
+        for (final r in q.reponses) {
+          compte[r.$2] = (compte[r.$2] ?? 0) + 1;
+        }
+      }
+      expect(compte.keys.toSet(), Profil.values.toSet());
+      expect(compte.values.every((n) => n == 3), isTrue);
+    });
+
+    test('R11 le profil le plus choisi gagne ; à égalité, le plus récent', () {
+      expect(TestSpectateur.resultat([Profil.critique, Profil.hote, Profil.critique]), Profil.critique);
+      expect(TestSpectateur.resultat([Profil.critique, Profil.hote]), Profil.hote);
+    });
+
+    test('R11 le Bluff de Pop : un seul vrai synopsis, deux faux, jamais de navet ni de documentaire', () async {
+      final demo = await SourceDemo().catalogue();
+      for (var graine = 0; graine < 40; graine++) {
+        final b = BluffDePop.pour(demo, Random(graine))!;
+        expect(b.synopsis, hasLength(3));
+        expect(b.synopsis.toSet(), hasLength(3));
+        expect(b.synopsis[b.vrai], BluffDePop.premierePhrase(b.film.synopsis));
+        expect(b.synopsis.where(BluffDePop.fauxDePop.contains), hasLength(2));
+        expect(Tirage.assezBon(b.film), isTrue);
+        expect(b.film.genres, isNot(contains('Documentary')));
+      }
+    });
+
+    test('R11 un synopsis Jellyfin trop long est ramené à sa première phrase', () {
+      expect(BluffDePop.premierePhrase('Un homme part. Puis il revient.'), 'Un homme part.');
+      expect(BluffDePop.premierePhrase(null), '');
+    });
+
+    test('R11 le Joker du Bluff : +1 case une seule fois, sans dépasser 3 par jour', () async {
+      final e = await _etat();
+      await e.terminerAccueil(profil: Profil.critique, bluffGagne: true);
+      expect(e.accueilFait, isTrue);
+      expect(e.profil, Profil.critique);
+      expect(await e.validerSeance(_carte('a', type: TypeCarte.envie, cases: 1), pronostic: 3), 2);
+      expect(e.jokerBluff, isFalse);
+      expect(await e.validerSeance(_carte('b', type: TypeCarte.envie, cases: 1), pronostic: 3), 1);
+
+      final f = await _etat();
+      await f.terminerAccueil(bluffGagne: true);
+      expect(await f.validerSeance(_carte('c'), pronostic: 3), 3, reason: 'le Joker ne fait pas sauter le plafond');
     });
   });
 }
