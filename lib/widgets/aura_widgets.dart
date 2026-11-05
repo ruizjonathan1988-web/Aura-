@@ -594,6 +594,11 @@ class ChampAura extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Règle : rien à taper sur la télé. Le champ y devient une invitation.
+    if (estTele(context)) {
+      return Text('Ça s\'écrit depuis ton téléphone : sur la télé, on ne tape rien.',
+          style: AuraTexte.corps(14, couleur: AuraCouleurs.texteDoux));
+    }
     return TextField(
       controller: controleur,
       maxLength: longueurMax,
@@ -612,4 +617,7 @@ class ChampAura extends StatelessWidget {
 }
 
 /// Vrai sur un grand écran piloté à la télécommande.
-bool estTele(BuildContext context) => MediaQuery.sizeOf(context).width >= 900;
+bool estTele(BuildContext context) => estLargeurTele(MediaQuery.sizeOf(context).width);
+
+/// À partir de cette largeur, Aura se comporte en appli de télé.
+bool estLargeurTele(double largeur) => largeur >= 900;

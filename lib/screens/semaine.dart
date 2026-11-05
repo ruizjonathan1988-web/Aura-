@@ -95,7 +95,7 @@ class _SemaineEcranState extends State<SemaineEcran> {
   Widget _contenu(EtatJeu etat, Affiche a) {
     final vue = _vue(etat, a);
     final place = etat.curseurDe(a.semaine);
-    final dimanche = DateTime.now().weekday == DateTime.sunday;
+    final dimanche = Affiche.jourDeRevelation(DateTime.now());
     final etapes = [
       ('Affiche', 'lundi', true),
       ('Séance', vue ? 'vue' : 'à voir', vue),
@@ -148,7 +148,8 @@ class _SemaineEcranState extends State<SemaineEcran> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('LE CURSEUR : ${a.question.toUpperCase()}', style: AuraTexte.titre(16)),
               const SizedBox(height: 4),
-              Row(children: [
+              // Un Curseur placé reste caché jusqu'à la Révélation : la télé est partagée.
+              if (place == null || dimanche) Row(children: [
                 Expanded(
                   child: SliderTheme(
                     data: SliderTheme.of(context).copyWith(

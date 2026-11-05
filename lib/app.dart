@@ -96,7 +96,7 @@ class _CoquilleState extends State<Coquille> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final etat = PorteeEtat.of(context);
-    final tele = MediaQuery.sizeOf(context).width >= 900;
+    final tele = estTele(context);
     final ecran = switch (_onglet) {
       Onglet.ceSoir => CeSoirEcran(versPlateau: () => _aller(Onglet.plateau)),
       Onglet.plateau => const PlateauEcran(),

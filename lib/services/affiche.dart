@@ -16,6 +16,9 @@ class Affiche {
   /// La question du Curseur, selon le genre du film.
   final String question;
 
+  /// Le Curseur placé ne se dévoile que le dimanche, jour de la Révélation.
+  static bool jourDeRevelation(DateTime d) => d.weekday == DateTime.sunday;
+
   static DateTime lundiDe(DateTime d) => DateTime(d.year, d.month, d.day).subtract(Duration(days: d.weekday - 1));
 
   static Affiche? de(DateTime jour, List<Film> catalogue, String Function(DateTime) cle) {

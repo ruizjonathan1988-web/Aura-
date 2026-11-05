@@ -357,17 +357,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
             children: [
               Text('TON VERDICT EN UNE PHRASE', style: AuraTexte.titre(16)),
               const SizedBox(height: 8),
-              TextField(
-                controller: _verdict,
-                maxLength: 120,
-                style: AuraTexte.corps(15),
-                decoration: InputDecoration(
-                  hintText: 'À voir seul, un soir de pluie',
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(width: 2.5)),
-                ),
-              ),
+              ChampAura(controleur: _verdict, indication: 'À voir seul, un soir de pluie', longueurMax: 120),
             ],
           ),
         ),
