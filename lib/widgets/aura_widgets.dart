@@ -290,19 +290,40 @@ class Figurine extends StatelessWidget {
   }
 }
 
-/// Pop, la mascotte VJOD, avec une bulle.
-class PopQuiParle extends StatelessWidget {
+/// Pop, la mascotte VJOD, avec une bulle. Il se dandine doucement : il
+/// est vivant, il a toujours quelque chose à dire.
+class PopQuiParle extends StatefulWidget {
   const PopQuiParle({super.key, required this.texte, this.taille = 80});
   final String texte;
   final double taille;
 
   @override
+  State<PopQuiParle> createState() => _PopQuiParleState();
+}
+
+class _PopQuiParleState extends State<PopQuiParle> with SingleTickerProviderStateMixin {
+  late final _danse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _danse.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final texte = widget.texte;
+    final taille = widget.taille;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Transform.rotate(
-          angle: -0.1,
+        AnimatedBuilder(
+          animation: _danse,
+          builder: (context, enfant) => Transform.rotate(
+            angle: -0.1 + 0.08 * Curves.easeInOut.transform(_danse.value),
+            alignment: Alignment.bottomCenter,
+            child: Transform.translate(offset: Offset(0, -3 * _danse.value), child: enfant),
+          ),
           child: Image.asset('assets/marque/pop.png', height: taille, semanticLabel: 'Pop, la mascotte VJOD'),
         ),
         const SizedBox(width: 6),

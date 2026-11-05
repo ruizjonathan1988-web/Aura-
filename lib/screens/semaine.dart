@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../app.dart';
 import '../models/modeles.dart';
 import '../services/affiche.dart';
 import '../services/etat.dart';
+import '../services/premier_soir.dart';
 import '../services/vjod_lien.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
@@ -92,12 +95,72 @@ class _SemaineEcranState extends State<SemaineEcran> {
     );
   }
 
+  BluffDePop? _bluffCache;
+  String? _bluffCle;
+  int? _choixBluff;
+
+  /// Le Bluff de la semaine, tiré une fois (même ordre toute la semaine).
+  BluffDePop? _bluff(Affiche a) {
+    if (_bluffCle != a.semaine) {
+      _bluffCle = a.semaine;
+      _bluffCache = BluffDePop.pourFilm(a.film, math.Random(a.semaine.codeUnits.fold<int>(7, (h, c) => (h * 31 + c) % 1000003)));
+    }
+    return _bluffCache;
+  }
+
+  Widget _bluffVue(EtatJeu etat, Affiche a, BluffDePop b) {
+    final fini = _choixBluff != null;
+    return Panneau(
+      couleur: AuraCouleurs.rose,
+      inclinaison: 0.01,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('LE BLUFF DE LA SEMAINE', style: AuraTexte.titre(18)),
+        const SizedBox(height: 8),
+        PopQuiParle(
+          taille: 60,
+          texte: !fini
+              ? 'Avant de le regarder : un seul de ces résumés est le vrai. J\'ai écrit les deux autres. Trouve le vrai pour gagner un Joker (+1 case).'
+              : _choixBluff == b.vrai
+                  ? 'Encore toi ! Bon, voilà ton Joker. Je ferai mieux la semaine prochaine.'
+                  : 'Je t\'ai eu ! Le vrai, c\'était l\'autre. Rendez-vous la semaine prochaine.',
+        ),
+        const SizedBox(height: 10),
+        for (final (i, t) in b.synopsis.indexed)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: ChoixLarge(
+              libelle: t,
+              autofocus: i == 0,
+              couleur: !fini
+                  ? AuraCouleurs.creme
+                  : i == b.vrai
+                      ? AuraCouleurs.vert
+                      : i == _choixBluff
+                          ? AuraCouleurs.caseRouge
+                          : AuraCouleurs.creme,
+              onTap: fini ? null : () => setState(() => _choixBluff = i),
+            ),
+          ),
+        if (fini)
+          AuraBouton(
+            libelle: 'Continuer',
+            autofocus: true,
+            onPressed: () {
+              etat.jouerBluff(a.semaine, trouve: _choixBluff == b.vrai);
+              setState(() => _choixBluff = null);
+            },
+          ),
+      ]),
+    );
+  }
+
   Widget _contenu(EtatJeu etat, Affiche a) {
     final vue = _vue(etat, a);
     final place = etat.curseurDe(a.semaine);
     final dimanche = Affiche.jourDeRevelation(DateTime.now());
+    final bluff = etat.bluffDe(a.semaine);
     final etapes = [
-      ('Affiche', 'lundi', true),
+      ('Bluff', bluff == null ? 'à jouer' : (bluff ? 'gagné' : 'perdu'), bluff != null),
       ('Séance', vue ? 'vue' : 'à voir', vue),
       ('Curseur', place != null ? 'placé' : 'après', place != null),
       ('Révélation', 'dimanche', dimanche && place != null),
@@ -137,6 +200,10 @@ class _SemaineEcranState extends State<SemaineEcran> {
           ],
         ]),
         const SizedBox(height: 18),
+        if (bluff == null && _bluff(a) != null) ...[
+          _bluffVue(etat, a, _bluff(a)!),
+          const SizedBox(height: 18),
+        ],
         if (!vue) ...[
           if (VjodLien.disponible(a.film)) ...[
             AuraBouton(libelle: 'Lancer dans VJOD', icone: Icons.play_arrow_rounded, autofocus: true, onPressed: () => _lancer(a.film)),
