@@ -48,7 +48,7 @@ class SourceJellyfin implements SourceFilms {
       'MinCommunityRating': '6',
       'SortBy': auHasard ? 'Random' : 'SortName',
       'Limit': auHasard ? '120' : '400',
-      'Fields': 'Genres,ProductionLocations,People,ProductionYear,RunTimeTicks,CommunityRating,UserData',
+      'Fields': 'Genres,ProductionLocations,People,ProductionYear,RunTimeTicks,CommunityRating,UserData,Overview',
       if (emotion != null) 'Genres': emotion.genres.join('|'),
     });
     final rep = await _client.get(uri, headers: {
@@ -106,6 +106,7 @@ class SourceJellyfin implements SourceFilms {
       genres: (j['Genres'] as List? ?? const []).cast<String>(),
       pays: (j['ProductionLocations'] as List? ?? const []).cast<String>(),
       realisateur: realisateur,
+      synopsis: j['Overview'] as String?,
       dejaVu: (userData?['Played'] as bool?) ?? false,
       serveurId: j['ServerId'] as String?,
       source: SourceFilm.jellyfin,
@@ -130,20 +131,20 @@ class SourceDemo implements SourceFilms {
   Future<List<Film>> catalogue({Emotion? emotion, bool auHasard = true}) async => _films;
 
   static const _films = <Film>[
-    Film(id: 'd1', titre: 'Le Samouraï', annee: 1967, dureeMinutes: 105, note: 7.9, genres: ['Crime', 'Thriller'], pays: ['France'], realisateur: 'Jean-Pierre Melville'),
-    Film(id: 'd2', titre: 'La Isla Mínima', annee: 2014, dureeMinutes: 105, note: 7.2, genres: ['Thriller', 'Crime'], pays: ['Espagne'], realisateur: 'Alberto Rodríguez'),
-    Film(id: 'd3', titre: 'Les Diaboliques', annee: 1955, dureeMinutes: 117, note: 8.0, genres: ['Thriller', 'Mystery'], pays: ['France'], realisateur: 'Henri-Georges Clouzot'),
-    Film(id: 'd4', titre: 'Memories of Murder', annee: 2003, dureeMinutes: 132, note: 8.0, genres: ['Crime', 'Thriller'], pays: ['Corée du Sud'], realisateur: 'Bong Joon-ho'),
-    Film(id: 'd5', titre: 'Le Dîner de cons', annee: 1998, dureeMinutes: 80, note: 7.5, genres: ['Comedy'], pays: ['France'], realisateur: 'Francis Veber'),
-    Film(id: 'd6', titre: 'Le Voyage de Chihiro', annee: 2001, dureeMinutes: 125, note: 8.5, genres: ['Animation', 'Fantasy'], pays: ['Japon'], realisateur: 'Hayao Miyazaki'),
-    Film(id: 'd7', titre: 'Intouchables', annee: 2011, dureeMinutes: 112, note: 8.3, genres: ['Comedy', 'Drama'], pays: ['France'], realisateur: 'Olivier Nakache, Éric Toledano'),
-    Film(id: 'd8', titre: 'Les Temps modernes', annee: 1936, dureeMinutes: 87, note: 8.3, genres: ['Comedy', 'Drama'], pays: ['États-Unis'], realisateur: 'Charlie Chaplin'),
-    Film(id: 'd9', titre: 'Une séparation', annee: 2011, dureeMinutes: 123, note: 7.9, genres: ['Drama'], pays: ['Iran'], realisateur: 'Asghar Farhadi'),
-    Film(id: 'd10', titre: 'Les Parapluies de Cherbourg', annee: 1964, dureeMinutes: 91, note: 7.6, genres: ['Drama', 'Romance'], pays: ['France'], realisateur: 'Jacques Demy'),
-    Film(id: 'd11', titre: 'Mad Max: Fury Road', annee: 2015, dureeMinutes: 120, note: 7.6, genres: ['Adventure', 'Science Fiction'], pays: ['Australie'], realisateur: 'George Miller'),
-    Film(id: 'd12', titre: 'Le Salaire de la peur', annee: 1953, dureeMinutes: 131, note: 8.0, genres: ['Adventure', 'Thriller'], pays: ['France'], realisateur: 'Henri-Georges Clouzot'),
-    Film(id: 'd13', titre: 'Shoah', annee: 1985, dureeMinutes: 566, note: 8.6, genres: ['Documentary', 'History'], pays: ['France'], realisateur: 'Claude Lanzmann'),
-    Film(id: 'd14', titre: 'Persepolis', annee: 2007, dureeMinutes: 96, note: 7.8, genres: ['Animation', 'Drama'], pays: ['Iran', 'France'], realisateur: 'Marjane Satrapi, Vincent Paronnaud'),
-    Film(id: 'd15', titre: 'Rec', annee: 2007, dureeMinutes: 78, note: 7.0, genres: ['Horror'], pays: ['Espagne'], realisateur: 'Jaume Balagueró, Paco Plaza'),
+    Film(id: 'd1', titre: 'Le Samouraï', annee: 1967, dureeMinutes: 105, note: 7.9, genres: ['Crime', 'Thriller'], pays: ['France'], realisateur: 'Jean-Pierre Melville', synopsis: 'Un tueur à gages solitaire et méthodique se retrouve traqué à la fois par la police et par ceux qui l\'ont engagé.'),
+    Film(id: 'd2', titre: 'La Isla Mínima', annee: 2014, dureeMinutes: 105, note: 7.2, genres: ['Thriller', 'Crime'], pays: ['Espagne'], realisateur: 'Alberto Rodríguez', synopsis: 'En 1980, deux policiers que tout oppose enquêtent sur la disparition de deux adolescentes dans les marais andalous.'),
+    Film(id: 'd3', titre: 'Les Diaboliques', annee: 1955, dureeMinutes: 117, note: 8.0, genres: ['Thriller', 'Mystery'], pays: ['France'], realisateur: 'Henri-Georges Clouzot', synopsis: 'L\'épouse et la maîtresse d\'un directeur d\'école tyrannique s\'allient pour le tuer, mais le corps disparaît.'),
+    Film(id: 'd4', titre: 'Memories of Murder', annee: 2003, dureeMinutes: 132, note: 8.0, genres: ['Crime', 'Thriller'], pays: ['Corée du Sud'], realisateur: 'Bong Joon-ho', synopsis: 'En 1986, dans la campagne coréenne, deux inspecteurs aux méthodes opposées traquent l\'auteur d\'une série de meurtres.'),
+    Film(id: 'd5', titre: 'Le Dîner de cons', annee: 1998, dureeMinutes: 80, note: 7.5, genres: ['Comedy'], pays: ['France'], realisateur: 'Francis Veber', synopsis: 'Un éditeur qui invite chaque semaine un « con » à dîner pour s\'en moquer voit sa soirée tourner au désastre à cause de son invité.'),
+    Film(id: 'd6', titre: 'Le Voyage de Chihiro', annee: 2001, dureeMinutes: 125, note: 8.5, genres: ['Animation', 'Fantasy'], pays: ['Japon'], realisateur: 'Hayao Miyazaki', synopsis: 'Une fillette piégée dans un monde d\'esprits doit travailler dans des bains publics pour sauver ses parents changés en cochons.'),
+    Film(id: 'd7', titre: 'Intouchables', annee: 2011, dureeMinutes: 112, note: 8.3, genres: ['Comedy', 'Drama'], pays: ['France'], realisateur: 'Olivier Nakache, Éric Toledano', synopsis: 'Un riche aristocrate tétraplégique engage comme auxiliaire de vie un jeune homme de banlieue tout juste sorti de prison.'),
+    Film(id: 'd8', titre: 'Les Temps modernes', annee: 1936, dureeMinutes: 87, note: 8.3, genres: ['Comedy', 'Drama'], pays: ['États-Unis'], realisateur: 'Charlie Chaplin', synopsis: 'Un ouvrier broyé par le travail à la chaîne enchaîne les mésaventures et croise la route d\'une jeune orpheline.'),
+    Film(id: 'd9', titre: 'Une séparation', annee: 2011, dureeMinutes: 123, note: 7.9, genres: ['Drama'], pays: ['Iran'], realisateur: 'Asghar Farhadi', synopsis: 'À Téhéran, un couple en instance de divorce se retrouve pris dans un conflit avec l\'aide-soignante engagée pour le père malade.'),
+    Film(id: 'd10', titre: 'Les Parapluies de Cherbourg', annee: 1964, dureeMinutes: 91, note: 7.6, genres: ['Drama', 'Romance'], pays: ['France'], realisateur: 'Jacques Demy', synopsis: 'Une jeune vendeuse de parapluies et un garagiste s\'aiment, mais la guerre d\'Algérie les sépare. Tout est chanté.'),
+    Film(id: 'd11', titre: 'Mad Max: Fury Road', annee: 2015, dureeMinutes: 120, note: 7.6, genres: ['Adventure', 'Science Fiction'], pays: ['Australie'], realisateur: 'George Miller', synopsis: 'Dans un désert post-apocalyptique, Max et l\'impératrice Furiosa fuient un tyran à bord d\'un camion de guerre.'),
+    Film(id: 'd12', titre: 'Le Salaire de la peur', annee: 1953, dureeMinutes: 131, note: 8.0, genres: ['Adventure', 'Thriller'], pays: ['France'], realisateur: 'Henri-Georges Clouzot', synopsis: 'En Amérique du Sud, quatre hommes sans le sou acceptent de transporter de la nitroglycérine sur des routes défoncées.'),
+    Film(id: 'd13', titre: 'Shoah', annee: 1985, dureeMinutes: 566, note: 8.6, genres: ['Documentary', 'History'], pays: ['France'], realisateur: 'Claude Lanzmann', synopsis: 'Neuf heures de témoignages de survivants, de témoins et d\'anciens bourreaux de l\'extermination des Juifs d\'Europe.'),
+    Film(id: 'd14', titre: 'Persepolis', annee: 2007, dureeMinutes: 96, note: 7.8, genres: ['Animation', 'Drama'], pays: ['Iran', 'France'], realisateur: 'Marjane Satrapi, Vincent Paronnaud', synopsis: 'Une jeune Iranienne grandit pendant la révolution islamique puis la guerre, avant de partir vivre en Europe.'),
+    Film(id: 'd15', titre: 'Rec', annee: 2007, dureeMinutes: 78, note: 7.0, genres: ['Horror'], pays: ['Espagne'], realisateur: 'Jaume Balagueró, Paco Plaza', synopsis: 'Une journaliste et son caméraman suivent des pompiers dans un immeuble de Barcelone soudain placé en quarantaine.'),
   ];
 }

@@ -4,6 +4,7 @@ import '../app.dart';
 import '../models/modeles.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
+import 'premier_soir.dart';
 import 'reglages.dart';
 
 /// « Quel spectateur es-tu ? » : ta figurine, ton pouvoir, ton contrat.
@@ -144,6 +145,12 @@ class ProfilEcran extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 22),
+              AuraBouton(
+                libelle: 'Refaire le test',
+                principal: false,
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PremierSoirEcran(testSeul: true))),
+              ),
+              const SizedBox(height: 12),
               AuraBouton(
                 libelle: 'Réglages',
                 icone: Icons.settings_rounded,
