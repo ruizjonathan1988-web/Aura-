@@ -1,9 +1,20 @@
-/// Les clés Supabase arrivent à la compilation :
-///   flutter build apk --dart-define=SUPABASE_URL=… --dart-define=SUPABASE_ANON_KEY=…
-/// Sans elles, Aura tourne en solo, sans compte.
+/// Le serveur des ligues (Supabase).
+///
+/// L'adresse et la clé « anon » sont publiques par nature : elles finissent
+/// dans l'APK et dans la version web. Ce sont les règles de sécurité des
+/// tables (RLS, voir supabase/migrations) qui protègent les données.
+/// Ne jamais mettre ici la clé « service_role ».
+///
+/// Des secrets GitHub SUPABASE_URL et SUPABASE_ANON_KEY, s'ils existent,
+/// passent avant ces valeurs (--dart-define à la compilation).
 abstract final class Config {
-  static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  static const supabaseCle = String.fromEnvironment('SUPABASE_ANON_KEY');
+  static const _urlCompilee = String.fromEnvironment('SUPABASE_URL');
+  static const _cleCompilee = String.fromEnvironment('SUPABASE_ANON_KEY');
+
+  static const supabaseUrl = _urlCompilee != '' ? _urlCompilee : 'https://trjocwmslkxtluuhsvgx.supabase.co';
+  static const supabaseCle = _cleCompilee != ''
+      ? _cleCompilee
+      : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRyam9jd21zbGt4dGx1dWhzdmd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM5MTE2MzksImV4cCI6MjEwOTQ4NzYzOX0.dIR1DCJAY9C1tQn_--oPw3m9eebTNMT6M7E6K7OmQOc';
 
   static bool get serveur => supabaseUrl.isNotEmpty && supabaseCle.isNotEmpty;
 }
