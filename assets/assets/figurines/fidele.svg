@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 136" width="100" height="136">
+<rect x="6" y="116" width="88" height="17" rx="4" fill="#B5793F" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M12 120 V50 A38 38 0 0 1 88 50 V120 Z" fill="#FFD23F" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M18 116 V52 A32 32 0 0 1 82 52 V116" fill="none" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="2.5"/>
+
+<circle cx="31" cy="50" r="10" fill="#C98A4B" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="69" cy="50" r="10" fill="#C98A4B" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="31" cy="50" r="4" fill="#F7B9C9"/>
+<ellipse cx="50" cy="104" rx="26" ry="18" fill="#C98A4B" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="50" cy="72" r="26" fill="#C98A4B" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="62" y="74" width="12" height="12" fill="#F58BC7" stroke="#141414" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" transform="rotate(12 68 80)"/>
+<path d="M60 76 l2 2 M66 74 l1 3 M72 78 l-2 2" stroke="#141414" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="40" cy="66" r="4" fill="#141414"/>
+<circle cx="61" cy="65" r="6" fill="#4AA3E8" stroke="#141414" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M58 62 l6 6 M64 62 l-6 6" stroke="#141414" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+<ellipse cx="50" cy="82" rx="11" ry="8" fill="#F6EFE2" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M46 79 Q50 76 54 79 Q50 84 46 79 Z" fill="#141414"/>
+<path d="M44 88 Q50 93 56 88" fill="none" stroke="#141414" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M35 104 l4 0 M39 100 l0 8" stroke="#141414" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>
