@@ -1,13 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app.dart';
 import '../models/modeles.dart';
+import '../services/config.dart';
+import '../services/connexion_vjod.dart';
 import '../services/etat.dart';
 import '../services/sources.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
 
-/// Réglages : jouer en démo, ou en édition VJOD branchée sur Jellyfin.
+enum _Methode { quickConnect, identifiants, cle }
+
+/// Réglages : jouer avec la sélection de démonstration, ou brancher sa
+/// bibliothèque VJOD. Trois façons de se connecter, de la plus simple à la
+/// plus technique : un code Quick Connect, l'identifiant et le mot de passe
+/// VJOD, ou (avancé) l'identifiant Jellyfin et une clé d'API.
 class ReglagesEcran extends StatefulWidget {
   const ReglagesEcran({super.key});
 
@@ -16,73 +25,129 @@ class ReglagesEcran extends StatefulWidget {
 }
 
 class _ReglagesEcranState extends State<ReglagesEcran> {
-  late final TextEditingController _adresse;
-  late final TextEditingController _utilisateur;
-  late final TextEditingController _jeton;
+  final _adresse = TextEditingController();
+  final _nom = TextEditingController();
+  final _motDePasse = TextEditingController();
+  final _utilisateurId = TextEditingController();
+  final _cle = TextEditingController();
+  bool _pret = false;
   bool _vjod = false;
-  bool _test = false;
-  String? _resultat;
+  _Methode _methode = _Methode.quickConnect;
+  bool _enCours = false;
+  String? _message;
+  String? _code;
+  Timer? _attente;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_resultat == null && !_test) {
-      final etat = PorteeEtat.of(context);
-      _vjod = etat.mode == ModeJeu.vjod;
-      _adresse = TextEditingController(text: etat.connexion.adresse);
-      _utilisateur = TextEditingController(text: etat.connexion.utilisateurId);
-      _jeton = TextEditingController(text: etat.connexion.jeton);
-      _resultat = '';
-    }
+    if (_pret) return;
+    _pret = true;
+    final etat = PorteeEtat.lire(context);
+    _vjod = etat.mode == ModeJeu.vjod;
+    _adresse.text = etat.connexion.adresse.isNotEmpty ? etat.connexion.adresse : Config.serveurVjod;
+    _utilisateurId.text = etat.connexion.utilisateurId;
+    _cle.text = etat.connexion.jeton;
+    if (!estTele(context)) _methode = _Methode.identifiants;
   }
 
   @override
   void dispose() {
-    _adresse.dispose();
-    _utilisateur.dispose();
-    _jeton.dispose();
+    _attente?.cancel();
+    for (final c in [_adresse, _nom, _motDePasse, _utilisateurId, _cle]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
-  ConnexionJellyfin get _connexion =>
-      ConnexionJellyfin(adresse: _adresse.text.trim(), utilisateurId: _utilisateur.text.trim(), jeton: _jeton.text.trim());
+  ConnexionVjod get _vjodClient => ConnexionVjod(adresse: _adresse.text, appareil: PorteeEtat.lire(context).appareil);
 
-  Future<void> _tester() async {
-    setState(() {
-      _test = true;
-      _resultat = '';
-    });
+  Future<void> _brancher(ConnexionJellyfin c) async {
+    final etat = PorteeEtat.lire(context);
     try {
-      final films = await SourceJellyfin(_connexion).catalogue(emotion: Emotion.frissonner);
-      _resultat = 'Connexion réussie : ${films.length} films à 3 étoiles ou plus pour « Frissonner ».';
+      final films = await SourceJellyfin(c).catalogue(emotion: Emotion.frissonner);
+      await etat.reglerVjod(actif: true, c: c);
+      _message = 'Bibliothèque VJOD branchée ! ${films.length} films à 3 étoiles ou plus rien que pour « Frissonner ».';
     } on ErreurSource catch (e) {
-      _resultat = e.message;
+      _message = e.message;
     } catch (_) {
-      _resultat = 'Jellyfin ne répond pas à cette adresse.';
+      _message = 'Connecté, mais la bibliothèque ne répond pas. Réessaie dans un instant.';
     }
-    if (mounted) setState(() => _test = false);
   }
 
-  Widget _champ(String libelle, TextEditingController c, {bool secret = false, String? aide}) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: TextField(
-          controller: c,
-          obscureText: secret,
-          style: AuraTexte.corps(15),
-          decoration: InputDecoration(
-            labelText: libelle,
-            helperText: aide,
-            helperMaxLines: 2,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(width: 2.5)),
-          ),
-        ),
-      );
+  Future<void> _seConnecter() async {
+    setState(() {
+      _enCours = true;
+      _message = null;
+    });
+    try {
+      final c = switch (_methode) {
+        _Methode.identifiants => await _vjodClient.avecIdentifiants(_nom.text, _motDePasse.text),
+        _Methode.cle => ConnexionJellyfin(adresse: _adresse.text.trim(), utilisateurId: _utilisateurId.text.trim(), jeton: _cle.text.trim()),
+        _Methode.quickConnect => throw StateError('Quick Connect passe par le code'),
+      };
+      await _brancher(c);
+    } on ErreurSource catch (e) {
+      _message = e.message;
+    } catch (_) {
+      _message = 'Le serveur ne répond pas à cette adresse. Vérifie-la (la même que dans VJOD).';
+    }
+    if (mounted) setState(() => _enCours = false);
+  }
+
+  Future<void> _demanderCode() async {
+    _attente?.cancel();
+    setState(() {
+      _enCours = true;
+      _message = null;
+      _code = null;
+    });
+    final client = _vjodClient;
+    try {
+      final (secret, code) = await client.demanderCode();
+      if (!mounted) return;
+      setState(() => _code = code);
+      var essais = 0;
+      _attente = Timer.periodic(const Duration(seconds: 3), (t) async {
+        if (!mounted) {
+          t.cancel();
+          return;
+        }
+        essais++;
+        if (essais > 100) {
+          t.cancel();
+          if (mounted) setState(() => _message = 'Le code a expiré. Demandes-en un nouveau.');
+          return;
+        }
+        try {
+          if (await client.codeAccepte(secret)) {
+            t.cancel();
+            final c = await client.avecQuickConnect(secret);
+            await _brancher(c);
+            if (mounted) setState(() => _code = null);
+          }
+        } catch (_) {
+          // On réessaie au prochain passage.
+        }
+      });
+    } on ErreurSource catch (e) {
+      _message = e.message;
+    } catch (_) {
+      _message = 'Le serveur ne répond pas à cette adresse. Vérifie-la (la même que dans VJOD).';
+    }
+    if (mounted) setState(() => _enCours = false);
+  }
+
+  Future<void> _demo() async {
+    final etat = PorteeEtat.lire(context);
+    await etat.reglerVjod(actif: false, c: etat.connexion);
+    if (mounted) setState(() => _vjod = false);
+  }
 
   @override
   Widget build(BuildContext context) {
     final etat = PorteeEtat.of(context);
+    final branche = etat.mode == ModeJeu.vjod && etat.connexion.complete;
     return Scaffold(
       body: FondTrame(
         child: SafeArea(
@@ -94,74 +159,34 @@ class _ReglagesEcranState extends State<ReglagesEcran> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(children: [
-                      Touchable(
-                        etiquette: 'Retour',
-                        onTap: () => Navigator.of(context).pop(),
-                        builder: (context, focus, appui) => Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: AuraCouleurs.creme,
-                            shape: BoxShape.circle,
-                            border: Border.all(width: 3),
-                            boxShadow: [if (focus) const BoxShadow(color: AuraCouleurs.jaune, spreadRadius: 4)],
-                          ),
-                          child: const Icon(Icons.arrow_back_rounded, color: AuraCouleurs.noir),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      const Expanded(child: TitreCartoon('Réglages', taille: 38)),
-                    ]),
+                    const EnTeteRetour(titre: 'Réglages'),
                     const SizedBox(height: 18),
                     Panneau(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('OÙ LE JEU PIOCHE TES FILMS', style: AuraTexte.titre(16)),
-                          const SizedBox(height: 10),
-                          Wrap(spacing: 8, runSpacing: 8, children: [
-                            Pastille(libelle: 'Démonstration', choisie: !_vjod, onTap: () => setState(() => _vjod = false)),
-                            Pastille(libelle: 'Édition VJOD', choisie: _vjod, onTap: () => setState(() => _vjod = true)),
-                          ]),
-                          const SizedBox(height: 10),
-                          Text(
-                            _vjod
-                                ? 'Les cartes viennent de ta bibliothèque Jellyfin, et « Lancer dans VJOD » ouvre le film directement dans VJOD, sur la télé comme sur le téléphone.'
-                                : 'Un petit catalogue d\'exemple pour découvrir le jeu sans serveur.',
-                            style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_vjod) ...[
-                      const SizedBox(height: 16),
-                      Panneau(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text('TA BIBLIOTHÈQUE JELLYFIN', style: AuraTexte.titre(16)),
-                            const SizedBox(height: 12),
-                            _champ('Adresse du serveur', _adresse, aide: 'La même que dans VJOD, par exemple https://…'),
-                            _champ('Identifiant utilisateur Jellyfin', _utilisateur, aide: 'Tableau de bord Jellyfin, Utilisateurs : l\'identifiant est dans l\'adresse de la page du profil.'),
-                            _champ('Clé d\'API', _jeton, secret: true, aide: 'Tableau de bord Jellyfin, Clés API, puis « + ».'),
-                            AuraBouton(libelle: _test ? 'Test en cours…' : 'Tester la connexion', principal: false, onPressed: _test || !_connexion.complete ? null : _tester),
-                            if ((_resultat ?? '').isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              Text(_resultat!, style: AuraTexte.corps(14, poids: FontWeight.w900)),
-                            ],
-                          ],
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('OÙ LE JEU CHOISIT TES FILMS', style: AuraTexte.titre(16)),
+                        const SizedBox(height: 10),
+                        Wrap(spacing: 8, runSpacing: 8, children: [
+                          Pastille(libelle: 'Sélection Aura', choisie: !_vjod, onTap: _demo),
+                          Pastille(libelle: 'Ma bibliothèque VJOD', choisie: _vjod, autofocus: true, onTap: () => setState(() => _vjod = true)),
+                        ]),
+                        const SizedBox(height: 10),
+                        Text(
+                          _vjod
+                              ? 'Les cartes viennent de ta bibliothèque VJOD, et « Lancer dans VJOD » ouvre le film directement, sur la télé comme sur le téléphone. Les films que tu termines sont validés automatiquement.'
+                              : 'Une sélection de 42 films reconnus, pour découvrir le jeu sans serveur.',
+                          style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux),
                         ),
-                      ),
-                    ],
-                    const SizedBox(height: 20),
-                    AuraBouton(
-                      libelle: 'Enregistrer',
-                      onPressed: () async {
-                        await etat.reglerVjod(actif: _vjod, c: _connexion);
-                        if (context.mounted) Navigator.of(context).pop();
-                      },
+                        if (branche) ...[
+                          const SizedBox(height: 10),
+                          Text('Connecté à ${etat.connexion.adresse}', style: AuraTexte.corps(13, poids: FontWeight.w900)),
+                        ],
+                      ]),
                     ),
+                    if (_vjod) ...[const SizedBox(height: 16), _connexion()],
+                    if (_message != null) ...[
+                      const SizedBox(height: 14),
+                      Panneau(couleur: AuraCouleurs.jaune, child: Text(_message!, style: AuraTexte.corps(14, poids: FontWeight.w900))),
+                    ],
                   ],
                 ),
               ),
@@ -171,4 +196,88 @@ class _ReglagesEcranState extends State<ReglagesEcran> {
       ),
     );
   }
+
+  Widget _connexion() {
+    return Panneau(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('SE CONNECTER AVEC VJOD', style: AuraTexte.titre(16)),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          Pastille(libelle: 'Avec un code', choisie: _methode == _Methode.quickConnect, onTap: () => setState(() => _methode = _Methode.quickConnect)),
+          if (!estTele(context))
+            Pastille(libelle: 'Identifiant et mot de passe', choisie: _methode == _Methode.identifiants, onTap: () => setState(() => _methode = _Methode.identifiants)),
+          Pastille(libelle: 'Avancé', choisie: _methode == _Methode.cle, onTap: () => setState(() => _methode = _Methode.cle)),
+        ]),
+        const SizedBox(height: 14),
+        Text('ADRESSE DU SERVEUR', style: AuraTexte.titre(14)),
+        const SizedBox(height: 6),
+        _champ(_adresse, 'La même que dans VJOD, par exemple https://…'),
+        const SizedBox(height: 12),
+        ...switch (_methode) {
+          _Methode.quickConnect => _quickConnect(),
+          _Methode.identifiants => [
+              Text('TON IDENTIFIANT VJOD', style: AuraTexte.titre(14)),
+              const SizedBox(height: 6),
+              _champ(_nom, 'Ton nom d\'utilisateur'),
+              const SizedBox(height: 10),
+              Text('TON MOT DE PASSE', style: AuraTexte.titre(14)),
+              const SizedBox(height: 6),
+              _champ(_motDePasse, 'Ton mot de passe', secret: true),
+              const SizedBox(height: 12),
+              AuraBouton(libelle: _enCours ? 'Connexion…' : 'Me connecter', onPressed: _enCours ? null : _seConnecter),
+            ],
+          _Methode.cle => [
+              Text('IDENTIFIANT UTILISATEUR JELLYFIN', style: AuraTexte.titre(14)),
+              const SizedBox(height: 6),
+              _champ(_utilisateurId, 'Dans l\'adresse de la page de ton profil Jellyfin'),
+              const SizedBox(height: 10),
+              Text('CLÉ D\'API', style: AuraTexte.titre(14)),
+              const SizedBox(height: 6),
+              _champ(_cle, 'Tableau de bord Jellyfin, Clés API, puis « + »', secret: true),
+              const SizedBox(height: 12),
+              AuraBouton(libelle: _enCours ? 'Vérification…' : 'Brancher', onPressed: _enCours ? null : _seConnecter),
+            ],
+        },
+      ]),
+    );
+  }
+
+  List<Widget> _quickConnect() => [
+        if (_code == null) ...[
+          Text(
+            'Aura affiche un code. Sur ton téléphone, dans VJOD ou Jellyfin, ouvre Paramètres puis Quick Connect, et entre ce code. C\'est tout.',
+            style: AuraTexte.corps(14),
+          ),
+          const SizedBox(height: 12),
+          AuraBouton(libelle: _enCours ? 'Demande en cours…' : 'Afficher mon code', onPressed: _enCours ? null : _demanderCode),
+        ] else ...[
+          Text('TON CODE', style: AuraTexte.titre(14)),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            alignment: Alignment.center,
+            decoration: AuraTrait.panneau(couleur: AuraCouleurs.jaune),
+            child: Text(_code!, style: AuraTexte.titre(52).copyWith(letterSpacing: 10)),
+          ),
+          const SizedBox(height: 10),
+          Text('Entre-le dans VJOD ou Jellyfin, sur ton téléphone : Paramètres, puis Quick Connect. Aura se connecte dès que c\'est accepté.',
+              style: AuraTexte.corps(14)),
+          const SizedBox(height: 12),
+          AuraBouton(libelle: 'Nouveau code', principal: false, onPressed: _enCours ? null : _demanderCode),
+        ],
+      ];
+
+  /// Le seul endroit où l'on tape sur la télé : l'adresse du serveur, et
+  /// seulement si elle n'est pas déjà connue (exception à la règle R10).
+  Widget _champ(TextEditingController c, String indication, {bool secret = false}) => TextField(
+        controller: c,
+        obscureText: secret,
+        style: AuraTexte.corps(15),
+        decoration: InputDecoration(
+          hintText: indication,
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(width: 2.5)),
+        ),
+      );
 }

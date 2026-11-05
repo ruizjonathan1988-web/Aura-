@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -222,6 +223,16 @@ class EtatJeu extends ChangeNotifier {
     if (enregistre != null) position = 1;
     _prefs.setString('mois', ce);
     _prefs.setInt('position', position);
+  }
+
+  /// Identifiant stable de cet appareil (demandé par Jellyfin à la connexion).
+  String get appareil {
+    final deja = _prefs.getString('appareil');
+    if (deja != null) return deja;
+    final r = Random();
+    final id = 'aura-${List.generate(16, (_) => r.nextInt(16).toRadixString(16)).join()}';
+    _prefs.setString('appareil', id);
+    return id;
   }
 
   SourceFilms get source =>

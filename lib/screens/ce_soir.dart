@@ -10,6 +10,7 @@ import '../services/vjod_lien.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
 import 'plan_du_jour.dart';
+import 'reglages.dart';
 
 enum _Etape { envie, cartes, pronostic, billet }
 
@@ -134,6 +135,14 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         ],
         _CartePlanDuJour(resultat: etat.planDuJour),
         const SizedBox(height: 18),
+        if (etat.mode == ModeJeu.demo) ...[
+          ChoixLarge(
+            libelle: 'Tu utilises VJOD ? Branche ta bibliothèque : les cartes viendront de tes films, et ceux que tu termines seront validés automatiquement.',
+            couleur: AuraCouleurs.bleu,
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReglagesEcran())),
+          ),
+          const SizedBox(height: 18),
+        ],
         if (etat.jokerBluff) ...[
           Panneau(
             couleur: AuraCouleurs.vert,
