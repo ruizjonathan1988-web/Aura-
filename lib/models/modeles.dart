@@ -125,7 +125,8 @@ enum TypeCarte {
   retro('Rétro', AuraCouleurs.caseOrange, Color(0xFFFFC772)),
   voyage('Voyage', AuraCouleurs.caseVert, Color(0xFF62C472)),
   pepite('Pépite', AuraCouleurs.caseRose, Color(0xFFFFB3DC)),
-  envie('Envie', AuraCouleurs.caseBleu, Color(0xFF8CC6F2));
+  envie('Envie', AuraCouleurs.caseBleu, Color(0xFF8CC6F2)),
+  affiche('Affiche', AuraCouleurs.caseRouge, Color(0xFFF57D6C));
 
   const TypeCarte(this.libelle, this.couleur, this.couleurClaire);
   final String libelle;

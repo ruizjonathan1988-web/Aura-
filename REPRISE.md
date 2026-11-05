@@ -63,12 +63,17 @@ Fait :
 - Plateau du mois contre Pop, profils et figurines, réglages.
 - Tirage avec règle zéro navet et plafond de 3 cases par jour (`lib/services/tirage.dart`), tests dans `test/jeu_test.dart`.
 - Édition VJOD : source Jellyfin (`MinCommunityRating=6`) et lancement direct dans VJOD par `moonfin://play?id=<itemId>&serverId=<serverId>`, que VJOD comprend déjà.
-- Schéma Supabase des ligues (`supabase/migrations/0001_ligues.sql`), pas encore branché dans l'appli.
+- Onglets alignés sur le prototype : Ce soir, Plateau, Semaine, Ligue ; le Profil s'ouvre par la pastille ronde en haut, la pastille des pions mène à la Ligue, les Réglages sont en bas du Profil.
+- Plan du jour (`lib/services/plan_du_jour.dart`) : même film pour tous le même jour, 3 indices à ouvrir, 1 essai parmi 4 titres (rien à taper), résultat à copier sans spoiler.
+- Semaine en solo : Affiche choisie par Pop (même film du lundi au dimanche), séance à +2 cases, Curseur secret, Révélation le dimanche. Bluff et Faussaire attendent les ligues.
+- Plateau du mois : la position repart de la case 1 le 1er du mois.
+- Ligues Supabase branchées (`lib/services/ligues.dart`) : compte anonyme avec pseudo, création de ligue, rejointe par code à 6 caractères, classement du mois (`supabase/migrations/0002_classement.sql`), séances envoyées au serveur et renvoyées si hors ligne. Sans les secrets, l'appli reste en solo. Sur la télé, la ligue s'affiche mais se gère au téléphone.
+- Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
 ## Prochaines étapes, dans l'ordre
 
 1. Vérifier l'APK sur la box et le téléphone ; régler la navigation à la télécommande si besoin.
-2. Brancher Supabase : compte, création et rejointe de ligue par code, synchronisation des séances. Secrets `SUPABASE_URL` et `SUPABASE_ANON_KEY` à ajouter au dépôt.
+2. Activer Supabase : créer le projet, lancer `0001_ligues.sql` puis `0002_classement.sql` dans l'éditeur SQL, activer les connexions anonymes (Authentication > Sign In / Providers), ajouter les secrets `SUPABASE_URL` et `SUPABASE_ANON_KEY` au dépôt. Ensuite : relier la télé au compte du téléphone (code à afficher sur la télé).
 3. Le test « Quel spectateur es-tu ? » à l'inscription, avec la révélation de la figurine à partager.
 4. Le Duel du canapé : chacun tire ses cartes, on les pose sur la télé, élimination à tour de rôle, cartes Veto et Jokers, mini-quiz dont le gagnant prend la télécommande.
 5. Le mode « Soirée jeu » sur la télé (plateau en grand, téléphones en manettes).
@@ -80,6 +85,6 @@ Fait :
 ## Ailleurs
 
 - Bible du jeu (doc sourcé : recherches, profils, boucles, code de bonne conduite, jauge de buzz) : https://claude.ai/artifact/6Z17KcsCNCrzfhDrJmdcKt
-- Maquettes et prototype interactif (canevas) : https://claude.ai/artifact/CBMHGoeQ7iWUjnuPRQ6asU
+- Maquettes et prototype interactif (canevas) : https://claude.ai/artifact/CBMHGoeQ7iWUjnuPRQ6asU (copie dans `docs/maquettes/`)
 
 Ces deux liens sont privés au compte d'origine : pour les ouvrir depuis un autre compte, les partager d'abord depuis leur menu Partager.

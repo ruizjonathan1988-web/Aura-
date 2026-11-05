@@ -518,3 +518,98 @@ class _MainDeCartesState extends State<MainDeCartes> {
     );
   }
 }
+
+/// Un grand choix en pleine largeur (réponse du Plan du jour, synopsis du
+/// Bluff…), jaune quand il est choisi, vert ou rouge une fois corrigé.
+class ChoixLarge extends StatelessWidget {
+  const ChoixLarge({super.key, required this.libelle, this.onTap, this.couleur = AuraCouleurs.creme, this.autofocus = false});
+
+  final String libelle;
+  final VoidCallback? onTap;
+  final Color couleur;
+  final bool autofocus;
+
+  @override
+  Widget build(BuildContext context) {
+    return Touchable(
+      onTap: onTap,
+      autofocus: autofocus,
+      etiquette: libelle,
+      builder: (context, focus, appui) => AnimatedContainer(
+        duration: const Duration(milliseconds: 80),
+        transform: Matrix4.translationValues(appui ? 3 : 0, appui ? 3 : 0, 0),
+        constraints: const BoxConstraints(minHeight: 50),
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+        decoration: BoxDecoration(
+          color: couleur,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AuraCouleurs.noir, width: 2.5),
+          boxShadow: _ombres(focus: focus, appui: appui, ombre: 3),
+        ),
+        child: Text(libelle, style: AuraTexte.corps(15, poids: FontWeight.w900)),
+      ),
+    );
+  }
+}
+
+/// La rangée de titre des écrans ouverts par-dessus : bouton Retour et titre.
+class EnTeteRetour extends StatelessWidget {
+  const EnTeteRetour({super.key, required this.titre});
+  final String titre;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Touchable(
+        etiquette: 'Retour',
+        onTap: () => Navigator.of(context).pop(),
+        builder: (context, focus, appui) => Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AuraCouleurs.creme,
+            shape: BoxShape.circle,
+            border: Border.all(width: 3),
+            boxShadow: _ombres(focus: focus, appui: appui, ombre: 3),
+          ),
+          child: const Icon(Icons.arrow_back_rounded, color: AuraCouleurs.noir),
+        ),
+      ),
+      const SizedBox(width: 14),
+      Expanded(child: TitreCartoon(titre, taille: 38)),
+    ]);
+  }
+}
+
+/// Un champ de texte au style du jeu. Réservé au téléphone : sur la télé,
+/// on ne tape rien.
+class ChampAura extends StatelessWidget {
+  const ChampAura({super.key, required this.controleur, required this.indication, this.longueurMax, this.majuscules = false, this.onValider});
+
+  final TextEditingController controleur;
+  final String indication;
+  final int? longueurMax;
+  final bool majuscules;
+  final ValueChanged<String>? onValider;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controleur,
+      maxLength: longueurMax,
+      textCapitalization: majuscules ? TextCapitalization.characters : TextCapitalization.sentences,
+      onSubmitted: onValider,
+      style: AuraTexte.corps(16, poids: FontWeight.w900),
+      decoration: InputDecoration(
+        hintText: indication,
+        counterText: '',
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(width: 2.5)),
+      ),
+    );
+  }
+}
+
+/// Vrai sur un grand écran piloté à la télécommande.
+bool estTele(BuildContext context) => MediaQuery.sizeOf(context).width >= 900;
