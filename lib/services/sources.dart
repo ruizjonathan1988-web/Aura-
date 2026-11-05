@@ -7,7 +7,10 @@ import '../models/modeles.dart';
 /// D'où viennent les films proposés par le jeu.
 abstract class SourceFilms {
   String get nom;
-  Future<List<Film>> catalogue({required Emotion emotion});
+
+  /// Les films de la source. Sans [emotion], tous les genres. [auHasard] à
+  /// faux donne toujours le même ordre (utile au Plan du jour et à l'Affiche).
+  Future<List<Film>> catalogue({Emotion? emotion, bool auHasard = true});
 }
 
 /// Réglages de connexion à Jellyfin (édition VJOD).
@@ -38,15 +41,15 @@ class SourceJellyfin implements SourceFilms {
   String get nom => 'Ta bibliothèque Jellyfin';
 
   @override
-  Future<List<Film>> catalogue({required Emotion emotion}) async {
+  Future<List<Film>> catalogue({Emotion? emotion, bool auHasard = true}) async {
     final uri = connexion.url('/Users/${connexion.utilisateurId}/Items', {
       'IncludeItemTypes': 'Movie',
       'Recursive': 'true',
       'MinCommunityRating': '6',
-      'SortBy': 'Random',
-      'Limit': '120',
+      'SortBy': auHasard ? 'Random' : 'SortName',
+      'Limit': auHasard ? '120' : '400',
       'Fields': 'Genres,ProductionLocations,People,ProductionYear,RunTimeTicks,CommunityRating,UserData',
-      'Genres': emotion.genres.join('|'),
+      if (emotion != null) 'Genres': emotion.genres.join('|'),
     });
     final rep = await _client.get(uri, headers: {
       'X-Emby-Token': connexion.jeton,
@@ -98,7 +101,7 @@ class SourceDemo implements SourceFilms {
   String get nom => 'Catalogue de démonstration';
 
   @override
-  Future<List<Film>> catalogue({required Emotion emotion}) async => _films;
+  Future<List<Film>> catalogue({Emotion? emotion, bool auHasard = true}) async => _films;
 
   static const _films = <Film>[
     Film(id: 'd1', titre: 'Le Samouraï', annee: 1967, dureeMinutes: 105, note: 7.9, genres: ['Crime', 'Thriller'], pays: ['France'], realisateur: 'Jean-Pierre Melville'),

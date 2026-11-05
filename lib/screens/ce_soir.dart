@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import '../app.dart';
 import '../models/modeles.dart';
 import '../services/etat.dart';
+import '../services/plan_du_jour.dart';
 import '../services/sources.dart';
 import '../services/tirage.dart';
 import '../services/vjod_lien.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
+import 'plan_du_jour.dart';
 
 enum _Etape { envie, cartes, pronostic, billet }
 
@@ -120,6 +122,8 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _CartePlanDuJour(resultat: etat.planDuJour),
+        const SizedBox(height: 18),
         SizedBox(
           height: 150,
           child: Stack(
@@ -347,4 +351,70 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [Text(a, style: AuraTexte.corps(12, poids: FontWeight.w900)), Text(b, style: AuraTexte.titre(24))],
       );
+}
+
+/// L'accès au Plan du jour, en haut de Ce soir.
+class _CartePlanDuJour extends StatelessWidget {
+  const _CartePlanDuJour({required this.resultat});
+  final ResultatPlan? resultat;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = resultat;
+    final cases = [
+      for (var i = 0; i < 3; i++)
+        r == null
+            ? [AuraCouleurs.vert, AuraCouleurs.jaune, AuraCouleurs.creme][i]
+            : i < r.indices - 1
+                ? AuraCouleurs.jaune
+                : i == r.indices - 1
+                    ? (r.trouve ? AuraCouleurs.vert : AuraCouleurs.caseRouge)
+                    : AuraCouleurs.creme,
+    ];
+    return Touchable(
+      etiquette: 'Le Plan du jour',
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanDuJourEcran())),
+      builder: (context, focus, appui) => AnimatedContainer(
+        duration: const Duration(milliseconds: 80),
+        transform: Matrix4.translationValues(appui ? 3 : 0, appui ? 3 : 0, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: AuraTrait.panneau(ombre: appui ? 0 : 4).copyWith(
+          boxShadow: [
+            if (focus) const BoxShadow(color: AuraCouleurs.jaune, spreadRadius: 5),
+            if (!appui) const BoxShadow(color: AuraCouleurs.noir, offset: Offset(4, 4)),
+          ],
+        ),
+        child: Row(children: [
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            for (final c in cases)
+              Container(
+                width: 14,
+                height: 14,
+                margin: const EdgeInsets.only(right: 3),
+                decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3), border: Border.all(width: 1.5)),
+              ),
+          ]),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('LE PLAN DU JOUR', style: AuraTexte.titre(16)),
+              Text(
+                r == null
+                    ? 'Un film à deviner, 3 indices, 1 essai'
+                    : r.trouve
+                        ? 'Trouvé au ${r.indices == 1 ? '1er' : '${r.indices}e'} indice. À demain !'
+                        : 'Raté aujourd\'hui. Revanche demain !',
+                style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux),
+              ),
+            ]),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(color: AuraCouleurs.jaune, borderRadius: BorderRadius.circular(10), border: Border.all(width: 2.5)),
+            child: Text(r == null ? 'JOUER' : 'PARTAGER', style: AuraTexte.titre(15)),
+          ),
+        ]),
+      ),
+    );
+  }
 }

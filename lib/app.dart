@@ -5,7 +5,7 @@ import 'screens/ce_soir.dart';
 import 'screens/ligue.dart';
 import 'screens/plateau.dart';
 import 'screens/profil.dart';
-import 'screens/reglages.dart';
+import 'screens/semaine.dart';
 import 'services/etat.dart';
 import 'theme/aura_theme.dart';
 import 'widgets/aura_widgets.dart';
@@ -44,12 +44,16 @@ class AuraApp extends StatelessWidget {
 enum Onglet {
   ceSoir('Ce soir', Icons.style_rounded),
   plateau('Plateau', Icons.flag_rounded),
+  semaine('Semaine', Icons.local_movies_rounded),
   ligue('Ligue', Icons.emoji_events_rounded),
   profil('Profil', Icons.face_rounded);
 
   const Onglet(this.libelle, this.icone);
   final String libelle;
   final IconData icone;
+
+  /// Les onglets de la barre ; le Profil s'ouvre depuis la pastille en haut.
+  static const barre = [ceSoir, plateau, semaine, ligue];
 }
 
 /// La structure de l'appli : en-tête, écran courant, et navigation en bas
@@ -73,6 +77,7 @@ class _CoquilleState extends State<Coquille> {
     final ecran = switch (_onglet) {
       Onglet.ceSoir => CeSoirEcran(versPlateau: () => _aller(Onglet.plateau)),
       Onglet.plateau => const PlateauEcran(),
+      Onglet.semaine => const SemaineEcran(),
       Onglet.ligue => const LigueEcran(),
       Onglet.profil => const ProfilEcran(),
     };
@@ -91,7 +96,7 @@ class _CoquilleState extends State<Coquille> {
                   _EnTete(
                     position: etat.position,
                     onProfil: () => _aller(Onglet.profil),
-                    onReglages: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReglagesEcran())),
+                    onLigue: () => _aller(Onglet.ligue),
                     onglets: tele ? _Onglets(actif: _onglet, onChoisir: _aller, compact: true) : null,
                   ),
                   Expanded(child: KeyedSubtree(key: ValueKey(_onglet), child: ecran)),
@@ -107,16 +112,22 @@ class _CoquilleState extends State<Coquille> {
 }
 
 class _EnTete extends StatelessWidget {
-  const _EnTete({required this.position, required this.onProfil, required this.onReglages, this.onglets});
+  const _EnTete({required this.position, required this.onProfil, required this.onLigue, this.onglets});
 
   final int position;
   final VoidCallback onProfil;
-  final VoidCallback onReglages;
+  final VoidCallback onLigue;
   final Widget? onglets;
+
+  static List<BoxShadow> _ombres(bool focus, bool appui) => [
+        if (focus) const BoxShadow(color: AuraCouleurs.jaune, spreadRadius: 4),
+        if (!appui) const BoxShadow(color: AuraCouleurs.noir, offset: Offset(3, 3)),
+      ];
 
   @override
   Widget build(BuildContext context) {
     final etat = PorteeEtat.of(context);
+    final ligues = etat.ligues;
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
       child: Row(
@@ -139,44 +150,47 @@ class _EnTete extends StatelessWidget {
           ),
           if (onglets != null) ...[const SizedBox(width: 24), Expanded(child: onglets!)] else const Spacer(),
           Touchable(
-            etiquette: 'Réglages',
-            onTap: onReglages,
+            etiquette: 'Voir la ligue : tu es case $position sur 30',
+            onTap: onLigue,
             builder: (context, focus, appui) => Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: AuraCouleurs.creme,
-                shape: BoxShape.circle,
-                border: Border.all(width: 3),
-                boxShadow: [
-                  if (focus) const BoxShadow(color: AuraCouleurs.jaune, spreadRadius: 4),
-                  if (!appui) const BoxShadow(color: AuraCouleurs.noir, offset: Offset(3, 3)),
-                ],
-              ),
-              child: const Icon(Icons.settings_rounded, color: AuraCouleurs.noir),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Touchable(
-            etiquette: 'Mon profil : ${etat.profil.nom}, case $position',
-            onTap: onProfil,
-            builder: (context, focus, appui) => Container(
-              padding: const EdgeInsets.fromLTRB(6, 2, 12, 2),
+              padding: const EdgeInsets.fromLTRB(4, 2, 11, 2),
               decoration: BoxDecoration(
                 color: AuraCouleurs.creme,
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(width: 3),
-                boxShadow: [
-                  if (focus) const BoxShadow(color: AuraCouleurs.jaune, spreadRadius: 4),
-                  if (!appui) const BoxShadow(color: AuraCouleurs.noir, offset: Offset(3, 3)),
-                ],
+                boxShadow: _ombres(focus, appui),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Figurine.profil(etat.profil, hauteur: 40),
-                const SizedBox(width: 6),
+                Figurine.profil(etat.profil, hauteur: 36),
+                Transform.translate(offset: const Offset(-9, 0), child: const Figurine.pop(hauteur: 36)),
                 Text('$position/30', style: AuraTexte.corps(14, poids: FontWeight.w900)),
               ]),
             ),
+          ),
+          const SizedBox(width: 8),
+          ListenableBuilder(
+            listenable: ligues ?? etat,
+            builder: (context, _) {
+              final pseudo = ligues?.pseudo;
+              return Touchable(
+                etiquette: 'Mon profil : ${etat.profil.nom}',
+                onTap: onProfil,
+                builder: (context, focus, appui) => Container(
+                  width: 46,
+                  height: 46,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: etat.profil.couleur,
+                    shape: BoxShape.circle,
+                    border: Border.all(width: 3),
+                    boxShadow: _ombres(focus, appui),
+                  ),
+                  child: pseudo == null || pseudo.isEmpty
+                      ? const Icon(Icons.face_rounded, color: AuraCouleurs.noir)
+                      : Text(pseudo.characters.first.toUpperCase(), style: AuraTexte.titre(20)),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -195,7 +209,7 @@ class _Onglets extends StatelessWidget {
   Widget build(BuildContext context) {
     final rangee = Row(
       children: [
-        for (final o in Onglet.values)
+        for (final o in Onglet.barre)
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),

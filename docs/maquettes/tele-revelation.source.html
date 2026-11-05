@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<title>Aura · la Révélation sur la télé</title>
+<script src="9b129b3e-9ac5-4973-8d8b-24fc33f13e37"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style></style>
+<style>
+body{margin:0;background:#0B0B0C}
+a{color:#E8A33C}a:hover{color:#F3C27A}
+</style>
+</helmet>
+<div style="width: 1280px; height: 720px; box-sizing: border-box; background: #0B0B0C; color: #F1EFEA; font-family: 'Roboto', sans-serif; padding: 48px 64px; display: flex; flex-direction: column; gap: 32px">
+
+  <header style="display: flex; align-items: flex-end; justify-content: space-between">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 18px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #EF3B2D">La Révélation · dimanche 20 h 30</span>
+      <span style="font-family: 'Anton', sans-serif; font-size: 56px; line-height: 1">Memories of Murder</span>
+    </div>
+    <span style="font-size: 18px; color: #A8A6A1">Ligue des Mardis · semaine 2 sur 4</span>
+  </header>
+
+  <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 32px; flex: 1">
+    <section style="grid-column: span 3; background: #19191B; border-radius: 24px; padding: 32px; display: flex; flex-direction: column; gap: 24px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <span style="font-size: 26px; font-weight: 800">À quel point ça fait peur ?</span>
+        <span style="font-size: 18px; color: #57C7B8; font-weight: 700">Le Curseur</span>
+      </div>
+      <div style="position: relative; height: 150px">
+        <div style="position: absolute; left: 0; right: 0; top: 70px; height: 10px; border-radius: 5px; background: #262628"></div>
+        <sc-for list="{{curseurs}}" as="c" hint-placeholder-count="5">
+          <div style="{{c.style}}">
+            <span style="font-size: 15px; font-weight: 800">{{c.nom}}</span>
+            <span style="{{c.pion}}">{{c.val}}</span>
+          </div>
+        </sc-for>
+        <div style="position: absolute; left: 62%; top: 96px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px">
+          <svg width="18" height="12" sc-camel-view-box="0 0 18 12" aria-hidden="true"><path d="M9 0l9 12H0z" fill="#E8A33C"></path></svg>
+          <span style="font-size: 15px; font-weight: 800; color: #E8A33C">Moyenne 6,2</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 16px; background: #262628; border-radius: 16px; padding: 18px 22px">
+        <span style="width: 44px; height: 44px; border-radius: 50%; background: #57C7B8; color: #0B0B0C; font-weight: 800; font-size: 20px; display: flex; align-items: center; justify-content: center">M</span>
+        <span style="flex: 1; font-size: 20px">Max, le Médium, avait parié sur <strong>6</strong>. À 0,2 près !</span>
+        <span style="font-family: 'Anton', sans-serif; font-size: 30px; color: #E8A33C">+3</span>
+      </div>
+    </section>
+
+    <section style="grid-column: span 2; background: #19191B; border: 2px solid #A98BFF; border-radius: 24px; padding: 32px; display: flex; flex-direction: column; gap: 18px">
+      <span style="font-size: 18px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #A98BFF">Qui est le Faussaire ?</span>
+      <sc-for list="{{votes}}" as="v" hint-placeholder-count="4">
+        <div style="{{v.row}}">
+          <span style="flex: 1; font-size: 20px; font-weight: 700">{{v.nom}}</span>
+          <span style="display: flex; gap: 6px"><sc-for list="{{v.dots}}" as="d" hint-placeholder-count="2"><span style="width: 14px; height: 14px; border-radius: 50%; background: #F1EFEA"></span></sc-for></span>
+        </div>
+      </sc-for>
+      <span style="font-size: 17px; line-height: 1.45; color: #A8A6A1; margin-top: auto">OK pour révéler le Faussaire et son faux Verdict.</span>
+    </section>
+  </div>
+
+  <footer style="display: flex; align-items: center; gap: 24px">
+    <span style="font-size: 16px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #A8A6A1">Plateau</span>
+    <div style="flex: 1; position: relative; height: 40px">
+      <div style="position: absolute; left: 0; right: 0; top: 18px; height: 4px; border-radius: 2px; background: #262628"></div>
+      <sc-for list="{{pions}}" as="p" hint-placeholder-count="5">
+        <span style="{{p.style}}">{{p.ini}}</span>
+      </sc-for>
+    </div>
+    <span style="font-size: 16px; color: #A8A6A1">Flèches pour naviguer · OK pour révéler</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:720}}">
+class Component extends DCLogic {
+  renderVals() {
+    const data = [["Jon", 7, "#E8A33C"], ["Léa", 8, "#EF3B2D"], ["Inès", 5, "#A98BFF"], ["Max", 6, "#57C7B8"], ["Sam", 5, "#6FA8FF"]];
+    const curseurs = data.map(([nom, val, c], i) => ({
+      nom, val,
+      style: "position: absolute; left: " + (val * 10) + "%; top: " + (i % 2 ? 0 : 6) + "px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; margin-left: " + (i === 4 ? 26 : i === 2 ? -26 : 0) + "px",
+      pion: "width: 44px; height: 44px; border-radius: 50%; background: " + c + "; color: #0B0B0C; font-weight: 800; font-size: 18px; display: flex; align-items: center; justify-content: center; margin-top: " + (i % 2 ? 26 : 20) + "px"
+    }));
+    const votes = [["Sam", 2, true], ["Inès", 1, false], ["Léa", 1, false], ["Jon", 0, false]].map(([nom, n, top]) => ({
+      nom,
+      dots: Array.from({ length: n }, () => ({})),
+      row: "display: flex; align-items: center; gap: 12px; border-radius: 14px; padding: 14px 18px; min-height: 56px; box-sizing: border-box; " + (top ? "background: #262628; outline: 3px solid #E8A33C;" : "background: #262628;")
+    }));
+    const pions = [["J", 15, "#E8A33C"], ["L", 16, "#EF3B2D"], ["I", 12, "#A98BFF"], ["M", 9, "#57C7B8"], ["S", 6, "#6FA8FF"]].map(([ini, pos, c], i) => ({
+      ini,
+      style: "position: absolute; left: " + (pos / 30 * 100) + "%; top: 4px; transform: translateX(-50%); margin-left: " + (ini === "L" ? 18 : 0) + "px; width: 32px; height: 32px; border-radius: 50%; background: " + c + "; color: #0B0B0C; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center"
+    }));
+    return { curseurs, votes, pions };
+  }
+}
+</script>
+
+
+</body></html>

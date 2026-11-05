@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<title>Aura · téléphone</title>
+<script src="26034727-15e8-4601-a0fc-26a32261a7c9"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style></style>
+<style>
+body{margin:0;background:#E5261F}
+a{color:#141414}a:hover{color:#000}
+button,input{font-family:'Nunito',sans-serif}
+button:focus-visible,input:focus-visible{outline:4px solid #FFD23F;outline-offset:3px}
+.fond{background-color:#E5261F;background-image:radial-gradient(rgba(20,20,20,.16) 1.6px,transparent 1.8px);background-size:14px 14px}
+.titre{font-family:'Anton',sans-serif;font-weight:400;text-transform:uppercase;color:#F6EFE2;-webkit-text-stroke:2px #141414;paint-order:stroke fill;text-shadow:3px 3px 0 #141414;letter-spacing:.01em}
+.panneau{background:#F6EFE2;color:#141414;border:3px solid #141414;border-radius:18px;box-shadow:4px 4px 0 #141414}
+.chip{font-weight:900;font-size:15px;line-height:1;color:#141414;background:#F6EFE2;border:2.5px solid #141414;border-radius:999px;padding:12px 16px;min-height:44px;cursor:pointer;box-shadow:2px 2px 0 #141414}
+.chip.on{background:#FFD23F;box-shadow:3px 3px 0 #141414}
+.btn{display:block;width:100%;font-family:'Anton',sans-serif;font-size:21px;letter-spacing:.02em;text-transform:uppercase;background:#F2A93B;color:#141414;border:3px solid #141414;border-radius:18px;padding:14px;min-height:60px;cursor:pointer;box-shadow:4px 4px 0 #141414;transition:transform .08s,box-shadow .08s}
+.btn.ghost{background:#F6EFE2;font-size:17px;min-height:52px}
+.gros{transition:transform .08s,box-shadow .08s}
+.btn:active,.chip:active,.gros:active{transform:translate(3px,3px);box-shadow:0 0 0 #141414}
+.tab{flex:1;min-height:50px;border:0;border-radius:14px;cursor:pointer;font-family:'Anton',sans-serif;font-size:15px;letter-spacing:.03em;text-transform:uppercase;color:#141414;background:transparent}
+.tab.on{background:#FFD23F;border:2.5px solid #141414}
+.opt{display:block;width:100%;text-align:left;background:#F6EFE2;color:#141414;border:2.5px solid #141414;border-radius:14px;padding:13px 15px;font-size:14px;font-weight:800;line-height:1.4;cursor:pointer;min-height:44px;box-shadow:3px 3px 0 #141414}
+.opt.on{background:#FFD23F}
+.scroll{flex:1;overflow-y:auto;padding:18px 18px 26px;display:flex;flex-direction:column;gap:20px}
+.scroll::-webkit-scrollbar{display:none}
+.etiq{font-family:'Anton',sans-serif;font-size:16px;letter-spacing:.03em;text-transform:uppercase;color:#141414}
+.doux{color:#4A3F33}
+</style>
+</helmet>
+<div class="fond" style="width: 390px; height: 844px; box-sizing: border-box; color: #141414; font-family: 'Nunito', sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 20px 18px 4px">
+    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px">
+      <span class="titre" style="font-size: 36px; line-height: 1; transform: rotate(-3deg); display: inline-block">Aura</span>
+      <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 900; background: #000000; color: #F6EFE2; border: 2px solid #141414; border-radius: 7px; padding: 2px 7px 2px 8px; margin-left: 4px">un jeu <img src="919e5f69-f235-428e-9947-77ba570a8b3a" alt="VJOD" style="height: 16px; width: auto; display: block"></span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px">
+      <button type="button" class="gros" sc-camel-on-click="{{voirLigue}}" aria-label="Voir la ligue" style="display: flex; align-items: center; gap: 6px; background: #F6EFE2; border: 3px solid #141414; border-radius: 999px; padding: 4px 11px 4px 4px; min-height: 44px; box-shadow: 3px 3px 0 #141414; cursor: pointer; color: #141414">
+        <span style="display: flex"><sc-for list="{{pionsTete}}" as="p" hint-placeholder-count="5"><img src="{{p.src}}" alt="{{p.alt}}" style="{{p.style}}"></sc-for></span>
+        <span style="font-size: 14px; font-weight: 900">{{jonPos}}/30</span>
+      </button>
+      <button type="button" class="gros" sc-camel-on-click="{{voirProfil}}" aria-label="Mon profil : {{monProfil.nom}}" style="width: 46px; height: 46px; border-radius: 50%; border: 3px solid #141414; background: {{monProfil.col}}; box-shadow: 3px 3px 0 #141414; font-family: 'Anton', sans-serif; font-size: 20px; color: #141414; cursor: pointer">J</button>
+    </div>
+  </header>
+
+  <sc-if value="{{isSoir}}" hint-placeholder-val="{{ true }}">
+  <div class="scroll">
+
+    <sc-if value="{{isHumeur}}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; flex-direction: column; gap: 20px">
+      <button type="button" class="panneau gros" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left; cursor: pointer">
+        <span style="flex: none; display: grid; grid-template-columns: repeat(3, 12px); gap: 3px" aria-hidden="true">
+          <span style="height: 12px; border-radius: 3px; background: #5BD08A; border: 1.5px solid #141414"></span><span style="height: 12px; border-radius: 3px; background: #FFD23F; border: 1.5px solid #141414"></span><span style="height: 12px; border-radius: 3px; background: #F6EFE2; border: 1.5px solid #141414"></span>
+          <span style="height: 12px; border-radius: 3px; background: #5BD08A; border: 1.5px solid #141414"></span><span style="height: 12px; border-radius: 3px; background: #5BD08A; border: 1.5px solid #141414"></span><span style="height: 12px; border-radius: 3px; background: #FFD23F; border: 1.5px solid #141414"></span>
+        </span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span class="etiq">Le Plan du jour</span><span class="doux" style="font-size: 13px; font-weight: 800">Un film à deviner, 3 indices, 1 essai</span></span>
+        <span style="font-family: 'Anton', sans-serif; font-size: 16px; background: #FFD23F; border: 2.5px solid #141414; border-radius: 10px; padding: 6px 10px">Jouer</span>
+      </button>
+
+      <div style="position: relative; padding-right: 108px; min-height: 130px">
+        <h1 class="titre" style="margin: 0; font-size: 42px; line-height: 1.02; transform: rotate(-2deg); transform-origin: left">Qu'est-ce qu'on ressent ce soir ?</h1>
+        <img src="c9cef3a7-0ceb-4721-8262-7ba06d830a3c" alt="Pop, la mascotte VJOD" style="position: absolute; right: -6px; top: -8px; width: 118px; height: 150px; transform: rotate(6deg)">
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <sc-for list="{{moods}}" as="m" hint-placeholder-count="5">
+          <button class="{{m.cls}}" type="button" sc-camel-on-click="{{m.pick}}">{{m.label}}</button>
+        </sc-for>
+      </div>
+
+      <div class="panneau" style="padding: 14px; display: flex; flex-direction: column; gap: 10px">
+        <span class="etiq">Combien de temps ?</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{durees}}" as="d" hint-placeholder-count="3">
+            <button class="{{d.cls}}" type="button" sc-camel-on-click="{{d.pick}}">{{d.label}}</button>
+          </sc-for>
+        </div>
+        <span class="etiq" style="margin-top: 6px">Tes plateformes</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{plats}}" as="p" hint-placeholder-count="7">
+            <button class="{{p.cls}}" type="button" sc-camel-on-click="{{p.pick}}" aria-pressed="{{p.on}}" style="font-size: 13px; padding: 10px 12px">{{p.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <button class="btn" type="button" sc-camel-on-click="{{tirer}}">Tirer mes 3 cartes</button>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{isCartes}}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-direction: column; gap: 16px">
+      <div>
+        <h1 class="titre" style="margin: 0; font-size: 46px; line-height: 1; transform: rotate(-2deg); transform-origin: left">Tire ta carte !</h1>
+        <p style="margin: 10px 0 0; font-size: 15px; font-weight: 800; line-height: 1.35">{{mood}}, {{duree}}. Touche une carte pour la sortir de ta main.</p>
+      </div>
+      <div style="display: flex; align-items: flex-end; gap: 6px; margin: -6px 0 -4px">
+        <img src="c9cef3a7-0ceb-4721-8262-7ba06d830a3c" alt="Pop" style="width: 62px; height: 79px; flex: none; transform: rotate(-6deg)">
+        <span class="panneau" style="position: relative; padding: 9px 12px; font-size: 14px; font-weight: 900; line-height: 1.3; border-radius: 16px 16px 16px 4px; box-shadow: 3px 3px 0 #141414">{{bulle}}</span>
+      </div>
+      <div style="position: relative; height: 296px">
+        <sc-for list="{{cartes}}" as="c" hint-placeholder-count="3">
+          <button type="button" class="gros" sc-camel-on-click="{{c.focus}}" aria-pressed="{{c.on}}" aria-label="{{c.defi}}" style="{{c.style}}">
+            <span style="display: flex; justify-content: space-between; align-items: center; padding: 0 3px 6px; font-family: 'Anton', sans-serif; font-size: 18px; text-transform: uppercase"><span>{{c.type}}</span><span style="background: #141414; color: #F6EFE2; border-radius: 999px; padding: 1px 9px; font-size: 14px">{{c.gain}}</span></span>
+            <span style="{{c.fenetre}}"><span class="titre" style="font-size: 62px; line-height: 1">?</span></span>
+            <span style="flex: 1; margin-top: 7px; background: #FFFFFF; border: 2.5px solid #141414; border-radius: 12px; padding: 8px 9px; display: flex; flex-direction: column; gap: 3px">
+              <span style="font-size: 15px; font-weight: 900; line-height: 1.15">{{c.defi}}</span>
+              <span class="doux" style="font-size: 11.5px; font-weight: 700; line-height: 1.3">{{c.indice}}</span>
+            </span>
+          </button>
+        </sc-for>
+        <span style="position: absolute; right: 2px; top: -16px; z-index: 5; width: 60px; height: 60px; border-radius: 50%; background: #FFD23F; border: 3px solid #141414; box-shadow: 3px 3px 0 #141414; transform: rotate(12deg); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1">
+          <span style="font-family: 'Anton', sans-serif; font-size: 21px">{{enMain.jeton}}</span>
+          <span style="font-size: 10px; font-weight: 900">Joker</span>
+        </span>
+      </div>
+      <div class="panneau" style="padding: 12px 14px; font-size: 14px; font-weight: 800; line-height: 1.4">{{enMain.joker}}. Que des films notés 3 étoiles ou plus.</div>
+      <div style="display: flex; gap: 10px">
+        <button class="btn ghost" type="button" sc-camel-on-click="{{retour}}" aria-label="Changer d'envie" style="width: 64px; flex: none; display: flex; align-items: center; justify-content: center">
+          <svg width="26" height="26" sc-camel-view-box="0 0 24 24" fill="none" stroke="#141414" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"></path><path d="M20 4v7h-7"></path></svg>
+        </button>
+        <button class="btn" type="button" sc-camel-on-click="{{jouer}}">Jouer cette carte !</button>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{isProno}}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-direction: column; gap: 18px">
+      <div class="panneau" style="overflow: hidden; transform: rotate(-1.5deg)">
+        <div style="background: {{carte.col}}; border-bottom: 3px solid #141414; padding: 8px 14px; font-family: 'Anton', sans-serif; font-size: 16px; text-transform: uppercase">Carte révélée !</div>
+        <div style="padding: 16px; display: flex; flex-direction: column; gap: 6px">
+          <span style="font-family: 'Anton', sans-serif; font-size: 36px; line-height: 1; text-transform: uppercase">{{carte.titre}}</span>
+          <span class="doux" style="font-size: 14px; font-weight: 800">{{carte.meta}}</span>
+          <span style="font-size: 14px; font-weight: 900">Où le voir : {{carte.ou}}</span>
+        </div>
+      </div>
+      <div class="panneau" style="padding: 14px; display: flex; flex-direction: column; gap: 10px">
+        <span class="etiq">Ton pronostic : quelle note ?</span>
+        <div style="display: flex; gap: 6px">
+          <sc-for list="{{notes}}" as="n" hint-placeholder-count="5">
+            <button class="{{n.cls}}" type="button" sc-camel-on-click="{{n.pick}}" style="flex: 1; padding: 12px 0; font-family: 'Anton', sans-serif; font-size: 18px">{{n.n}}</button>
+          </sc-for>
+        </div>
+        <span class="etiq" style="margin-top: 4px">Une fin heureuse ?</span>
+        <div style="display: flex; gap: 8px">
+          <sc-for list="{{fins}}" as="f" hint-placeholder-count="2">
+            <button class="{{f.cls}}" type="button" sc-camel-on-click="{{f.pick}}" style="flex: 1">{{f.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+      <button class="btn" type="button" sc-camel-on-click="{{lancer}}">Lancer la séance</button>
+      <button class="btn ghost" type="button" sc-camel-on-click="{{tirer}}">Revoir ma main</button>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{isBillet}}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-direction: column; gap: 16px">
+      <h1 class="titre" style="margin: 0; font-size: 40px; line-height: 1; transform: rotate(-2deg); transform-origin: left">Séance validée !</h1>
+      <div class="panneau" style="overflow: hidden; transform: rotate(1.5deg)">
+        <div style="padding: 16px 18px 12px; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900"><span>Billet n° 027</span><span>Jeudi 5 nov.</span></div>
+          <span style="font-family: 'Anton', sans-serif; font-size: 32px; line-height: 1; text-transform: uppercase">{{carte.titre}}</span>
+          <span class="doux" style="font-size: 14px; font-weight: 800">{{mood}}, {{carte.defi}}</span>
+        </div>
+        <div style="border-top: 3px dashed #141414; padding: 12px 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; background: #FFE9A8">
+          <span style="display: flex; flex-direction: column"><span style="font-size: 12px; font-weight: 900">Pronostic</span><span style="font-family: 'Anton', sans-serif; font-size: 24px">{{note}} / 5</span></span>
+          <span style="display: flex; flex-direction: column"><span style="font-size: 12px; font-weight: 900">Plateau</span><span style="font-family: 'Anton', sans-serif; font-size: 24px">{{carte.gain}}</span></span>
+        </div>
+      </div>
+      <button class="btn ghost" type="button">Quiz du générique, 3 questions</button>
+      <div class="panneau" style="padding: 14px; display: flex; flex-direction: column; gap: 8px">
+        <label for="verdict" class="etiq">Ton Verdict en une phrase</label>
+        <input id="verdict" type="text" value="{{verdict}}" sc-camel-on-change="{{ecrire}}" placeholder="À voir seul, un soir de pluie" style="font-size: 15px; font-weight: 800; color: #141414; background: #FFFFFF; border: 2.5px solid #141414; border-radius: 12px; padding: 13px 14px; min-height: 50px; box-sizing: border-box; width: 100%">
+      </div>
+      <button class="btn" type="button" sc-camel-on-click="{{avancer}}">Avancer mon pion</button>
+    </div>
+    </sc-if>
+
+  </div>
+  </sc-if>
+
+  <sc-if value="{{isPlateau}}" hint-placeholder-val="{{ false }}">
+  <div class="scroll">
+    <div>
+      <h1 class="titre" style="margin: 0; font-size: 40px; line-height: 1; transform: rotate(-2deg); transform-origin: left">Le plateau de novembre</h1>
+      <p style="margin: 10px 0 0; font-size: 15px; font-weight: 800">Semaine 2 sur 4. Pas de dé : on avance en regardant.</p>
+    </div>
+    <sc-if value="{{moved}}" hint-placeholder-val="{{ false }}">
+      <div class="panneau" style="padding: 12px 14px; background: #FFD23F; font-size: 15px; font-weight: 900; transform: rotate(-1deg)">+3 cases ! Tu tombes sur une case Curseur.</div>
+    </sc-if>
+    <div style="background: #1C1C1C; border: 3px solid #141414; border-radius: 30px; padding: 9px; box-shadow: 5px 5px 0 #141414">
+      <div style="border: 2.5px solid #F6EFE2; border-radius: 22px; padding: 6px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(11, 40px); gap: 3px">
+        <sc-for list="{{cells}}" as="c" hint-placeholder-count="30">
+          <div style="{{c.style}}" title="{{c.label}}">
+            <span style="{{c.markStyle}}">{{c.mark}}</span>
+            <span style="position: absolute; left: 3px; bottom: 2px; display: flex; align-items: flex-end">
+              <sc-for list="{{c.pawns}}" as="p" hint-placeholder-count="0"><img src="{{p.src}}" alt="{{p.alt}}" style="{{p.style}}"></sc-for>
+            </span>
+          </div>
+        </sc-for>
+        <div style="grid-column: 2 / span 4; grid-row: 2 / span 9; margin: 5px; border: 2.5px solid #F6EFE2; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 12px 8px; overflow: hidden">
+          <div style="display: flex; align-items: flex-end; gap: 3px" role="img" aria-label="Podium : Léa première, Jon deuxième, Inès troisième">
+            <sc-for list="{{podium}}" as="p" hint-placeholder-count="3">
+              <span style="display: flex; flex-direction: column; align-items: center; gap: 3px">
+                <img src="{{p.src}}" alt="" style="{{p.pion}}">
+                <span style="{{p.marche}}">{{p.rang}}</span>
+              </span>
+            </sc-for>
+          </div>
+          <span style="font-family: 'Lilita One', sans-serif; font-size: 40px; line-height: .9; color: #F6EFE2; text-align: center; -webkit-text-stroke: 2px #141414; paint-order: stroke fill; text-shadow: 3px 3px 0 #E5261F; transform: rotate(-4deg)">Nov.<br>Saison 3</span>
+          <svg width="196" height="64" sc-camel-view-box="0 0 196 64" aria-hidden="true">
+            <path d="M6 54 Q98 40 190 54 L190 64 L6 64 Z" fill="#3DAA4E" stroke="#141414" stroke-width="2.5"></path>
+            <path d="M30 56 Q98 48 166 56" fill="none" stroke="#F7A93B" stroke-width="3" stroke-dasharray="6 5"></path>
+            <g stroke="#141414" stroke-width="2"><path d="M30 52 V30" fill="none"></path><circle cx="30" cy="24" r="7" fill="#F58BC7"></circle><circle cx="22" cy="24" r="6" fill="#F58BC7"></circle><circle cx="38" cy="24" r="6" fill="#F58BC7"></circle><circle cx="30" cy="16" r="6" fill="#F58BC7"></circle><circle cx="30" cy="24" r="4" fill="#FFD23F"></circle></g>
+            <g stroke="#141414" stroke-width="2"><path d="M164 52 V26" fill="none"></path><circle cx="164" cy="20" r="7" fill="#F6EFE2"></circle><circle cx="156" cy="20" r="6" fill="#F6EFE2"></circle><circle cx="172" cy="20" r="6" fill="#F6EFE2"></circle><circle cx="164" cy="12" r="6" fill="#F6EFE2"></circle><circle cx="164" cy="20" r="4" fill="#F7A93B"></circle></g>
+            <g stroke="#141414" stroke-width="2"><path d="M60 52 V40" fill="none"></path><circle cx="60" cy="36" r="6" fill="#EE4B36"></circle><circle cx="60" cy="36" r="2.5" fill="#FFD23F"></circle></g>
+            <g stroke="#141414" stroke-width="2"><path d="M136 52 V38" fill="none"></path><circle cx="136" cy="33" r="6" fill="#4AA3E8"></circle><circle cx="136" cy="33" r="2.5" fill="#F6EFE2"></circle></g>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px 12px">
+      <sc-for list="{{legend}}" as="l" hint-placeholder-count="7">
+        <span style="display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 900"><span style="{{l.dot}}"></span>{{l.label}}</span>
+      </sc-for>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <span class="titre" style="font-size: 24px">Tes Jokers</span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <div class="panneau" style="padding: 12px; transform: rotate(-2deg); display: flex; flex-direction: column; gap: 4px"><span style="width: 42px; height: 42px; border-radius: 50%; background: #FFD23F; border: 2.5px solid #141414; font-family: 'Anton', sans-serif; font-size: 17px; display: flex; align-items: center; justify-content: center">×2</span><span style="font-family: 'Anton', sans-serif; font-size: 18px; text-transform: uppercase">Nostalgique</span><span class="doux" style="font-size: 13px; font-weight: 800; line-height: 1.3">Cases doublées pour un film d'avant 1980</span></div>
+        <div class="panneau" style="padding: 12px; transform: rotate(2deg); display: flex; flex-direction: column; gap: 4px"><span style="width: 42px; height: 42px; border-radius: 50%; background: #5BD08A; border: 2.5px solid #141414; font-family: 'Anton', sans-serif; font-size: 17px; display: flex; align-items: center; justify-content: center">+1</span><span style="font-family: 'Anton', sans-serif; font-size: 18px; text-transform: uppercase">Voyageur</span><span class="doux" style="font-size: 13px; font-weight: 800; line-height: 1.3">Une case de plus par pays jamais vu</span></div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span class="titre" style="font-size: 24px">La carte des genres</span>
+      <sc-for list="{{regions}}" as="r" hint-placeholder-count="5">
+        <div class="panneau" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; box-shadow: 3px 3px 0 #141414">
+          <span style="flex: 1; font-size: 15px; font-weight: 900">{{r.nom}}</span>
+          <span class="doux" style="font-size: 13px; font-weight: 800">{{r.etat}}</span>
+          <span style="{{r.badge}}">{{r.ini}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{isSemaine}}" hint-placeholder-val="{{ false }}">
+  <div class="scroll">
+    <div class="panneau" style="padding: 14px 16px; transform: rotate(-1deg); display: flex; flex-direction: column; gap: 4px">
+      <span class="etiq">L'Affiche de la semaine</span>
+      <span style="font-family: 'Anton', sans-serif; font-size: 34px; line-height: 1; text-transform: uppercase">Memories of Murder</span>
+      <span class="doux" style="font-size: 13px; font-weight: 800">2003, Bong Joon-ho. Choisi par Léa, Programmatrice de la semaine.</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+      <sc-for list="{{etapes}}" as="e" hint-placeholder-count="4">
+        <div style="{{e.style}}"><span style="font-family: 'Anton', sans-serif; font-size: 13px; text-transform: uppercase">{{e.label}}</span><span style="font-size: 11px; font-weight: 800">{{e.quand}}</span></div>
+      </sc-for>
+    </div>
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <span class="titre" style="font-size: 26px">Le Bluff</span>
+      <span style="font-size: 15px; font-weight: 900; line-height: 1.35">Un seul synopsis est vrai. Les autres sont signés par tes amis.</span>
+      <sc-for list="{{bluffs}}" as="b" hint-placeholder-count="4">
+        <button class="{{b.cls}}" type="button" sc-camel-on-click="{{b.vote}}">{{b.txt}}</button>
+      </sc-for>
+      <sc-if value="{{voted}}" hint-placeholder-val="{{ false }}">
+        <div class="panneau" style="padding: 12px 14px; background: #FFD23F; font-size: 15px; font-weight: 900; line-height: 1.4; transform: rotate(-1deg)">{{bluffResult}}</div>
+      </sc-if>
+    </section>
+    <section class="panneau" style="padding: 14px; display: flex; flex-direction: column; gap: 8px">
+      <label for="peur" class="etiq">Le Curseur : à quel point ça fait peur ?</label>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <input id="peur" type="range" min="0" max="10" value="{{peur}}" sc-camel-on-change="{{curseur}}" style="flex: 1; accent-color: #E5261F; height: 44px">
+        <span style="font-family: 'Anton', sans-serif; font-size: 30px; min-width: 44px; text-align: right">{{peur}}</span>
+      </div>
+      <span class="doux" style="font-size: 13px; font-weight: 800; line-height: 1.4">Placé en secret après ta séance. Dimanche, Max, le Médium, devra deviner la moyenne.</span>
+    </section>
+    <section class="panneau" style="padding: 14px; background: #9B7BFF; transform: rotate(1deg); display: flex; flex-direction: column; gap: 6px">
+      <span class="etiq">Ton rôle secret</span>
+      <span style="font-family: 'Anton', sans-serif; font-size: 30px; text-transform: uppercase">Témoin</span>
+      <span style="font-size: 14px; font-weight: 800; line-height: 1.4">Un Faussaire n'a pas vu le film et va écrire un faux Verdict. Dimanche, démasque-le.</span>
+    </section>
+    <div class="panneau" style="padding: 14px; background: #FFD23F; display: flex; justify-content: space-between; align-items: center; gap: 10px">
+      <span style="display: flex; flex-direction: column"><span class="etiq">La Révélation</span><span style="font-size: 15px; font-weight: 900">Dimanche 20 h 30, sur la télé</span></span>
+      <span style="font-size: 13px; font-weight: 900; text-align: right">4 joueurs sur 5 prêts</span>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{isLigue}}" hint-placeholder-val="{{ false }}">
+  <div class="scroll">
+    <h1 class="titre" style="margin: 0; font-size: 40px; line-height: 1; transform: rotate(-2deg); transform-origin: left">La ligue des Mardis</h1>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <sc-for list="{{ligue}}" as="j" hint-placeholder-count="5">
+        <div style="{{j.row}}">
+          <span style="font-family: 'Anton', sans-serif; font-size: 24px; width: 22px">{{j.rang}}</span>
+          <img src="{{j.src}}" alt="" style="{{j.pion}}">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 900">{{j.nom}}</span><span class="doux" style="font-size: 12px; font-weight: 800">{{j.profil}}, case {{j.case}}, Flair {{j.flair}}</span></span>
+          <span style="font-family: 'Anton', sans-serif; font-size: 22px">{{j.pts}}</span>
+        </div>
+      </sc-for>
+    </div>
+    <section class="panneau" style="padding: 14px; display: flex; flex-direction: column; gap: 8px; transform: rotate(-1deg)">
+      <span class="etiq">Ton Flair de prescripteur</span>
+      <div style="display: flex; align-items: baseline; gap: 10px"><span style="font-family: 'Anton', sans-serif; font-size: 44px; line-height: 1">74 %</span><span style="font-size: 14px; font-weight: 800">de tes conseils ont plu</span></div>
+      <div style="height: 14px; border-radius: 7px; background: #FFFFFF; border: 2.5px solid #141414; overflow: hidden"><div style="width: 74%; height: 100%; background: #F2A93B; border-right: 2.5px solid #141414"></div></div>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <span class="titre" style="font-size: 24px">Listes à voir absolument</span>
+      <sc-for list="{{listes}}" as="l" hint-placeholder-count="2">
+        <div class="panneau" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between; gap: 10px"><span style="font-size: 15px; font-weight: 900">{{l.titre}}</span><span style="font-family: 'Anton', sans-serif; font-size: 16px">{{l.avance}}</span></div>
+          <span class="doux" style="font-size: 13px; font-weight: 800">par {{l.auteur}}, campagne jouable</span>
+          <div style="height: 12px; border-radius: 6px; background: #FFFFFF; border: 2px solid #141414; overflow: hidden"><div style="{{l.barre}}"></div></div>
+        </div>
+      </sc-for>
+    </section>
+    <section class="panneau" style="padding: 14px; background: #FF8FB8; display: flex; gap: 14px; align-items: center; transform: rotate(1.5deg)">
+      <svg width="40" height="40" sc-camel-view-box="0 0 24 24" fill="#F6EFE2" stroke="#141414" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="18" height="12" rx="2"></rect><path d="M3 9h18v4H3z"></path><path d="M12 9v12" fill="none"></path><path d="M12 9c-2-4-6-4-6-1s6 1 6 1zM12 9c2-4 6-4 6-1s-6 1-6 1z"></path></svg>
+      <span style="display: flex; flex-direction: column; gap: 2px"><span class="etiq">Cadeau cacheté</span><span style="font-size: 15px; font-weight: 900">Inès t'offre un film, à ouvrir vendredi soir</span></span>
+    </section>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{isProfil}}" hint-placeholder-val="{{ false }}">
+  <div class="scroll">
+    <h1 class="titre" style="margin: 0; font-size: 40px; line-height: 1; transform: rotate(-2deg); transform-origin: left">Quel spectateur es-tu ?</h1>
+    <section class="panneau" style="overflow: hidden; transform: rotate(-1deg)">
+      <div style="background: {{monProfil.col}}; border-bottom: 3px solid #141414; padding: 14px 16px; display: flex; align-items: flex-end; gap: 14px">
+        <img src="{{monProfil.img}}" alt="Ta figurine : {{monProfil.nom}}" style="width: 96px; height: 131px; display: block; flex: none; transform: rotate(-4deg)">
+        <span style="display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px">
+          <span style="font-family: 'Anton', sans-serif; font-size: 32px; line-height: 1; text-transform: uppercase">{{monProfil.nom}}</span>
+          <span style="font-size: 14px; font-weight: 800; line-height: 1.35">{{monProfil.style}}</span>
+        </span>
+      </div>
+      <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 14px; font-weight: 800; line-height: 1.4"><span class="etiq">Pouvoir {{monProfil.pouvoir}} : </span>{{monProfil.effet}}</span>
+        <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900"><span>Contrat : {{monProfil.contrat}}</span><span>{{monProfil.avance}}</span></div>
+        <div style="height: 14px; border-radius: 7px; background: #FFFFFF; border: 2.5px solid #141414; overflow: hidden"><div style="{{monProfil.barre}}"></div></div>
+        <span class="doux" style="font-size: 13px; font-weight: 800">Ton piège de saison : {{monProfil.piege}}</span>
+      </div>
+    </section>
+    <span class="titre" style="font-size: 24px">Changer de profil</span>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+      <sc-for list="{{profils}}" as="p" hint-placeholder-count="8">
+        <button type="button" class="gros" sc-camel-on-click="{{p.pick}}" aria-pressed="{{p.on}}" style="{{p.style}}">
+          <img src="{{p.img}}" alt="" style="width: 54px; height: 73px; display: block; margin: -4px 0 2px">
+          <span style="font-family: 'Anton', sans-serif; font-size: 18px; text-transform: uppercase">{{p.nom}}</span>
+          <span class="doux" style="font-size: 12px; font-weight: 800; line-height: 1.3">{{p.court}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <nav aria-label="Navigation principale" style="display: flex; gap: 4px; background: #F6EFE2; border-top: 3px solid #141414; padding: 6px 8px 14px">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+      <button class="{{t.cls}}" type="button" sc-camel-on-click="{{t.go}}">{{t.label}}</button>
+    </sc-for>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: "soir", step: "humeur", mood: "Frissonner", duree: "2 h", pick: 0, focus: 0, note: 4, fin: "Oui", verdict: "", vote: -1, peur: 6, moved: false, profil: "fidele", plats: ["Netflix", "Canal+", "Jellyfin"] };
+  }
+  renderVals() {
+    const s = this.state;
+    const set = (o) => this.setState(o);
+    const chip = (on) => "chip" + (on ? " on" : "");
+    const K = "#141414";
+
+    const P = [
+      { id: "devoreur", nom: "Le Dévoreur", col: "#FF8FB8", court: "Enchaîne, finit une saison en un week-end", style: "Tu enchaînes les épisodes et tu finis une saison en un week-end.", pouvoir: "Marathon", effet: "une saison terminée vaut une campagne entière.", contrat: "2 séries de genres différents", fait: 1, total: 2, piege: "savourer une série, un épisode par soir." },
+      { id: "degustateur", nom: "Le Dégustateur", col: "#FFB27A", court: "Un épisode, puis il laisse reposer", style: "Un épisode ou un film, puis tu laisses reposer.", pouvoir: "Slow", effet: "chaque séance notée et commentée rapporte double.", contrat: "6 séances avec Verdict", fait: 2, total: 6, piege: "tenir un marathon d'un soir." },
+      { id: "explorateur", nom: "L'Explorateur", col: "#5BD08A", court: "Pays, époques et genres jamais vus", style: "Tu cherches les pays, les époques et les genres jamais vus.", pouvoir: "Boussole", effet: "une carte de plus au tirage, bonus sur les régions vierges.", contrat: "4 pays ou décennies inédits", fait: 1, total: 4, piege: "partager un film avec un ami." },
+      { id: "critique", nom: "Le Critique", col: "#FFD23F", court: "Note, décortique, a toujours un avis", style: "Tu notes, tu décortiques, tu as toujours un avis.", pouvoir: "Plume", effet: "tes Verdicts pèsent double dans le Flair.", contrat: "5 conseils qui plaisent", fait: 3, total: 5, piege: "regarder un film sans le noter." },
+      { id: "fidele", nom: "Le Fidèle", col: "#F6EFE2", court: "Revoit ses films doudous", style: "Tu revois tes films doudous et tes séries refuges.", pouvoir: "Madeleine", effet: "un revisionnage compte, si tu le fais découvrir à un ami.", contrat: "faire adopter 2 favoris", fait: 1, total: 2, piege: "découvrir un film sorti cette année." },
+      { id: "supporter", nom: "Le Supporter", col: "#5CB8FF", court: "Sport, direct et grands soirs", style: "Tu regardes surtout du sport et du direct.", pouvoir: "Tribune", effet: "tes pronostics de match font avancer ton pion.", contrat: "8 pronostics, dont 3 justes", fait: 5, total: 8, piege: "voir un film de sport, pour une fois." },
+      { id: "hote", nom: "L'Hôte", col: "#9B7BFF", court: "Regarde pour partager", style: "Tu regardes pour partager, en couple, en famille ou entre amis.", pouvoir: "Projectionniste", effet: "une séance à plusieurs fait avancer tout le monde.", contrat: "3 séances partagées", fait: 1, total: 3, piege: "une séance seul, choisie pour toi." },
+      { id: "presse", nom: "Le Pressé", col: "#B8E07A", court: "Peu de temps, formats courts", style: "Tu as peu de temps et tu aimes les formats courts.", pouvoir: "Court-métrage", effet: "un format de moins d'une heure compte plein.", contrat: "6 formats courts, 4 Plans du jour", fait: 4, total: 10, piege: "un film de plus de deux heures." }
+    ];
+    const IMGP = { devoreur: "/_blob/3fdb0deea1b427fe13082568c2fbd0f5", degustateur: "/_blob/ce42bdbd4c39bc0e56da57efa69b78e9", explorateur: "/_blob/c39d101422f8c3f3d116bb902735fb51", critique: "/_blob/def46aed06011b1b07ea1f671b78d060", fidele: "/_blob/3145e12c6821f69d861a40fcf45ec9a3", supporter: "/_blob/4d943a737e9766dfe1d2ce1261a19c27", hote: "/_blob/b56b0980df3bfec9f3618b99becdb601", presse: "/_blob/d48e4d562701b1989c1928cdbd96350c" };
+    const mp = P.find((p) => p.id === s.profil) || P[4];
+    const monProfil = { ...mp, img: IMGP[mp.id], avance: mp.fait + " / " + mp.total, barre: "height: 100%; background: #F2A93B; border-right: 2.5px solid " + K + "; width: " + Math.round((mp.fait / mp.total) * 100) + "%" };
+    const profils = P.map((p, i) => {
+      const on = p.id === s.profil;
+      return { ...p, on, img: IMGP[p.id], pick: () => set({ profil: p.id }), style: "display: flex; flex-direction: column; align-items: flex-start; gap: 5px; text-align: left; background: " + (on ? "#FFD23F" : "#F6EFE2") + "; color: " + K + "; border: 3px solid " + K + "; border-radius: 16px; padding: 12px; min-height: 112px; cursor: pointer; box-shadow: " + (on ? "5px 5px 0 " : "3px 3px 0 ") + K + "; transform: rotate(" + (i % 2 ? 1 : -1) + "deg)" };
+    });
+
+    const tabs = [["soir", "Ce soir"], ["plateau", "Plateau"], ["semaine", "Semaine"], ["ligue", "Ligue"]].map(([id, label]) => ({ label, cls: "tab" + (s.tab === id ? " on" : ""), go: () => set({ tab: id }) }));
+    const moods = ["Frissonner", "Rire", "Être bouleversé", "S'évader", "Réfléchir"].map((m) => ({ label: m, cls: chip(s.mood === m), pick: () => set({ mood: m }) }));
+    const durees = ["Moins d'1 h 30", "2 h", "Toute la soirée"].map((d) => ({ label: d, cls: chip(s.duree === d), pick: () => set({ duree: d }) }));
+    const plats = ["Netflix", "Prime Video", "Disney+", "Canal+", "Apple TV+", "Arte", "Jellyfin"].map((p) => {
+      const on = s.plats.includes(p);
+      return { label: p, on, cls: chip(on), pick: () => set({ plats: on ? s.plats.filter((x) => x !== p) : [...s.plats, p] }) };
+    });
+    const ouTxt = s.plats.length ? "une de tes " + s.plats.length + " plateformes" : "choisis tes plateformes";
+
+    const base = [
+      { type: "Rétro", defi: "Un film d'avant 1980", indice: "Un tueur à gages, un Paris sans un mot de trop", gain: "+3 cases", jeton: "×2", joker: "Ton Joker Nostalgique double les cases de cette carte", col: "#F7A93B", col2: "#FFC772", titre: "Le Samouraï", meta: "1967, Jean-Pierre Melville, 1 h 45", ou: ouTxt },
+      { type: "Voyage", defi: "Un pays jamais vu", indice: "Deux flics dans les marais andalous", gain: "+2 cases", jeton: "+1", joker: "Ton Joker Voyageur ajoute une case", col: "#3DAA4E", col2: "#62C472", titre: "La Isla Mínima", meta: "2014, Alberto Rodríguez, 1 h 45", ou: ouTxt },
+      { type: "Ami", defi: "Conseillé par Max", indice: "Une piscine, un secret, du suspense", gain: "+1 case", jeton: "Flair", joker: "Le Flair de Max est en jeu sur cette carte", col: "#F58BC7", col2: "#FFB3DC", titre: "Les Diaboliques", meta: "1955, Henri-Georges Clouzot, 1 h 57", ou: ouTxt }
+    ];
+    const fan = [["0deg", 92, 4], ["-12deg", 4, 38], ["12deg", 180, 38]];
+    const focus = s.focus;
+    const cartes = base.map((c, i) => {
+      const on = i === focus;
+      const [rot, left, top] = fan[i];
+      return {
+        ...c, on, gain: c.gain.replace(/ cases?/, ""),
+        focus: () => set({ focus: i }),
+        style: "position: absolute; left: " + left + "px; top: " + (on ? top - 12 : top) + "px; z-index: " + (on ? 3 : 1) + "; width: 176px; height: 256px; box-sizing: border-box; transform: rotate(" + rot + "); transform-origin: 50% 110%; display: flex; flex-direction: column; text-align: left; background: " + c.col + "; color: " + K + "; border: 3.5px solid " + K + "; border-radius: 16px; padding: 8px; overflow: hidden; cursor: pointer; box-shadow: " + (on ? "8px 8px 0 " : "4px 4px 0 ") + K,
+        fenetre: "height: 92px; flex: none; border: 2.5px solid " + K + "; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: repeating-conic-gradient(from 0deg at 50% 110%, " + c.col + " 0deg 9deg, " + c.col2 + " 9deg 18deg)"
+      };
+    });
+    const bulles = ["Un film d'avant 1980 ? Fais pas cette tête, le noir et blanc ne mord pas.", "Un pays jamais vu. Prépare ton passeport et tes sous-titres !", "Max te conseille un film. Je dis ça, je dis rien, mais son Flair est à 88 %."];
+    const enMain = base[focus];
+    const carte = base[s.pick];
+    const notes = [1, 2, 3, 4, 5].map((n) => ({ n, cls: chip(s.note === n), pick: () => set({ note: n }) }));
+    const fins = ["Oui", "Non"].map((f) => ({ label: f, cls: chip(s.fin === f), pick: () => set({ fin: f }) }));
+
+    const types = ["Départ","Défi","Bluff","Défi","Curseur","Coup","Défi","Cadeau","Duel","Défi","Faussaire","Défi","Bluff","Défi","Curseur","Coup","Défi","Duel","Cadeau","Défi","Faussaire","Bluff","Défi","Coup","Curseur","Défi","Duel","Cadeau","Défi","Finale"];
+    const col = { "Départ": "#4AA3E8", "Défi": "#F7A93B", "Bluff": "#F58BC7", "Curseur": "#3DAA4E", "Coup": "#FFD23F", "Cadeau": "#F6EFE2", "Duel": "#4AA3E8", "Faussaire": "#9B7BFF", "Étape": "#EE4B36", "Finale": "#FFD23F" };
+    const pc = { J: "#FFD23F", L: "#FF8FB8", I: "#9B7BFF", M: "#5BD08A", S: "#5CB8FF" };
+    const IMG = { pop: "/_blob/b504e9d32a858981aff3c2eda565209e", devoreur: "/_blob/3fdb0deea1b427fe13082568c2fbd0f5", degustateur: "/_blob/ce42bdbd4c39bc0e56da57efa69b78e9", explorateur: "/_blob/c39d101422f8c3f3d116bb902735fb51", critique: "/_blob/def46aed06011b1b07ea1f671b78d060", fidele: "/_blob/3145e12c6821f69d861a40fcf45ec9a3", supporter: "/_blob/4d943a737e9766dfe1d2ce1261a19c27", hote: "/_blob/b56b0980df3bfec9f3618b99becdb601", presse: "/_blob/d48e4d562701b1989c1928cdbd96350c" };
+    const persoDe = { P: "pop", J: s.profil, L: "critique", I: "explorateur", M: "devoreur", S: "supporter" };
+    const nomDe = { P: "Pop, le Programmateur", J: "Jon", L: "Léa", I: "Inès", M: "Max", S: "Sam" };
+    const src = (ini) => IMG[persoDe[ini]] || IMG.fidele;
+    const pion = (ini, w, extra) => "width: " + w + "px; height: " + Math.round(w * 1.36) + "px; display: block; flex: none;" + (extra || "");
+    const jonPos = s.moved ? 15 : 12;
+    const joueurs = [["P", 10], ["J", jonPos], ["L", 16], ["M", 9], ["I", 12], ["S", 6]];
+    const pos = [];
+    for (let c = 1; c <= 6; c++) pos.push([1, c]);
+    for (let r = 2; r <= 11; r++) pos.push([r, 6]);
+    for (let c = 5; c >= 1; c--) pos.push([11, c]);
+    for (let r = 10; r >= 2; r--) pos.push([r, 1]);
+    const coins = { "1,1": "14px 4px 4px 4px", "1,6": "4px 14px 4px 4px", "11,6": "4px 4px 14px 4px", "11,1": "4px 4px 4px 14px" };
+    const cells = pos.map(([r, c], i) => {
+      const num = i + 1;
+      const t = num === 1 ? "Départ" : num === 30 ? "Finale" : num % 5 === 0 ? "Étape" : types[i];
+      const mine = num === jonPos;
+      const mark = num === 1 ? "GO" : num === 30 ? "FIN" : num % 5 === 0 ? String(num) : "";
+      return {
+        label: "Case " + num + " : " + t, mark,
+        markStyle: "font-family: 'Anton', sans-serif; font-size: 17px; color: #F6EFE2; -webkit-text-stroke: 1.5px " + K + "; paint-order: stroke fill; letter-spacing: .02em",
+        style: "grid-row: " + r + "; grid-column: " + c + "; position: relative; background: " + col[t] + "; border-radius: " + (coins[r + "," + c] || "4px") + "; display: flex; align-items: center; justify-content: center;" + (mine ? " box-shadow: 0 0 0 3px #F6EFE2; z-index: 2;" : ""),
+        pawns: joueurs.filter((j) => j[1] === num).map(([ini], k) => ({ ini, src: src(ini), alt: nomDe[ini], style: pion(ini, 22, " margin-left: " + (k ? -10 : 0) + "px;") }))
+      };
+    });
+    const legend = [["Défi","Défi"],["Bluff","Bluff"],["Curseur","Curseur"],["Faussaire","Faussaire"],["Duel","Duel"],["Cadeau","Cadeau"],["Coup","Coup de théâtre"],["Étape","Étape bonus"]].map(([t, label]) => ({ label, dot: "width: 14px; height: 14px; border-radius: 4px; border: 2px solid " + K + "; background: " + col[t] }));
+    const podium = [["I", "3e", 24, "#F6EFE2"], ["L", "1er", 44, "#FFD23F"], ["J", "2e", 34, "#F7A93B"]].map(([ini, rang, h, bg]) => ({
+      ini, rang, src: src(ini), pion: pion(ini, 34),
+      marche: "width: 40px; height: " + h + "px; background: " + bg + "; border: 2px solid " + K + "; border-radius: 4px 4px 0 0; font-family: 'Anton', sans-serif; font-size: 13px; color: " + K + "; display: flex; justify-content: center; padding-top: 2px; box-sizing: border-box"
+    }));
+    const regions = [
+      { nom: "Polar", etat: "Léa 4, toi 3", ini: "L", own: "#FF8FB8" },
+      { nom: "Animation", etat: "toi 2", ini: "J", own: "#FFD23F" },
+      { nom: "Horreur", etat: "Max 3", ini: "M", own: "#5BD08A" },
+      { nom: "Cinéma d'ailleurs", etat: "Inès 2, toi 1", ini: "I", own: "#9B7BFF" },
+      { nom: "Western", etat: "libre", ini: "?", own: "#FFFFFF" }
+    ].map((r) => ({ ...r, badge: "width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid " + K + "; background: " + r.own + "; font-family: 'Anton', sans-serif; font-size: 14px; display: flex; align-items: center; justify-content: center" }));
+
+    const etapes = [["Bluff", "fait", true], ["Séance", "à voir", false], ["Curseur", "après", false], ["Révélation", "dimanche", false]].map(([label, quand, done]) => ({
+      label, quand,
+      style: "border: 2.5px solid " + K + "; border-radius: 12px; padding: 8px 4px; display: flex; flex-direction: column; gap: 2px; text-align: center; box-shadow: 2px 2px 0 " + K + "; background: " + (done ? "#FFD23F" : "#F6EFE2")
+    }));
+    const syn = [
+      { txt: "Un photographe de mariage découvre sur ses clichés le même inconnu, mariage après mariage.", vrai: false, auteur: "Max", pron: "lui" },
+      { txt: "Une policière de Séoul infiltre un village de pêcheurs où personne ne semble vieillir.", vrai: false, auteur: "Inès", pron: "elle" },
+      { txt: "Dans la Corée rurale de 1986, deux inspecteurs que tout oppose traquent l'auteur d'une série de meurtres.", vrai: true },
+      { txt: "Deux frères ouvrent une agence de détectives sans avoir jamais résolu la moindre affaire.", vrai: false, auteur: "Sam", pron: "lui" }
+    ];
+    const bluffs = syn.map((b, i) => ({ txt: b.txt, cls: "opt" + (s.vote === i ? " on" : ""), vote: () => set({ vote: i }) }));
+    const v = syn[s.vote];
+    const bluffResult = !v ? "" : v.vrai ? "Bien vu, c'était le vrai synopsis : +2 points !" : "Piégé ! Ce synopsis était signé " + v.auteur + " : +1 point pour " + v.pron + ".";
+
+    const ligue = [
+      { nom: "Léa", ini: "L", pts: 47, case: 16, flair: "82 %", profil: "Critique" },
+      { nom: "Jon", ini: "J", pts: s.moved ? 47 : 44, case: jonPos, flair: "74 %", profil: mp.nom.replace(/^(Le |L')/, "") },
+      { nom: "Inès", ini: "I", pts: 41, case: 12, flair: "69 %", profil: "Explorateur" },
+      { nom: "Max", ini: "M", pts: 36, case: 9, flair: "88 %", profil: "Dévoreur" },
+      { nom: "Sam", ini: "S", pts: 28, case: 6, flair: "61 %", profil: "Supporter" }
+    ].map((j, i) => ({
+      ...j, rang: i + 1,
+      row: "display: flex; align-items: center; gap: 12px; border: 3px solid " + K + "; border-radius: 16px; padding: 10px 14px; box-shadow: " + (j.ini === "J" ? "5px 5px 0 " : "3px 3px 0 ") + K + "; background: " + (j.ini === "J" ? "#FFD23F" : "#F6EFE2") + "; transform: rotate(" + (j.ini === "J" ? -1.5 : 0) + "deg)",
+      src: src(j.ini), pion: pion(j.ini, 36)
+    }));
+    const listes = [
+      { titre: "7 polars pour comprendre le noir", auteur: "Max", fait: 3, total: 7 },
+      { titre: "5 comédies qui remontent le moral", auteur: "Léa", fait: 1, total: 5 }
+    ].map((l) => ({ ...l, avance: l.fait + " / " + l.total, barre: "height: 100%; background: #5BD08A; border-right: 2px solid " + K + "; width: " + Math.round((l.fait / l.total) * 100) + "%" }));
+    const pionsTete = ["J", "L", "I", "M", "S"].map((ini, i) => ({ ini, src: src(ini), alt: nomDe[ini], style: pion(ini, 26, " margin-left: " + (i ? -9 : 0) + "px; margin-top: -6px;") }));
+
+    return {
+      tabs, moods, durees, plats, cartes, enMain, carte, notes, fins, cells, legend, regions, etapes, bluffs, ligue, listes, pionsTete, monProfil, profils, podium, bulle: bulles[focus],
+      mood: s.mood, duree: s.duree, note: s.note, verdict: s.verdict, peur: s.peur, moved: s.moved, jonPos,
+      voted: s.vote >= 0, bluffResult,
+      isSoir: s.tab === "soir", isPlateau: s.tab === "plateau", isSemaine: s.tab === "semaine", isLigue: s.tab === "ligue", isProfil: s.tab === "profil",
+      isHumeur: s.step === "humeur", isCartes: s.step === "cartes", isProno: s.step === "prono", isBillet: s.step === "billet",
+      tirer: () => set({ step: "cartes" }),
+      retour: () => set({ step: "humeur" }),
+      jouer: () => set({ pick: focus, step: "prono" }),
+      lancer: () => set({ step: "billet" }),
+      ecrire: (e) => set({ verdict: e.target.value }),
+      curseur: (e) => set({ peur: Number(e.target.value) }),
+      avancer: () => set({ moved: true, tab: "plateau", step: "humeur" }),
+      voirLigue: () => set({ tab: "ligue" }),
+      voirProfil: () => set({ tab: "profil" })
+    };
+  }
+}
+</script>
+
+
+</body></html>
