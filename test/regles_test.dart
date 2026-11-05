@@ -10,6 +10,7 @@ import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
 import 'package:aura/services/carte_genres.dart';
 import 'package:aura/services/connexion_vjod.dart';
+import 'package:aura/services/duel.dart';
 import 'package:aura/services/etat.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/pop.dart';
@@ -432,6 +433,61 @@ void main() {
       accepte = true;
       expect(await vjod.codeAccepte(secret), isTrue);
       expect((await vjod.avecQuickConnect(secret)).jeton, 'jeton42');
+    });
+  });
+
+  group('R14 Le Duel du canapé', () {
+    Duel nouveau() => Duel([for (var i = 0; i < 3; i++) _carte('a$i')], [for (var i = 0; i < 3; i++) _carte('b$i')]);
+    CarteEnJeu de(Duel d, int j, int n) => d.cartes.where((c) => c.joueur == j).elementAt(n);
+
+    test('R14 on écarte à tour de rôle une carte de l\'autre', () {
+      final d = nouveau();
+      expect(d.tour, 0);
+      expect(d.peutEcarter(de(d, 0, 0)), isFalse, reason: 'pas ses propres cartes tant que l\'autre en a plusieurs');
+      d.ecarter(de(d, 1, 0));
+      expect(d.tour, 1);
+      expect(() => d.ecarter(de(d, 1, 1)), throwsStateError);
+    });
+
+    test('R14 un Veto par joueur protège une carte de l\'adversaire', () {
+      final d = nouveau();
+      d.proteger(de(d, 0, 2));
+      expect(d.veto[0], isFalse);
+      expect(d.peutEcarter(de(d, 0, 2)), isFalse);
+      expect(d.peutProteger(de(d, 1, 0)), isTrue);
+      d.ecarter(de(d, 0, 0));
+      expect(d.peutProteger(de(d, 0, 1)), isFalse, reason: 'le Veto ne sert qu\'une fois');
+    });
+
+    test('R14 la partie finit toujours avec une carte chacun', () {
+      for (var graine = 0; graine < 30; graine++) {
+        final hasard = Random(graine);
+        final d = nouveau();
+        var coups = 0;
+        while (!d.fini && coups < 20) {
+          final veto = d.cartes.where(d.peutProteger).toList();
+          if (veto.isNotEmpty && hasard.nextInt(4) == 0) {
+            d.proteger(veto[hasard.nextInt(veto.length)]);
+          } else {
+            final possibles = d.cartes.where(d.peutEcarter).toList();
+            expect(possibles, isNotEmpty, reason: 'il y a toujours un coup possible');
+            d.ecarter(possibles[hasard.nextInt(possibles.length)]);
+          }
+          coups++;
+        }
+        expect(d.fini, isTrue);
+        expect(d.restantes(0), hasLength(1));
+        expect(d.restantes(1), hasLength(1));
+      }
+    });
+
+    test('R14 le quiz : 4 réponses différentes dont la bonne, jamais deux fois la même question', () {
+      for (final q in Quiz.questions) {
+        expect(q.reponses, hasLength(4));
+        expect(q.reponses.toSet(), hasLength(4));
+      }
+      final tirees = Quiz.tirer(6, Random(1));
+      expect(tirees.map((q) => q.texte).toSet(), hasLength(6));
     });
   });
 }
