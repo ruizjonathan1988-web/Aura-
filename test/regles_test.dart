@@ -7,6 +7,7 @@ import 'dart:math';
 
 import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
+import 'package:aura/services/carte_genres.dart';
 import 'package:aura/services/etat.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/pop.dart';
@@ -316,6 +317,61 @@ void main() {
       final f = await _etat();
       await f.terminerAccueil(bluffGagne: true);
       expect(await f.validerSeance(_carte('c'), pronostic: 3), 3, reason: 'le Joker ne fait pas sauter le plafond');
+    });
+  });
+
+  group('R12 La carte des genres contre Pop', () {
+    Billet dans(Region r, DateTime d) => Billet(
+          titre: 'Film ${r.name}',
+          type: 'Envie',
+          pronostic: 3,
+          cases: 1,
+          date: d,
+          genres: r.genres.isEmpty ? const [] : [r.genres.first],
+          annee: r == Region.classiques ? 1955 : 2010,
+          pays: r == Region.ailleurs ? const ['Japon'] : const ['France'],
+        );
+
+    test('R12 une séance rend la région tienne, et un film peut en couvrir plusieurs', () {
+      final samourai = Billet(titre: 'Le Samouraï', type: 'Rétro', pronostic: 4, cases: 3, date: DateTime(2026, 11, 3, 21), genres: const ['Crime'], annee: 1967, pays: const ['France']);
+      final c = CarteDesGenres.de(DateTime(2026, 11, 4), [samourai]);
+      expect(c.proprios[Region.polar], Proprio.joueur);
+      expect(c.proprios[Region.classiques], Proprio.joueur);
+      expect(c.proprios[Region.ailleurs], Proprio.libre);
+    });
+
+    test('R12 une région visée et pas défendue avant dimanche est prise par Pop', () {
+      final visee = CarteDesGenres.de(DateTime(2026, 11, 4), const []).cible!;
+      final apres = CarteDesGenres.de(DateTime(2026, 11, 10), const []);
+      expect(apres.proprios[visee], Proprio.pop);
+      expect(apres.regionsDePop, 1);
+      expect(apres.prisesCetteSemaine, [visee]);
+      expect(CarteDesGenres.de(DateTime(2026, 11, 17), const []).regionsDePop, 2);
+    });
+
+    test('R12 regarder un film dans la région visée la défend', () {
+      final visee = CarteDesGenres.de(DateTime(2026, 11, 4), const []).cible!;
+      final c = CarteDesGenres.de(DateTime(2026, 11, 10), [dans(visee, DateTime(2026, 11, 5, 21))]);
+      expect(c.proprios[visee], Proprio.joueur);
+      expect(c.regionsDePop, 0);
+    });
+
+    test('R12 une région prise par Pop se reprend', () {
+      final prise = CarteDesGenres.de(DateTime(2026, 11, 10), const []).prisesCetteSemaine.single;
+      final c = CarteDesGenres.de(DateTime(2026, 11, 12), [dans(prise, DateTime(2026, 11, 11, 21))]);
+      expect(c.proprios[prise], Proprio.joueur);
+    });
+
+    test('R12 avant le premier lundi du mois, Pop ne vise rien', () {
+      expect(CarteDesGenres.de(DateTime(2026, 11, 1, 20), const []).cible, isNull);
+      expect(CarteDesGenres.de(DateTime(2026, 11, 1, 20), const []).regionsDePop, 0);
+    });
+
+    test('R12 chaque région de Pop lui vaut une case', () {
+      final jour = DateTime(2026, 11, 10, 20);
+      final visee = CarteDesGenres.de(DateTime(2026, 11, 4), const []).cible!;
+      final defendu = [dans(visee, DateTime(2026, 11, 5, 21))];
+      expect(Pop.position(jour, const []) - Pop.position(jour, defendu), 1);
     });
   });
 }

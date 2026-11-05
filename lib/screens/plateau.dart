@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app.dart';
 import '../models/modeles.dart';
+import '../services/carte_genres.dart';
 import '../services/pop.dart';
 import '../services/tirage.dart';
 import '../theme/aura_theme.dart';
@@ -116,6 +117,8 @@ class PlateauEcran extends StatelessWidget {
                   ),
                 ]),
               ),
+              const SizedBox(height: 20),
+              _CarteDesGenresVue(carte: CarteDesGenres.de(maintenant, etat.billets), profil: etat.profil),
               const SizedBox(height: 20),
               const TitreCartoon('Tes derniers billets', taille: 24, inclinaison: 0),
               const SizedBox(height: 10),
@@ -308,5 +311,72 @@ class _Marche extends StatelessWidget {
         child: Text(rang, style: AuraTexte.titre(14)),
       ),
     ]);
+  }
+}
+
+/// La carte des genres : à qui est chaque région ce mois-ci, et ce que Pop vise.
+class _CarteDesGenresVue extends StatelessWidget {
+  const _CarteDesGenresVue({required this.carte, required this.profil});
+  final CarteDesGenres carte;
+  final Profil profil;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const TitreCartoon('La carte des genres', taille: 24, inclinaison: 0),
+        const SizedBox(height: 10),
+        PopQuiParle(texte: Pop.surLaCarte(carte), taille: 60),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final r in Region.values) _Region(region: r, proprio: carte.proprios[r]!, visee: carte.cible == r, profil: profil),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Une séance dans une région la rend tienne. Chaque région de Pop lui donne une case d\'avance : reprends-la en y regardant un film.',
+          style: AuraTexte.corps(13, couleur: AuraCouleurs.creme),
+        ),
+      ],
+    );
+  }
+}
+
+class _Region extends StatelessWidget {
+  const _Region({required this.region, required this.proprio, required this.visee, required this.profil});
+  final Region region;
+  final Proprio proprio;
+  final bool visee;
+  final Profil profil;
+
+  @override
+  Widget build(BuildContext context) {
+    final couleur = switch (proprio) {
+      Proprio.joueur => AuraCouleurs.jaune,
+      Proprio.pop => AuraCouleurs.caseRouge,
+      Proprio.libre => AuraCouleurs.creme,
+    };
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+      decoration: BoxDecoration(
+        color: couleur,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(width: visee ? 3.5 : 2.5),
+        boxShadow: AuraTrait.ombre(visee ? 4 : 2),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(region.libelle, style: AuraTexte.corps(14, poids: FontWeight.w900)),
+        const SizedBox(width: 6),
+        switch (proprio) {
+          Proprio.joueur => Figurine.profil(profil, hauteur: 26),
+          Proprio.pop => const Figurine.pop(hauteur: 26),
+          Proprio.libre => Text(visee ? 'VISÉE' : 'libre', style: visee ? AuraTexte.titre(13) : AuraTexte.corps(12, couleur: AuraCouleurs.texteDoux)),
+        },
+      ]),
+    );
   }
 }
