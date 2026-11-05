@@ -61,6 +61,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R12 Carte des genres | Une séance rend la région tienne (un film peut en couvrir plusieurs) ; Pop vise une région libre chaque lundi et la prend si rien n'y est vu avant dimanche ; elle se reprend ; rien de visé avant le premier lundi ; chaque région de Pop = 1 case | `CarteDesGenres`, `Pop.position` |
 | R13 Connexion VJOD | Identifiant et mot de passe, ou code Quick Connect accepté sur le téléphone, donnent une connexion complète ; mauvais mot de passe = message clair | `ConnexionVjod` |
 | R14 Duel du canapé | On écarte à tour de rôle une carte de l'autre ; un Veto par joueur protège une carte ; la partie finit toujours avec une carte chacun ; quiz : 4 réponses distinctes, pas de question en double | `Duel`, `Quiz` |
+| R15 Revenir après une pause | Après 3 jours d'absence, carte de rattrapage (+2 cases, plafond respecté) ; rien au premier lancement ; série en semaines, une semaine vide est une pause gratuite, deux la remettent à zéro ; un lundi matin ne fait pas perdre la série | `Fidelite`, `EtatJeu.bonRetour` |
 
 Règles sans test automatique : « pas de pochettes surprises payantes » (rien à vendre pour l'instant), le plafond de 3 cases côté serveur (trigger SQL `plafonner_cases`, pas exécuté en CI), et la navigation aux flèches (à vérifier à la main sur la box). Exception connue à R10 : sur la télé, l'adresse du serveur VJOD se tape encore dans les Réglages (sauf si `VJOD_SERVEUR` est fourni à la compilation) ; la connexion elle-même passe par un code Quick Connect.
 
@@ -115,6 +116,7 @@ Fait :
 - Sélection de démonstration : 42 films reconnus (classements IMDb et SensCritique), synopsis rédigés pour Aura. Le tirage garde d'abord les 40 % les mieux notés.
 - Connexion VJOD pour les utilisateurs de Jon (`lib/services/connexion_vjod.dart`, Réglages) : code Quick Connect sur la télé, identifiant et mot de passe VJOD au téléphone, ou clé d'API (avancé). Plus besoin de clé d'API. Une carte « Tu utilises VJOD ? » invite à brancher sa bibliothèque depuis Ce soir. Pour pré-remplir l'adresse du serveur pour tous, compiler avec `--dart-define=VJOD_SERVEUR=https://…` (à ajouter dans le workflow quand Jon donnera l'adresse).
 - Duel du canapé (`lib/screens/duel.dart`, `lib/services/duel.dart`, accès depuis Ce soir) : deux figurines, une envie chacun, 6 cartes retournées sur la table, élimination à tour de rôle avec un Veto chacun, Pop commente, mini-quiz de 6 questions sur des films reconnus (3 chacun), égalité tranchée par la meilleure note ; le gagnant « prend la télécommande » et lance le film (séance gardée pour la validation).
+- Revenir sans être puni (`lib/services/fidelite.dart`) : après 3 jours d'absence, Pop accueille (« j'ai gardé ta place au chaud ») et offre une carte de rattrapage (+2 cases sur la prochaine séance). Série comptée en semaines sur le Plateau, une semaine sans film ne la casse pas.
 - Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
@@ -130,7 +132,7 @@ La priorité est la rétention : d'abord colmater les fuites, ensuite l'effet «
 1. Vérifier l'APK sur la box et le téléphone, et la validation automatique avec un vrai film Jellyfin.
 2. Vérifier le premier soir sur la box (focus aux flèches à chaque question, animation de la boîte, Bluff avec un vrai synopsis Jellyfin en français).
 3. Pop, suite : il bluffe (par exemple un faux synopsis glissé dans les indices, ou une carte piégée dans la main). La carte des genres est faite.
-4. Revenir après une pause sans être puni : Pop garde ta place, carte de rattrapage.
+4. Revenir après une pause : fait (carte de rattrapage, série en semaines avec pauses gratuites).
 5. Mesurer : retour J+1, J+7, J+30 et taux cartes jouées / billets (le taux est déjà compté sur l'appareil ; à remonter dans Supabase).
 6. Supabase : vérifier que `0001` puis `0002` ont bien été lancés et que les connexions anonymes sont activées (à confirmer par Jon), puis les événements d'amis (« Léa a deviné ton Curseur ») et la figurine débloquée pour les deux quand on invite un ami.
 7. Duel du canapé : fait. À vérifier sur la box (focus des cartes aux flèches, lisibilité à 3 mètres).
