@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:aura/models/modeles.dart';
 import 'package:aura/services/sources.dart';
 import 'package:aura/services/affiche.dart';
+import 'package:aura/services/etat.dart';
+import 'package:aura/services/pop.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/tirage.dart';
 import 'package:aura/services/vjod_lien.dart';
@@ -135,5 +137,64 @@ void main() {
     expect(lundi.film.id, dimanche.film.id);
     expect(lundi.semaine, '2026-11-2');
     expect(Affiche.questionPour(_film('h', genres: const ['Horror'])), contains('peur'));
+  });
+
+  group('Pop', () {
+    Billet billet(String type, DateTime d, {int prono = 3, int? note, String verdict = ''}) =>
+        Billet(titre: 'T', type: type, pronostic: prono, cases: 1, date: d, note: note, verdict: verdict);
+
+    test('il avance d\'une case par jour, triches comprises, sans dépasser le plateau', () {
+      for (var j = 1; j <= 30; j++) {
+        final p = Pop.position(DateTime(2026, 11, j, 20), const []);
+        expect(p, greaterThanOrEqualTo(j.clamp(1, 30)));
+        expect(p, lessThanOrEqualTo(30));
+      }
+    });
+
+    test('un pari relevé le fait reculer de 2 cases', () {
+      final jour = DateTime(2026, 11, 5, 21);
+      final pari = Pop.pariDe(jour);
+      final avant = Pop.position(jour, const []);
+      // On fabrique la semaine qui relève n'importe lequel des paris.
+      final lundi = Pop.lundiDe(jour);
+      final semaine = [
+        for (final t in ['Rétro', 'Voyage', 'Affiche']) billet(t, lundi.add(const Duration(hours: 20)), note: 3, verdict: 'Bien'),
+      ];
+      expect(pari.releve(semaine), isTrue);
+      expect(Pop.position(jour, semaine), avant - Pop.recul);
+    });
+
+    test('il chambre un pronostic raté et salue un pronostic exact', () {
+      expect(Pop.surPronostic(pronostic: 5, note: 2, graine: 0), contains('5'));
+      expect(Pop.surPronostic(pronostic: 4, note: 4, graine: 1), isNotEmpty);
+    });
+  });
+
+  group('Validation automatique', () {
+    final debut = DateTime(2026, 11, 5, 21);
+
+    test('un film vu après la carte jouée crée le billet', () {
+      final vu = SourceJellyfin.dateDeVisionnage({'Played': true, 'LastPlayedDate': '2026-11-05T22:50:00.0000000Z'}, debut);
+      expect(vu, isNotNull);
+    });
+
+    test('un film vu avant la carte, ou à moitié, ne compte pas', () {
+      expect(SourceJellyfin.dateDeVisionnage({'Played': true, 'LastPlayedDate': '2025-01-01T10:00:00Z'}, debut), isNull);
+      expect(SourceJellyfin.dateDeVisionnage({'Played': false, 'PlayedPercentage': 40}, debut), isNull);
+      expect(SourceJellyfin.dateDeVisionnage({'Played': false, 'PlayedPercentage': 95}, debut), isNotNull);
+      expect(SourceJellyfin.dateDeVisionnage(null, debut), isNull);
+    });
+
+    test('billets et séances en attente survivent à la fermeture', () {
+      final b = Billet(titre: 'X', type: 'Rétro', pronostic: 4, cases: 3, date: debut, auto: true);
+      final relu = Billet.depuisJson(b.versJson());
+      expect(relu.aNoter, isTrue);
+      expect(relu.copie(note: 2).aNoter, isFalse);
+      final s = SeanceEnCours(titre: 'X', filmId: 'id', jellyfin: true, type: 'Rétro', cases: 3, pronostic: 4, debut: debut);
+      final s2 = SeanceEnCours.depuisJson(s.versJson());
+      expect(s2.filmId, 'id');
+      expect(s2.jellyfin, isTrue);
+      expect(s2.debut, debut);
+    });
   });
 }

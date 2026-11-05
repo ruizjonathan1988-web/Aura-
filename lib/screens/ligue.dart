@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../app.dart';
 import '../models/modeles.dart';
-import '../screens/plateau.dart';
 import '../services/etat.dart';
 import '../services/ligues.dart';
 import '../theme/aura_theme.dart';
@@ -184,7 +183,7 @@ class _DuelPop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pop = Circuit.positionDePop(DateTime.now());
+    final pop = etat.positionDePop;
     final lignes = [
       ('Toi', etat.position, Figurine.profil(etat.profil, hauteur: 52)),
       ('Pop, le Programmateur', pop, const Figurine.pop(hauteur: 52)),

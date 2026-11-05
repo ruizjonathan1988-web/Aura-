@@ -29,6 +29,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
   List<CarteDefi> _cartes = const [];
   int _choisie = 0;
   int _pronostic = 4;
+  int? _note;
   bool _chargement = false;
   String? _message;
   final _verdict = TextEditingController();
@@ -68,7 +69,8 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     }
   }
 
-  Future<void> _lancerDansVjod() async {
+  Future<void> _lancerDansVjod(EtatJeu etat) async {
+    await etat.commencerSeance(_carte, pronostic: _pronostic);
     final erreur = await VjodLien.ouvrir(_carte.film);
     if (!mounted) return;
     if (erreur != null) {
@@ -79,7 +81,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
   }
 
   Future<void> _valider(EtatJeu etat) async {
-    final gagnees = await etat.validerSeance(_carte, pronostic: _pronostic, verdict: _verdict.text.trim());
+    final gagnees = await etat.validerSeance(_carte, pronostic: _pronostic, note: _note, verdict: _verdict.text.trim());
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(gagnees > 0
@@ -88,6 +90,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     ));
     setState(() {
       _etape = _Etape.envie;
+      _note = null;
       _verdict.clear();
     });
     widget.versPlateau();
@@ -122,6 +125,13 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (etat.billetANoter != null) ...[
+          _ANoter(billet: etat.billetANoter!),
+          const SizedBox(height: 18),
+        ] else if (etat.enCoursAVoir.isNotEmpty) ...[
+          _AlorsCeFilm(seance: etat.enCoursAVoir.first),
+          const SizedBox(height: 18),
+        ],
         _CartePlanDuJour(resultat: etat.planDuJour),
         const SizedBox(height: 18),
         SizedBox(
@@ -153,7 +163,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
               Pastille(
                 libelle: e.libelle,
                 choisie: e == _emotion,
-                autofocus: e == _emotion,
+                autofocus: e == _emotion && etat.billetANoter == null && etat.enCoursAVoir.isEmpty,
                 onTap: () => setState(() => _emotion = e),
               ),
           ],
@@ -271,9 +281,15 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         ),
         const SizedBox(height: 20),
         if (vjod)
-          AuraBouton(libelle: 'Lancer dans VJOD', icone: Icons.play_arrow_rounded, onPressed: _lancerDansVjod)
+          AuraBouton(libelle: 'Lancer dans VJOD', icone: Icons.play_arrow_rounded, onPressed: () => _lancerDansVjod(PorteeEtat.of(context)))
         else
-          AuraBouton(libelle: 'C\'est parti, je regarde', onPressed: () => setState(() => _etape = _Etape.billet)),
+          AuraBouton(
+            libelle: 'C\'est parti, je regarde',
+            onPressed: () async {
+              await PorteeEtat.of(context).commencerSeance(_carte, pronostic: _pronostic);
+              if (mounted) setState(() => _etape = _Etape.billet);
+            },
+          ),
         const SizedBox(height: 12),
         AuraBouton(libelle: 'Revoir ma main', principal: false, onPressed: () => setState(() => _etape = _Etape.cartes)),
       ],
@@ -316,6 +332,22 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
                 ),
               ],
             ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Panneau(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('TA VRAIE NOTE (TU AVAIS DIT $_pronostic)', style: AuraTexte.titre(16)),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (var n = 1; n <= 5; n++)
+                  Pastille(libelle: '$n', choisie: n == _note, onTap: () => setState(() => _note = n)),
+              ]),
+              const SizedBox(height: 6),
+              Text('Pop compare avec ton pronostic. Prépare-toi.', style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
+            ],
           ),
         ),
         const SizedBox(height: 18),
@@ -416,5 +448,105 @@ class _CartePlanDuJour extends StatelessWidget {
         ]),
       ),
     );
+  }
+}
+
+/// Un billet créé tout seul : il ne manque que la note, en un geste.
+class _ANoter extends StatelessWidget {
+  const _ANoter({required this.billet});
+  final Billet billet;
+
+  @override
+  Widget build(BuildContext context) {
+    final etat = PorteeEtat.of(context);
+    return Panneau(
+      couleur: AuraCouleurs.vert,
+      inclinaison: -0.012,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(billet.cases > 0 ? 'BILLET VALIDÉ TOUT SEUL : +${billet.cases} !' : 'BILLET VALIDÉ TOUT SEUL !', style: AuraTexte.titre(16)),
+        const SizedBox(height: 4),
+        Text('Alors, ${billet.titre} ?', style: AuraTexte.titre(26)),
+        const SizedBox(height: 4),
+        Text('Ta note, et Pop la compare à ton pronostic (${billet.pronostic}).', style: AuraTexte.corps(13)),
+        const SizedBox(height: 10),
+        _Etoiles(autofocus: true, onNote: (n) => etat.noterBillet(billet, n)),
+      ]),
+    );
+  }
+}
+
+/// Une carte jouée sans billet : « Alors, ce film ? ». Une note valide tout.
+class _AlorsCeFilm extends StatelessWidget {
+  const _AlorsCeFilm({required this.seance});
+  final SeanceEnCours seance;
+
+  @override
+  Widget build(BuildContext context) {
+    final etat = PorteeEtat.of(context);
+    return Panneau(
+      couleur: AuraCouleurs.jaune,
+      inclinaison: -0.012,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('Alors, ${seance.titre} ?', style: AuraTexte.titre(26)),
+        const SizedBox(height: 4),
+        Text('Tu l\'as vu ? Donne ta note et ton pion avance de ${seance.cases}.', style: AuraTexte.corps(13)),
+        const SizedBox(height: 10),
+        _Etoiles(
+          autofocus: true,
+          onNote: (n) async {
+            final gagnees = await etat.validerEnCours(seance, note: n);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(gagnees > 0 ? 'Billet validé : +$gagnees !' : 'Billet validé. Ton pion a déjà fait ses 3 cases ce jour-là.'),
+              ));
+            }
+          },
+        ),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          Pastille(libelle: 'Pas encore vu', choisie: false, onTap: () => etat.reporterSeance(seance)),
+          Pastille(libelle: 'Je ne le regarderai pas', choisie: false, onTap: () => etat.abandonnerSeance(seance)),
+        ]),
+      ]),
+    );
+  }
+}
+
+/// Cinq étoiles à toucher (ou à atteindre aux flèches) : la note en un geste.
+class _Etoiles extends StatelessWidget {
+  const _Etoiles({required this.onNote, this.autofocus = false});
+  final ValueChanged<int> onNote;
+  final bool autofocus;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      for (var n = 1; n <= 5; n++)
+        Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: Touchable(
+            etiquette: '$n étoile${n > 1 ? 's' : ''}',
+            autofocus: autofocus && n == 4,
+            onTap: () => onNote(n),
+            builder: (context, focus, appui) => AnimatedContainer(
+              duration: const Duration(milliseconds: 80),
+              width: 48,
+              height: 48,
+              transform: Matrix4.translationValues(appui ? 2 : 0, appui ? 2 : 0, 0),
+              decoration: BoxDecoration(
+                color: focus ? AuraCouleurs.ambre : AuraCouleurs.creme,
+                shape: BoxShape.circle,
+                border: Border.all(width: 2.5),
+                boxShadow: [
+                  if (focus) const BoxShadow(color: AuraCouleurs.creme, spreadRadius: 3),
+                  if (!appui) const BoxShadow(color: AuraCouleurs.noir, offset: Offset(2, 2)),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Text('$n', style: AuraTexte.titre(20)),
+            ),
+          ),
+        ),
+    ]);
   }
 }

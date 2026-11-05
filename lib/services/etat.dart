@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/modeles.dart';
 import 'ligues.dart';
 import 'plan_du_jour.dart';
+import 'pop.dart';
 import 'sources.dart';
 import 'tirage.dart';
 
@@ -20,6 +21,8 @@ class Billet {
     required this.cases,
     required this.date,
     this.verdict = '',
+    this.note,
+    this.auto = false,
     this.envoye = false,
   });
 
@@ -30,11 +33,31 @@ class Billet {
   final DateTime date;
   final String verdict;
 
+  /// La vraie note donnée après la séance, à comparer au pronostic.
+  final int? note;
+
+  /// Vrai si le billet s'est créé tout seul (Jellyfin a vu le film passer).
+  final bool auto;
+
+  /// Un billet automatique attend encore la note du joueur.
+  bool get aNoter => auto && note == null;
+
   /// Vrai quand la séance est arrivée sur le serveur des ligues.
   final bool envoye;
 
-  Billet marqueEnvoye() =>
-      Billet(titre: titre, type: type, pronostic: pronostic, cases: cases, date: date, verdict: verdict, envoye: true);
+  Billet copie({int? note, bool? envoye}) => Billet(
+        titre: titre,
+        type: type,
+        pronostic: pronostic,
+        cases: cases,
+        date: date,
+        verdict: verdict,
+        note: note ?? this.note,
+        auto: auto,
+        envoye: envoye ?? this.envoye,
+      );
+
+  Billet marqueEnvoye() => copie(envoye: true);
 
   Map<String, dynamic> versJson() => {
         'titre': titre,
@@ -43,6 +66,8 @@ class Billet {
         'cases': cases,
         'date': date.toIso8601String(),
         'verdict': verdict,
+        if (note != null) 'note': note,
+        'auto': auto,
         'envoye': envoye,
       };
 
@@ -53,7 +78,54 @@ class Billet {
         cases: j['cases'] as int,
         date: DateTime.parse(j['date'] as String),
         verdict: (j['verdict'] as String?) ?? '',
+        note: j['note'] as int?,
+        auto: (j['auto'] as bool?) ?? false,
         envoye: (j['envoye'] as bool?) ?? false,
+      );
+}
+
+/// Une carte jouée dont le film n'est pas encore validé. Elle survit à la
+/// fermeture de l'appli : c'est elle qui permet de ne perdre aucune séance.
+class SeanceEnCours {
+  const SeanceEnCours({
+    required this.titre,
+    required this.filmId,
+    required this.jellyfin,
+    required this.type,
+    required this.cases,
+    required this.pronostic,
+    required this.debut,
+  });
+
+  final String titre;
+  final String filmId;
+
+  /// Vrai si le film vient de la bibliothèque Jellyfin : on peut alors
+  /// demander au serveur s'il a été vu.
+  final bool jellyfin;
+  final String type;
+  final int cases;
+  final int pronostic;
+  final DateTime debut;
+
+  Map<String, dynamic> versJson() => {
+        'titre': titre,
+        'film': filmId,
+        'jellyfin': jellyfin,
+        'type': type,
+        'cases': cases,
+        'pronostic': pronostic,
+        'debut': debut.toIso8601String(),
+      };
+
+  static SeanceEnCours depuisJson(Map<String, dynamic> j) => SeanceEnCours(
+        titre: j['titre'] as String,
+        filmId: j['film'] as String,
+        jellyfin: (j['jellyfin'] as bool?) ?? false,
+        type: j['type'] as String,
+        cases: j['cases'] as int,
+        pronostic: j['pronostic'] as int,
+        debut: DateTime.parse(j['debut'] as String),
       );
 }
 
@@ -75,11 +147,21 @@ class EtatJeu extends ChangeNotifier {
   int position = 1;
   List<Billet> billets = [];
 
+  /// Les cartes jouées qui attendent d'être validées.
+  List<SeanceEnCours> enCours = [];
+
+  /// Le dernier mot de Pop après une séance, affiché sur le plateau.
+  String? motDePop;
+
+  /// La case de Pop, l'adversaire du solo.
+  int get positionDePop => Pop.position(DateTime.now(), billets);
+
   static Future<EtatJeu> ouvrir({ServiceLigues? ligues}) async {
     final etat = EtatJeu(await SharedPreferences.getInstance(), ligues: ligues);
     if (ligues != null) {
       ligues.demarrer().then((_) => etat.synchroniser());
     }
+    etat.verifierSeances();
     return etat;
   }
 
@@ -97,6 +179,9 @@ class EtatJeu extends ChangeNotifier {
     position = _prefs.getInt('position') ?? 1;
     final brut = _prefs.getStringList('billets') ?? const [];
     billets = brut.map((s) => Billet.depuisJson(jsonDecode(s) as Map<String, dynamic>)).toList();
+    enCours = (_prefs.getStringList('en_cours') ?? const [])
+        .map((s) => SeanceEnCours.depuisJson(jsonDecode(s) as Map<String, dynamic>))
+        .toList();
     _nouveauMois();
   }
 
@@ -113,12 +198,11 @@ class EtatJeu extends ChangeNotifier {
   SourceFilms get source =>
       mode == ModeJeu.vjod && connexion.complete ? SourceJellyfin(connexion) : SourceDemo();
 
-  int get casesAujourdhui {
-    final now = DateTime.now();
-    return billets
-        .where((b) => b.date.year == now.year && b.date.month == now.month && b.date.day == now.day)
-        .fold(0, (s, b) => s + b.cases);
-  }
+  int get casesAujourdhui => casesLe(DateTime.now());
+
+  int casesLe(DateTime d) => billets
+      .where((b) => b.date.year == d.year && b.date.month == d.month && b.date.day == d.day)
+      .fold(0, (s, b) => s + b.cases);
 
   Future<void> choisirProfil(Profil p) async {
     profil = p;
@@ -139,20 +223,171 @@ class EtatJeu extends ChangeNotifier {
 
   /// Valide une séance et avance le pion, dans la limite de 3 cases par jour.
   /// Renvoie le nombre de cases réellement gagnées.
-  Future<int> validerSeance(CarteDefi carte, {required int pronostic, String verdict = ''}) async {
+  Future<int> validerSeance(CarteDefi carte, {required int pronostic, int? note, String verdict = ''}) async {
+    enCours = enCours.where((s) => s.filmId != carte.film.id).toList();
+    await _sauverEnCours();
+    return _ajouterBillet(
+      titre: carte.film.titre,
+      type: carte.type.libelle,
+      demandees: carte.cases,
+      pronostic: pronostic,
+      note: note,
+      verdict: verdict,
+      date: DateTime.now(),
+    );
+  }
+
+  Future<int> _ajouterBillet({
+    required String titre,
+    required String type,
+    required int demandees,
+    required int pronostic,
+    required DateTime date,
+    int? note,
+    String verdict = '',
+    bool auto = false,
+  }) async {
     _nouveauMois();
-    final cases = Regles.casesAccordees(demandees: carte.cases, dejaGagneesAujourdhui: casesAujourdhui);
+    final maintenant = DateTime.now();
+    final ceMois = moisDe(date) == moisDe(maintenant);
+    final cases = ceMois ? Regles.casesAccordees(demandees: demandees, dejaGagneesAujourdhui: casesLe(date)) : 0;
+    final pariAvant = Pop.parisPerdus(maintenant, billets);
     billets = [
-      Billet(titre: carte.film.titre, type: carte.type.libelle, pronostic: pronostic, cases: cases, date: DateTime.now(), verdict: verdict),
+      Billet(titre: titre, type: type, pronostic: pronostic, cases: cases, date: date, verdict: verdict, note: note, auto: auto),
       ...billets,
-    ];
+    ]..sort((a, b) => b.date.compareTo(a.date));
+    final pariGagne = Pop.parisPerdus(maintenant, billets) > pariAvant;
+    _direPop([
+      if (note != null) Pop.surPronostic(pronostic: pronostic, note: note, graine: billets.length),
+      if (pariGagne) 'Et zut, pari perdu : je recule de ${Pop.recul} cases. Je reviendrai.',
+    ]);
     position = (position + cases).clamp(1, Regles.taillePlateau);
     await _prefs.setInt('position', position);
     await _sauverBillets();
+    await _prefs.setInt('stat_billets', (_prefs.getInt('stat_billets') ?? 0) + 1);
     notifyListeners();
     synchroniser();
     return cases;
   }
+
+  void _direPop(List<String> phrases) {
+    final m = phrases.join(' ');
+    motDePop = m.isEmpty ? null : m;
+  }
+
+  // La validation sans effort : la carte jouée est gardée, et le billet se
+  // crée dès qu'on sait que le film a été vu.
+
+  /// La carte est jouée : on la garde jusqu'à ce que le film soit vu.
+  Future<void> commencerSeance(CarteDefi carte, {required int pronostic}) async {
+    if (enCours.any((s) => s.filmId == carte.film.id)) return;
+    enCours = [
+      SeanceEnCours(
+        titre: carte.film.titre,
+        filmId: carte.film.id,
+        jellyfin: carte.film.source == SourceFilm.jellyfin,
+        type: carte.type.libelle,
+        cases: carte.cases,
+        pronostic: pronostic,
+        debut: DateTime.now(),
+      ),
+      ...enCours,
+    ].take(5).toList();
+    await _sauverEnCours();
+    await _prefs.setInt('stat_cartes', (_prefs.getInt('stat_cartes') ?? 0) + 1);
+    notifyListeners();
+  }
+
+  /// « Alors, ce film ? » : une note, et le billet est validé.
+  Future<int> validerEnCours(SeanceEnCours s, {int? note, DateTime? vuLe, bool auto = false}) async {
+    enCours = enCours.where((x) => x.filmId != s.filmId).toList();
+    await _sauverEnCours();
+    return _ajouterBillet(
+      titre: s.titre,
+      type: s.type,
+      demandees: s.cases,
+      pronostic: s.pronostic,
+      note: note,
+      date: vuLe ?? DateTime.now(),
+      auto: auto,
+    );
+  }
+
+  final _reportees = <String>{};
+
+  /// Les séances en attente à proposer maintenant (sans celles qu'on a
+  /// reportées pendant cette ouverture de l'appli).
+  List<SeanceEnCours> get enCoursAVoir => enCours.where((s) => !_reportees.contains(s.filmId)).toList();
+
+  /// « Pas encore vu » : on n'insiste pas, on redemandera plus tard.
+  void reporterSeance(SeanceEnCours s) {
+    _reportees.add(s.filmId);
+    notifyListeners();
+  }
+
+  Future<void> abandonnerSeance(SeanceEnCours s) async {
+    enCours = enCours.where((x) => x.filmId != s.filmId).toList();
+    await _sauverEnCours();
+    notifyListeners();
+  }
+
+  /// Demande à Jellyfin si les films en attente ont été vus. Ceux qui l'ont
+  /// été deviennent des billets, sans rien demander au joueur.
+  /// Renvoie le nombre de billets créés.
+  Future<int> verifierSeances() async {
+    final c = connexion;
+    if (!c.complete || _verification) return 0;
+    _verification = true;
+    var crees = 0;
+    try {
+      final jellyfin = SourceJellyfin(c);
+      for (final s in [...enCours.where((s) => s.jellyfin)]) {
+        final vu = await jellyfin.vuDepuis(s.filmId, s.debut);
+        if (vu != null) {
+          await validerEnCours(s, vuLe: vu, auto: true);
+          crees++;
+        }
+      }
+    } catch (_) {
+      // Serveur injoignable : on réessaiera à la prochaine ouverture.
+    } finally {
+      _verification = false;
+    }
+    return crees;
+  }
+
+  bool _verification = false;
+
+  /// Le plus récent billet automatique qui attend sa note (7 jours au plus).
+  Billet? get billetANoter {
+    final limite = DateTime.now().subtract(const Duration(days: 7));
+    for (final b in billets) {
+      if (b.aNoter && b.date.isAfter(limite)) return b;
+    }
+    return null;
+  }
+
+  /// La note donnée en un geste après coup. Pop a son mot à dire.
+  Future<void> noterBillet(Billet b, int note) async {
+    final i = billets.indexOf(b);
+    if (i < 0) return;
+    billets[i] = b.copie(note: note);
+    _direPop([Pop.surPronostic(pronostic: b.pronostic, note: note, graine: billets.length)]);
+    await _sauverBillets();
+    notifyListeners();
+    synchroniser();
+  }
+
+  /// Part des cartes jouées qui finissent en billet : le chiffre qui dit si
+  /// la validation fuit.
+  double? get tauxDeValidation {
+    final cartes = _prefs.getInt('stat_cartes') ?? 0;
+    if (cartes == 0) return null;
+    return ((_prefs.getInt('stat_billets') ?? 0) / cartes).clamp(0, 1).toDouble();
+  }
+
+  Future<void> _sauverEnCours() =>
+      _prefs.setStringList('en_cours', enCours.map((s) => jsonEncode(s.versJson())).toList());
 
   /// Envoie aux ligues les séances du mois qui ne sont pas encore parties.
   Future<void> synchroniser() async {
@@ -163,6 +398,7 @@ class EtatJeu extends ChangeNotifier {
     for (var i = 0; i < billets.length; i++) {
       final b = billets[i];
       if (b.envoye || moisDe(b.date) != mois) continue;
+      if (b.aNoter && DateTime.now().difference(b.date).inDays < 2) continue; // on attend la note
       if (await l.envoyerSeance(b)) {
         billets[i] = b.marqueEnvoye();
         change = true;

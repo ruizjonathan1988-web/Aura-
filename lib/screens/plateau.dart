@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app.dart';
 import '../models/modeles.dart';
+import '../services/pop.dart';
 import '../services/tirage.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
@@ -55,9 +56,6 @@ abstract final class Circuit {
     }
     return p;
   }
-
-  /// En solo, Pop avance d'une case par jour du mois.
-  static int positionDePop(DateTime d) => d.day.clamp(1, Regles.taillePlateau);
 }
 
 class PlateauEcran extends StatelessWidget {
@@ -69,7 +67,9 @@ class PlateauEcran extends StatelessWidget {
   Widget build(BuildContext context) {
     final etat = PorteeEtat.of(context);
     final maintenant = DateTime.now();
-    final pop = Circuit.positionDePop(maintenant);
+    final pop = etat.positionDePop;
+    final pari = Pop.pariDe(maintenant);
+    final pariReleve = pari.releve(Pop.semaine(Pop.lundiDe(maintenant), maintenant, etat.billets));
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
       child: Center(
@@ -80,8 +80,10 @@ class PlateauEcran extends StatelessWidget {
             children: [
               TitreCartoon('Le plateau de ${_mois[maintenant.month - 1]}', taille: 38),
               const SizedBox(height: 8),
-              Text('Pas de dé : on avance en regardant, 3 cases par jour au maximum. Pop avance d\'une case par jour : passe-le !',
+              Text('Pas de dé : on avance en regardant, 3 cases par jour au maximum. Pop avance d\'une case par jour, et il triche un peu : passe-le !',
                   style: AuraTexte.corps(15)),
+              const SizedBox(height: 12),
+              PopQuiParle(texte: etat.motDePop ?? Pop.surPlateau(joueur: etat.position, pop: pop, jour: maintenant), taille: 70),
               const SizedBox(height: 16),
               _Circuit(joueur: etat.profil, positionJoueur: etat.position, positionPop: pop),
               const SizedBox(height: 14),
@@ -96,6 +98,23 @@ class PlateauEcran extends StatelessWidget {
                       Text(t.libelle, style: AuraTexte.corps(13, poids: FontWeight.w900)),
                     ]),
                 ],
+              ),
+              const SizedBox(height: 18),
+              Panneau(
+                couleur: pariReleve ? AuraCouleurs.vert : AuraCouleurs.jaune,
+                inclinaison: -0.015,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('LE PARI DE POP', style: AuraTexte.titre(16)),
+                  const SizedBox(height: 4),
+                  Text('« ${pari.texte} »', style: AuraTexte.corps(15, poids: FontWeight.w900)),
+                  const SizedBox(height: 6),
+                  Text(
+                    pariReleve
+                        ? 'Pari relevé ! Pop recule de ${Pop.recul} cases.'
+                        : 'Pour lui donner tort : ${pari.defi.toLowerCase()} avant dimanche. Il reculera de ${Pop.recul} cases.',
+                    style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux),
+                  ),
+                ]),
               ),
               const SizedBox(height: 20),
               const TitreCartoon('Tes derniers billets', taille: 24, inclinaison: 0),
@@ -112,7 +131,7 @@ class PlateauEcran extends StatelessWidget {
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text(b.titre, style: AuraTexte.corps(15, poids: FontWeight.w900)),
-                            Text(b.verdict.isEmpty ? '${b.type}, pronostic ${b.pronostic}/5' : '« ${b.verdict} »',
+                            Text(b.verdict.isNotEmpty ? '« ${b.verdict} »' : '${b.type}, pronostic ${b.pronostic}/5${b.note != null ? ', note ${b.note}/5' : ''}${b.auto ? ', validé tout seul' : ''}',
                                 style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
                           ]),
                         ),
