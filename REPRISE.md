@@ -2,7 +2,7 @@
 
 Document de passation : tout ce qu'il faut savoir pour continuer Aura dans une nouvelle conversation. À coller ou à faire lire en début de session.
 
-Dernière mise à jour : 6 novembre 2026, après la carte des genres contre Pop.
+Dernière mise à jour : 6 novembre 2026, nuit de travail autonome (voir « Nuit du 6 novembre »).
 
 ## Qui et quoi
 
@@ -59,8 +59,9 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R10 Tout à la télécommande | À partir de 900 de large, mode télé : les champs de texte deviennent « ça s'écrit depuis ton téléphone » | `ChampAura`, `estLargeurTele` |
 | R11 Premier soir | Test équilibré (chaque profil 3 fois sur 6 questions), égalité au plus récent ; Bluff : un vrai synopsis et deux faux de Pop, jamais de navet ni de documentaire ; Joker +1 case une seule fois, plafond de 3 respecté | `TestSpectateur`, `BluffDePop`, `EtatJeu.jokerBluff` |
 | R12 Carte des genres | Une séance rend la région tienne (un film peut en couvrir plusieurs) ; Pop vise une région libre chaque lundi et la prend si rien n'y est vu avant dimanche ; elle se reprend ; rien de visé avant le premier lundi ; chaque région de Pop = 1 case | `CarteDesGenres`, `Pop.position` |
+| R13 Connexion VJOD | Identifiant et mot de passe, ou code Quick Connect accepté sur le téléphone, donnent une connexion complète ; mauvais mot de passe = message clair | `ConnexionVjod` |
 
-Règles sans test automatique : « pas de pochettes surprises payantes » (rien à vendre pour l'instant), le plafond de 3 cases côté serveur (trigger SQL `plafonner_cases`, pas exécuté en CI), et la navigation aux flèches (à vérifier à la main sur la box). Exception connue à R10 : les Réglages Jellyfin demandent encore l'adresse et la clé au clavier.
+Règles sans test automatique : « pas de pochettes surprises payantes » (rien à vendre pour l'instant), le plafond de 3 cases côté serveur (trigger SQL `plafonner_cases`, pas exécuté en CI), et la navigation aux flèches (à vérifier à la main sur la box). Exception connue à R10 : sur la télé, l'adresse du serveur VJOD se tape encore dans les Réglages (sauf si `VJOD_SERVEUR` est fourni à la compilation) ; la connexion elle-même passe par un code Quick Connect.
 
 ## Les rythmes du jeu
 
@@ -109,12 +110,16 @@ Fait :
 - Pop adversaire (`lib/services/pop.dart`) : pari de la semaine (il recule de 2 cases s'il le perd), petites triches avouées, répliques sur le plateau et chambrage du pronostic (vraie note demandée après la séance).
 - Premier soir (`lib/screens/premier_soir.dart`, `lib/services/premier_soir.dart`) : au premier lancement, Pop accueille, test « Quel spectateur es-tu ? » en 6 questions, figurine qui sort de sa boîte (copiable pour partager), puis mini-Bluff : un film de la bibliothèque (synopsis Jellyfin « Overview », ramené à sa première phrase) ou de la démo, son vrai synopsis et deux faux de Pop. Trouver le vrai donne le Joker du Bluff (+1 case sur la prochaine séance). « Refaire le test » est dans le Profil.
 - Carte des genres (`lib/services/carte_genres.dart`, section du Plateau) : 8 régions (Polar, Comédie, Drame, Évasion, Animation, Frissons, Classiques avant 1980, Cinéma d'ailleurs hors France et États-Unis). Les billets gardent désormais genres, année et pays. Chaque lundi Pop vise une région libre et la prend si on ne la défend pas avant dimanche ; chacune lui vaut une case ; on la reprend en y regardant un film.
+- Français relu dans toute l'appli (textes de Pop, cartes, test, profils, messages) ; genres, pays et durées traduits à l'écran (`lib/services/traduction.dart`).
+- Sélection de démonstration : 42 films reconnus (classements IMDb et SensCritique), synopsis rédigés pour Aura. Le tirage garde d'abord les 40 % les mieux notés.
+- Connexion VJOD pour les utilisateurs de Jon (`lib/services/connexion_vjod.dart`, Réglages) : code Quick Connect sur la télé, identifiant et mot de passe VJOD au téléphone, ou clé d'API (avancé). Plus besoin de clé d'API. Une carte « Tu utilises VJOD ? » invite à brancher sa bibliothèque depuis Ce soir. Pour pré-remplir l'adresse du serveur pour tous, compiler avec `--dart-define=VJOD_SERVEUR=https://…` (à ajouter dans le workflow quand Jon donnera l'adresse).
 - Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
 ## Retours de Jon à traiter
 
-- **6 nov. : « le quiz est mal écrit, les propositions de films sont franchement mauvaises. »** À reprendre avec des bases reconnues : IMDb (Top 250, notes et nombre de votes), SensCritique (tops et notes de la communauté française), Letterboxd, TMDB. Concerne au moins le catalogue de démonstration (`SourceDemo`, 15 films choisis à la main), les questions du test « Quel spectateur es-tu ? », du mini-quiz du Duel (`docs/brouillons/duel.dart.txt`) et les faux synopsis de Pop. Demander à Jon lequel il visait en premier s'il n'a pas précisé. Licences : les jeux de données IMDb sont réservés à l'usage non commercial ; SensCritique n'a pas d'API publique ; TMDB est gratuit avec mention et demande un accord pour un usage commercial. Pour l'édition VJOD, les films viennent de sa bibliothèque Jellyfin : le seuil zéro navet peut aussi s'appuyer sur le nombre de votes TMDB/IMDb que Jellyfin récupère.
+- **6 nov. : « tout est mal écrit, le français est vraiment approximatif. »** Relecture complète faite dans la nuit ; à vérifier par Jon à l'usage.
+- **6 nov. : « le quiz est mal écrit, les propositions de films sont franchement mauvaises. »** Fait en partie : sélection de 42 films reconnus et tirage tourné vers les mieux notés ; questions du test réécrites. Reste : questions du mini-quiz du Duel à reprendre sur des bases reconnues. À reprendre avec des bases reconnues : IMDb (Top 250, notes et nombre de votes), SensCritique (tops et notes de la communauté française), Letterboxd, TMDB. Concerne au moins le catalogue de démonstration (`SourceDemo`, 15 films choisis à la main), les questions du test « Quel spectateur es-tu ? », du mini-quiz du Duel (`docs/brouillons/duel.dart.txt`) et les faux synopsis de Pop. Demander à Jon lequel il visait en premier s'il n'a pas précisé. Licences : les jeux de données IMDb sont réservés à l'usage non commercial ; SensCritique n'a pas d'API publique ; TMDB est gratuit avec mention et demande un accord pour un usage commercial. Pour l'édition VJOD, les films viennent de sa bibliothèque Jellyfin : le seuil zéro navet peut aussi s'appuyer sur le nombre de votes TMDB/IMDb que Jellyfin récupère.
 
 ## Prochaines étapes, dans l'ordre
 

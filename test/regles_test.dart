@@ -3,11 +3,13 @@
 // Une règle nouvelle = un test nouveau ici. Si un test casse, c'est qu'une
 // règle a changé : on le décide exprès, jamais par accident.
 
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
 import 'package:aura/services/carte_genres.dart';
+import 'package:aura/services/connexion_vjod.dart';
 import 'package:aura/services/etat.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/pop.dart';
@@ -16,6 +18,8 @@ import 'package:aura/services/sources.dart';
 import 'package:aura/services/tirage.dart';
 import 'package:aura/widgets/aura_widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Film _film(String id, {double? note = 7.5, int annee = 2010, int duree = 100, bool vu = false, int? votes}) =>
@@ -383,6 +387,51 @@ void main() {
       final visee = CarteDesGenres.de(DateTime(2026, 11, 4), const []).cible!;
       final defendu = [dans(visee, DateTime(2026, 11, 5, 21))];
       expect(Pop.position(jour, const []) - Pop.position(jour, defendu), 1);
+    });
+  });
+
+  group('R13 Se connecter avec VJOD sans clé d\'API', () {
+    final reponse = jsonEncode({'AccessToken': 'jeton42', 'User': {'Id': 'u7'}, 'ServerId': 's1'});
+
+    test('R13 identifiant et mot de passe donnent une connexion complète', () async {
+      late http.Request recue;
+      final client = MockClient((r) async {
+        recue = r;
+        return http.Response(reponse, 200);
+      });
+      final c = await ConnexionVjod(adresse: 'vjod.exemple.fr/', appareil: 'aura-test', client: client).avecIdentifiants(' jon ', 'secret');
+      expect(c.complete, isTrue);
+      expect(c.jeton, 'jeton42');
+      expect(c.utilisateurId, 'u7');
+      expect(recue.url.toString(), 'https://vjod.exemple.fr/Users/AuthenticateByName');
+      expect(recue.headers['X-Emby-Authorization'], contains('DeviceId="aura-test"'));
+      expect(jsonDecode(recue.body), {'Username': 'jon', 'Pw': 'secret'});
+    });
+
+    test('R13 un mauvais mot de passe donne un message clair', () async {
+      final client = MockClient((r) async => http.Response('', 401));
+      await expectLater(
+        ConnexionVjod(adresse: 'https://vjod.exemple.fr', appareil: 'a', client: client).avecIdentifiants('jon', 'faux'),
+        throwsA(isA<ErreurSource>().having((e) => e.message, 'message', contains('mot de passe'))),
+      );
+    });
+
+    test('R13 Quick Connect : code affiché, accepté sur le téléphone, puis connecté', () async {
+      var accepte = false;
+      final client = MockClient((r) async {
+        final chemin = r.url.path;
+        if (chemin.endsWith('/QuickConnect/Initiate')) return http.Response(jsonEncode({'Secret': 'sec', 'Code': '123456'}), 200);
+        if (chemin.endsWith('/QuickConnect/Connect')) return http.Response(jsonEncode({'Authenticated': accepte}), 200);
+        if (chemin.endsWith('/Users/AuthenticateWithQuickConnect')) return http.Response(reponse, 200);
+        return http.Response('', 404);
+      });
+      final vjod = ConnexionVjod(adresse: 'https://vjod.exemple.fr', appareil: 'a', client: client);
+      final (secret, code) = await vjod.demanderCode();
+      expect(code, '123456');
+      expect(await vjod.codeAccepte(secret), isFalse);
+      accepte = true;
+      expect(await vjod.codeAccepte(secret), isTrue);
+      expect((await vjod.avecQuickConnect(secret)).jeton, 'jeton42');
     });
   });
 }
