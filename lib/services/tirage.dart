@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../models/modeles.dart';
+import 'traduction.dart';
 
 /// Le tirage des trois cartes du soir.
 ///
@@ -40,10 +41,13 @@ class Tirage {
     required Profil profil,
     Set<String> paysVus = const {},
   }) {
-    final candidats = catalogue
-        .where((f) => !f.dejaVu && assezBon(f) && correspond(f, emotion, duree))
-        .toList()
+    final tous = catalogue.where((f) => !f.dejaVu && assezBon(f) && correspond(f, emotion, duree)).toList()
       ..shuffle(_hasard);
+    // Le haut du panier d'abord : on garde les mieux notés (40 % du lot, au
+    // moins 9 films), puis on mélange. Les autres ne servent qu'en secours.
+    final parNote = [...tous]..sort((a, b) => (b.note ?? 0).compareTo(a.note ?? 0));
+    final garde = max(9, (tous.length * .4).ceil());
+    final candidats = [...parNote.take(garde).toList()..shuffle(_hasard), ...parNote.skip(garde)];
     final pris = <String>{};
     final cartes = <CarteDefi>[];
 
@@ -64,9 +68,9 @@ class Tirage {
         defi: 'Un film d\'avant 1980',
         indice: _indice(retro),
         cases: 3,
-        joker: 'Ton Joker Nostalgique double les cases de cette carte',
+        joker: 'Un classique : 3 cases, la plus belle récompense.',
         film: retro,
-        bulleDePop: 'Un film d\'avant 1980 ? Fais pas cette tête, le noir et blanc ne mord pas.',
+        bulleDePop: 'Un film d\'avant 1980 ? Ne fais pas cette tête : le noir et blanc ne mord pas.',
       ));
     }
 
@@ -77,9 +81,9 @@ class Tirage {
         defi: 'Un pays jamais vu',
         indice: _indice(voyage),
         cases: 2,
-        joker: 'Ton Joker Voyageur ajoute une case',
+        joker: 'Un voyage : 2 cases.',
         film: voyage,
-        bulleDePop: 'Un pays jamais vu. Prépare ton passeport et tes sous-titres !',
+        bulleDePop: 'Cap sur un pays que tu ne connais pas encore. Prépare ton passeport et les sous-titres !',
       ));
     }
 
@@ -87,12 +91,12 @@ class Tirage {
     if (pepite != null) {
       cartes.add(CarteDefi(
         type: TypeCarte.pepite,
-        defi: 'Une pépite à plus de 3,7 étoiles',
+        defi: 'Une pépite très bien notée',
         indice: _indice(pepite),
         cases: 2,
-        joker: 'Une pépite rapporte un bonus de Flair si tu la conseilles',
+        joker: 'Une pépite : 2 cases.',
         film: pepite,
-        bulleDePop: 'Celle-là, je l\'ai gardée pour toi. Ne me déçois pas.',
+        bulleDePop: 'Celle-là, je la gardais pour toi. Ne me déçois pas.',
       ));
     }
 
@@ -101,12 +105,12 @@ class Tirage {
       if (f == null) break;
       cartes.add(CarteDefi(
         type: TypeCarte.envie,
-        defi: 'Pile dans ton envie : ${emotion.libelle.toLowerCase()}',
+        defi: emotion.phrase,
         indice: _indice(f),
         cases: 1,
-        joker: 'Une carte sûre, une case assurée',
+        joker: 'Une valeur sûre : 1 case.',
         film: f,
-        bulleDePop: 'Pas de défi ce soir ? Pas de souci, je ne juge pas. Enfin, un peu.',
+        bulleDePop: 'Pas de défi ce soir ? Je ne juge pas. Enfin, si, un peu.',
       ));
     }
     return cartes.take(3).toList();
@@ -116,10 +120,10 @@ class Tirage {
   String _indice(Film f) {
     final parts = <String>[];
     if (f.annee != null) parts.add('Années ${(f.annee! ~/ 10) * 10}');
-    if (f.pays.isNotEmpty) parts.add(f.pays.first);
-    if (f.genres.isNotEmpty) parts.add(f.genres.first.toLowerCase());
-    if (f.dureeMinutes != null) parts.add('${f.dureeMinutes} min');
-    return parts.join(', ');
+    if (f.pays.isNotEmpty) parts.add(Traduction.pays(f.pays.first));
+    if (f.genres.isNotEmpty) parts.add(Traduction.genre(f.genres.first));
+    if (f.dureeMinutes != null) parts.add(Traduction.duree(f.dureeMinutes!));
+    return parts.join(' · ');
   }
 }
 

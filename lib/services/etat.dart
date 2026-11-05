@@ -323,7 +323,7 @@ class EtatJeu extends ChangeNotifier {
     final pariGagne = Pop.parisPerdus(maintenant, billets) > pariAvant;
     _direPop([
       if (note != null) Pop.surPronostic(pronostic: pronostic, note: note, graine: billets.length),
-      if (pariGagne) 'Et zut, pari perdu : je recule de ${Pop.recul} cases. Je reviendrai.',
+      if (pariGagne) 'Zut, j\'ai perdu mon pari : je recule de ${Pop.recul} cases. Mais je reviendrai.',
     ]);
     position = (position + cases).clamp(1, Regles.taillePlateau);
     await _prefs.setInt('position', position);

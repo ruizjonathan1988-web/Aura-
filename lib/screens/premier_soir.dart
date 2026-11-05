@@ -102,13 +102,13 @@ class _PremierSoirEcranState extends State<PremierSoirEcran> {
           const SizedBox(height: 18),
           const PopQuiParle(
             taille: 110,
-            texte: 'Salut, moi c\'est Pop, le Programmateur. Ici, le dé, c\'est le film. On commence par savoir quel spectateur tu es, ensuite on joue. Trois minutes, promis.',
+            texte: 'Salut, moi, c\'est Pop, le Programmateur. Ici, le dé, c\'est le film. D\'abord, on découvre quel spectateur tu es ; ensuite, on joue. Trois minutes, promis.',
           ),
           const SizedBox(height: 24),
           AuraBouton(libelle: 'C\'est parti !', autofocus: true, onPressed: () => setState(() => _etape = _Etape.test)),
           const SizedBox(height: 12),
           AuraBouton(
-            libelle: 'Passer, je connais déjà',
+            libelle: 'Passer, je connais le jeu',
             principal: false,
             onPressed: () => PorteeEtat.lire(context).terminerAccueil(),
           ),
@@ -207,10 +207,10 @@ class _PremierSoirEcranState extends State<PremierSoirEcran> {
             const SizedBox(height: 14),
             PopQuiParle(
               texte: !fini
-                  ? 'Un seul de ces synopsis est vrai. Les deux autres, c\'est moi qui les ai écrits. Trouve le vrai et tu gagnes ta première carte Joker.'
+                  ? 'Un seul de ces synopsis est vrai. Les deux autres, c\'est moi qui les ai inventés. Trouve le vrai et tu gagnes ta première carte Joker.'
                   : gagne
-                      ? 'Quoi ?! Personne ne voit clair dans mon jeu, d\'habitude. Voilà ton Joker : +1 case sur ta prochaine séance.'
-                      : 'Ha ! Je t\'ai eu. Pas de Joker cette fois… mais je te laisse le film, je suis bon joueur.',
+                      ? 'Quoi ? D\'habitude, personne ne voit clair dans mon jeu ! Voilà ton Joker : +1 case sur ta prochaine séance.'
+                      : 'Ha ! Je t\'ai eu. Pas de Joker cette fois… Mais je te laisse le film : je suis beau joueur.',
             ),
             const SizedBox(height: 16),
             Panneau(

@@ -13,41 +13,41 @@ class QuestionProfil {
 
 abstract final class TestSpectateur {
   static const questions = [
-    QuestionProfil('Un dimanche soir de libre, tu…', [
-      ('Lances trois épisodes d\'affilée', Profil.devoreur),
-      ('Regardes un seul film, puis tu y repenses', Profil.degustateur),
-      ('Mets un match ou un direct', Profil.supporter),
-      ('Invites du monde pour une soirée film', Profil.hote),
+    QuestionProfil('Un dimanche soir de libre : que fais-tu ?', [
+      ('J\'enchaîne trois épisodes d\'affilée', Profil.devoreur),
+      ('Je regarde un seul film, et j\'y repense ensuite', Profil.degustateur),
+      ('Je mets un match ou un direct', Profil.supporter),
+      ('J\'invite des amis pour une soirée film', Profil.hote),
     ]),
     QuestionProfil('Ton film préféré, c\'est plutôt…', [
       ('Un film que je revois chaque année', Profil.fidele),
-      ('Un film d\'un pays dont je ne connais rien', Profil.explorateur),
-      ('Un film que je peux décortiquer des heures', Profil.critique),
-      ('Un film de moins d\'1 h 30', Profil.presse),
+      ('Un film venu d\'un pays que je connais mal', Profil.explorateur),
+      ('Un film qu\'on peut analyser pendant des heures', Profil.critique),
+      ('Un film de moins d\'une heure et demie', Profil.presse),
     ]),
-    QuestionProfil('Un ami te conseille un film. Tu…', [
-      ('Le regardes et tu lui donnes ta note', Profil.critique),
-      ('Lui proposes de le regarder ensemble', Profil.hote),
-      ('Ajoutes toute la saison à ta liste', Profil.devoreur),
-      ('Regardes la bande-annonce en accéléré', Profil.presse),
+    QuestionProfil('Un ami te recommande un film ou une série. Que fais-tu ?', [
+      ('Je le regarde et je lui donne ma note', Profil.critique),
+      ('Je lui propose qu\'on le regarde ensemble', Profil.hote),
+      ('J\'ajoute toute la saison à ma liste', Profil.devoreur),
+      ('Je regarde la bande-annonce en accéléré', Profil.presse),
     ]),
-    QuestionProfil('Ce qui te fait vibrer :', [
-      ('Le suspense en direct', Profil.supporter),
-      ('Retrouver mes personnages de toujours', Profil.fidele),
-      ('Découvrir une époque inconnue', Profil.explorateur),
+    QuestionProfil('Qu\'est-ce qui te fait vibrer ?', [
+      ('Le suspense d\'un direct', Profil.supporter),
+      ('Retrouver mes personnages préférés', Profil.fidele),
+      ('Découvrir une époque que je ne connais pas', Profil.explorateur),
       ('Prendre le temps de savourer', Profil.degustateur),
     ]),
-    QuestionProfil('Le pire, pour toi :', [
+    QuestionProfil('Pour toi, le pire, c\'est…', [
       ('Un film trop long', Profil.presse),
       ('Regarder seul', Profil.hote),
-      ('Un film dont il n\'y a rien à dire', Profil.critique),
-      ('Toujours les mêmes films', Profil.explorateur),
+      ('Un film dont on n\'a rien à dire', Profil.critique),
+      ('Revoir toujours les mêmes films', Profil.explorateur),
     ]),
-    QuestionProfil('Ta soirée idéale :', [
-      ('Une intégrale de mes films doudous', Profil.fidele),
+    QuestionProfil('Ta soirée idéale ?', [
+      ('Revoir mes films fétiches', Profil.fidele),
       ('Une finale de coupe', Profil.supporter),
-      ('Un film rare et une tisane', Profil.degustateur),
-      ('Une nuit blanche sur une série', Profil.devoreur),
+      ('Un film rare avec une tisane', Profil.degustateur),
+      ('Une nuit blanche devant une série', Profil.devoreur),
     ]),
   ];
 
@@ -63,7 +63,7 @@ abstract final class TestSpectateur {
     return reponses.lastWhere((p) => compte[p] == max);
   }
 
-  static String partage(Profil p) => 'Dans Aura, je suis ${p.nom} : ${p.description} Et toi, quel spectateur es-tu ? Un jeu VJOD.';
+  static String partage(Profil p) => 'Dans Aura, je suis ${p.nom}, pouvoir ${p.pouvoir}. Et toi, quel spectateur es-tu ? Fais le test dans Aura, un jeu VJOD.';
 }
 
 /// Le mini-Bluff du premier soir : un film, son vrai synopsis et deux faux

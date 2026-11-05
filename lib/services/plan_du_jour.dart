@@ -2,6 +2,7 @@ import 'dart:math';
 
 import '../models/modeles.dart';
 import 'tirage.dart';
+import 'traduction.dart';
 
 /// Le Plan du jour : un film à deviner en 3 indices, 1 seul essai.
 /// Même film pour tout le monde le même jour (à catalogue égal), et une
@@ -27,41 +28,16 @@ class PlanDuJour {
 
   /// Du plus vague au plus précis : genre et époque, pays et durée, réalisation.
   static List<String> indicesPour(Film f) {
-    final genre = f.genres.isEmpty ? null : _genreFr(f.genres.first);
+    final genre = f.genres.isEmpty ? null : Traduction.genre(f.genres.first);
     final epoque = f.annee == null ? null : 'années ${f.annee! ~/ 10 * 10}';
-    final pays = f.pays.isEmpty ? null : f.pays.first;
-    final duree = f.dureeMinutes == null ? null : _duree(f.dureeMinutes!);
+    final pays = f.pays.isEmpty ? null : Traduction.pays(f.pays.first);
+    final duree = f.dureeMinutes == null ? null : Traduction.duree(f.dureeMinutes!);
     return [
       [if (genre != null) 'Genre : $genre', if (epoque != null) 'Époque : $epoque'].join(' · ').ifEmpty('Un film noté 3 étoiles ou plus'),
       [if (pays != null) 'Pays : $pays', if (duree != null) 'Durée : $duree'].join(' · ').ifEmpty('Il est dans ta bibliothèque'),
       f.realisateur != null ? 'Réalisation : ${f.realisateur}' : (f.annee != null ? 'Sorti en ${f.annee}' : 'Dernière chance !'),
     ];
   }
-
-  static const _genres = {
-    'thriller': 'thriller',
-    'horror': 'horreur',
-    'mystery': 'mystère',
-    'crime': 'policier',
-    'comedy': 'comédie',
-    'drama': 'drame',
-    'romance': 'romance',
-    'adventure': 'aventure',
-    'fantasy': 'fantastique',
-    'science fiction': 'science-fiction',
-    'animation': 'animation',
-    'documentary': 'documentaire',
-    'history': 'histoire',
-    'war': 'guerre',
-    'action': 'action',
-    'family': 'famille',
-    'music': 'musique',
-    'western': 'western',
-  };
-
-  static String _genreFr(String g) => _genres[g.toLowerCase()] ?? g.toLowerCase();
-
-  static String _duree(int m) => m < 60 ? '$m min' : '${m ~/ 60} h ${(m % 60).toString().padLeft(2, '0')}';
 }
 
 /// Ce que le joueur a fait au Plan du jour : combien d'indices il a ouverts
@@ -80,7 +56,7 @@ class ResultatPlan {
       if (i == indices - 1) return trouve ? '🟩' : '🟥';
       return '⬜';
     }).join();
-    final phrase = trouve ? 'Trouvé au ${indices == 1 ? '1er' : '${indices}e'} indice' : 'Raté, le film m\'a eu';
+    final phrase = trouve ? 'Trouvé au ${indices == 1 ? '1er' : '${indices}e'} indice' : 'Raté, ce film m\'a eu';
     return 'Aura · Plan du jour du ${jour.day} ${mois[jour.month - 1]}\n$cases $phrase\nUn jeu VJOD';
   }
 }

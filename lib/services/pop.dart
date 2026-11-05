@@ -25,12 +25,12 @@ abstract final class Pop {
   static const recul = 2;
 
   static final paris = <Pari>[
-    Pari('Je parie que tu n\'oses pas une carte Rétro cette semaine.', 'Jouer une carte Rétro', (s) => s.any((b) => b.type == 'Rétro')),
-    Pari('Je parie que tu ne quittes pas ton canapé… enfin, ton pays, cette semaine.', 'Jouer une carte Voyage', (s) => s.any((b) => b.type == 'Voyage')),
-    Pari('Je parie que tu ne tiens pas 3 séances cette semaine.', 'Valider 3 séances', (s) => s.length >= 3),
-    Pari('Je parie que tu n\'écris pas 2 Verdicts cette semaine. Trop de travail.', 'Écrire 2 Verdicts', (s) => s.where((b) => b.verdict.isNotEmpty).length >= 2),
-    Pari('Je parie que tu ne tombes pas pile sur ton pronostic cette semaine.', 'Un pronostic exact', (s) => s.any((b) => b.note != null && b.note == b.pronostic)),
-    Pari('Je parie que tu sèches l\'Affiche de la semaine.', 'Voir l\'Affiche', (s) => s.any((b) => b.type == 'Affiche')),
+    Pari('Je parie que tu n\'oseras pas jouer une carte Rétro cette semaine.', 'Jouer une carte Rétro', (s) => s.any((b) => b.type == 'Rétro')),
+    Pari('Je parie que tu ne sortiras pas de tes frontières cette semaine.', 'Jouer une carte Voyage', (s) => s.any((b) => b.type == 'Voyage')),
+    Pari('Je parie que tu ne tiendras pas trois séances cette semaine.', 'Valider 3 séances', (s) => s.length >= 3),
+    Pari('Je parie que tu n\'écriras pas deux Verdicts cette semaine. Trop fatigant.', 'Écrire 2 Verdicts', (s) => s.where((b) => b.verdict.isNotEmpty).length >= 2),
+    Pari('Je parie que tu ne tomberas pas pile sur ton pronostic cette semaine.', 'Réussir un pronostic exact', (s) => s.any((b) => b.note != null && b.note == b.pronostic)),
+    Pari('Je parie que tu vas sécher l\'Affiche de la semaine.', 'Regarder l\'Affiche', (s) => s.any((b) => b.type == 'Affiche')),
   ];
 
   static DateTime lundiDe(DateTime d) => DateTime(d.year, d.month, d.day).subtract(Duration(days: d.weekday - 1));
@@ -81,28 +81,28 @@ abstract final class Pop {
     final ecart = (note - pronostic).abs();
     if (ecart == 0) {
       return _une([
-        'Pile-poil. Tu as lu le scénario en cachette ?',
+        'Pile-poil ! Tu as lu le scénario en cachette ?',
         'Exact. Je retire ce que j\'ai dit sur ton flair. Enfin, une partie.',
-        'Dans le mille ! Je vais devoir surveiller tes cartes.',
+        'En plein dans le mille. Je vais devoir surveiller tes cartes.',
       ], graine);
     }
     if (ecart == 1) {
       return _une([
-        'À une étoile près. Comme moi au bowling.',
-        'Presque. On dira que c\'est la faute du son.',
-        'Pas loin ! Mais pas loin, ça ne fait pas avancer les pions.',
+        'À une étoile près. Presque !',
+        'Pas loin. Mais « pas loin », ça ne fait pas avancer les pions.',
+        'Une étoile d\'écart. On dira que c\'était la faute du son.',
       ], graine);
     }
     if (note < pronostic) {
       return _une([
-        'Tu lui donnais $pronostic, il finit à $note. Il va falloir régler ton radar.',
-        'Ha ! $pronostic étoiles prédites, $note réelles. Je note ça dans mon carnet des grands ratés.',
-        'Tu y croyais, hein ? Moi, j\'avais vu venir le $note dès la bande-annonce.',
+        'Tu lui donnais $pronostic étoiles, il n\'en mérite que $note. Il va falloir régler ton radar.',
+        'Ha ! $pronostic étoiles prédites, $note au final. Je note ça dans mon carnet des grands ratés.',
+        'Tu y croyais, hein ? Moi, j\'avais deviné le $note dès la bande-annonce.',
       ], graine);
     }
     return _une([
-      'Tu ne le voyais qu\'à $pronostic, et il te met $note ? Ouvre ton cœur, voyons.',
-      'Sous-estimé à $pronostic, adoré à $note. Je te l\'avais dit. Enfin, j\'y pensais très fort.',
+      'Tu ne lui donnais que $pronostic étoiles, et il en mérite $note ? Tu t\'es laissé surprendre.',
+      'Sous-estimé à $pronostic, adoré à $note. Je te l\'avais dit. Enfin, je l\'ai pensé très fort.',
     ], graine);
   }
 
@@ -110,11 +110,11 @@ abstract final class Pop {
   static String surLaCarte(CarteDesGenres carte) {
     if (carte.prisesCetteSemaine.isNotEmpty) {
       final r = carte.prisesCetteSemaine.first.libelle;
-      return 'Personne ne gardait la région $r : je l\'ai prise. Une case de plus pour moi. Viens la chercher.';
+      return 'Personne ne gardait la région $r : je l\'ai prise. Une case de plus pour moi. Viens la reprendre !';
     }
     final c = carte.cible;
     if (c == null) return 'Tu tiens toute la carte. Je boude.';
-    return 'Cette semaine, je vise la région ${c.libelle}. Si tu n\'y regardes rien avant dimanche, elle est à moi.';
+    return 'Cette semaine, je vise la région ${c.libelle}. Si tu n\'y regardes aucun film avant dimanche soir, elle est à moi.';
   }
 
   /// Ce que Pop dit en te voyant sur le plateau.
@@ -122,15 +122,15 @@ abstract final class Pop {
     final g = graineDu(jour);
     if (triche(jour)) {
       return _une([
-        'J\'ai glissé sur une flaque de beurre : une case de plus. Ça compte, c\'est le règlement.',
-        'Le vent a poussé ma figurine d\'une case. Je n\'y suis pour rien. Presque rien.',
+        'J\'ai glissé sur une flaque de beurre : une case de plus. Le règlement ne l\'interdit pas.',
+        'Un coup de vent a poussé ma figurine d\'une case. Je n\'y suis pour rien… ou presque.',
         'J\'ai relu le règlement : il ne dit rien sur les pots de pop-corn. Une case de plus pour moi.',
       ], g);
     }
     if (pop > joueur) {
       return _une([
-        'Je suis devant. Ne te décourage pas. Enfin, si, un peu.',
-        'Tu vois ce pop-corn qui s\'éloigne ? C\'est moi.',
+        'Je suis devant. Ne te décourage pas… enfin, un peu quand même.',
+        'Tu vois ce pot de pop-corn qui s\'éloigne ? C\'est moi.',
         '${pop - joueur} case${pop - joueur > 1 ? 's' : ''} d\'avance. J\'ai le temps de faire une sieste.',
       ], g);
     }
@@ -139,7 +139,7 @@ abstract final class Pop {
     }
     return _une([
       'Tu m\'as doublé ? J\'avais du sel dans les yeux.',
-      'Profite, profite. Je mijote quelque chose.',
+      'Profites-en. Je mijote quelque chose.',
       'Devant moi ? Le mois n\'est pas fini, champion.',
     ], g);
   }

@@ -36,7 +36,7 @@ class _LigueEcranState extends State<LigueEcran> {
                   const SizedBox(height: 16),
                   const _Info(
                     titre: 'Les ligues entre amis',
-                    texte: 'Le serveur des ligues n\'est pas encore branché sur cette version. En attendant, bats Pop en solo.',
+                    texte: 'Les ligues ne sont pas disponibles dans cette version. En attendant, affronte Pop en solo.',
                   ),
                 ])
               : ListenableBuilder(listenable: service, builder: (context, _) => _avecServeur(etat, service)),
@@ -94,7 +94,7 @@ class _LigueEcranState extends State<LigueEcran> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('CODE D\'INVITATION', style: AuraTexte.titre(16)),
               Text(ligue.code, style: AuraTexte.titre(34).copyWith(letterSpacing: 4)),
-              Text('À donner à tes amis pour qu\'ils rejoignent la ligue.', style: AuraTexte.corps(13)),
+              Text('Donne-le à tes amis pour qu\'ils rejoignent la ligue.', style: AuraTexte.corps(13)),
             ]),
           ),
           if (!estTele(context))
@@ -331,7 +331,7 @@ class _InscriptionState extends State<_Inscription> {
           const SizedBox(height: 8),
           ChampAura(controleur: _pseudo, indication: 'Jon', longueurMax: 24, onValider: (_) => _valider()),
           const SizedBox(height: 8),
-          Text('Pas d\'e-mail, pas de mot de passe : ton joueur vit sur cet appareil. Ton profil : ${widget.profil.nom}.',
+          Text('Ni e-mail ni mot de passe : ton joueur est enregistré sur cet appareil. Ton profil : ${widget.profil.nom}.',
               style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
           if (_erreur != null) ...[
             const SizedBox(height: 8),

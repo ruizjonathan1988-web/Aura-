@@ -172,7 +172,7 @@ class _SemaineEcranState extends State<SemaineEcran> {
               ]),
               const SizedBox(height: 6),
               if (place == null) ...[
-                Text('Gauche et droite pour régler. Placé en secret : il sera dévoilé dimanche.', style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
+                Text('Flèches gauche et droite pour régler. Ton Curseur reste secret jusqu\'à dimanche.', style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
                 const SizedBox(height: 12),
                 AuraBouton(
                   libelle: 'Placer mon Curseur',
@@ -181,7 +181,7 @@ class _SemaineEcranState extends State<SemaineEcran> {
               ] else
                 Text(
                   dimanche
-                      ? 'Révélation ! Tu avais placé ton Curseur sur $place. En ligue, on comparera avec la moyenne de tes amis.'
+                      ? 'Révélation ! Tu avais placé ton Curseur sur $place. En ligue, il sera comparé à la moyenne de tes amis.'
                       : 'Curseur placé. Rendez-vous dimanche pour la Révélation.',
                   style: AuraTexte.corps(14, poids: FontWeight.w900),
                 ),
@@ -195,7 +195,7 @@ class _SemaineEcranState extends State<SemaineEcran> {
             Text('EN LIGUE, ÇA SE CORSE', style: AuraTexte.titre(18)),
             const SizedBox(height: 6),
             Text(
-              'Le Programmateur change chaque semaine. Le Bluff mêle le vrai synopsis aux faux de tes amis, un Faussaire n\'a pas vu le film, et la Révélation se joue le dimanche sur la télé.',
+              'Le Programmateur change chaque semaine. Dans le Bluff, le vrai synopsis se cache parmi les faux écrits par tes amis ; un Faussaire n\'a pas vu le film ; et la Révélation se joue le dimanche, sur la télé.',
               style: AuraTexte.corps(14),
             ),
           ]),

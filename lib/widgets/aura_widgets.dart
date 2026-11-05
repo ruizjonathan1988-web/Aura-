@@ -596,7 +596,7 @@ class ChampAura extends StatelessWidget {
   Widget build(BuildContext context) {
     // Règle : rien à taper sur la télé. Le champ y devient une invitation.
     if (estTele(context)) {
-      return Text('Ça s\'écrit depuis ton téléphone : sur la télé, on ne tape rien.',
+      return Text('À écrire depuis ton téléphone : sur la télé, on ne tape rien.',
           style: AuraTexte.corps(14, couleur: AuraCouleurs.texteDoux));
     }
     return TextField(

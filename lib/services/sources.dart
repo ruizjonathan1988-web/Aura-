@@ -38,7 +38,7 @@ class SourceJellyfin implements SourceFilms {
   final http.Client _client;
 
   @override
-  String get nom => 'Ta bibliothèque Jellyfin';
+  String get nom => 'ta bibliothèque Jellyfin';
 
   @override
   Future<List<Film>> catalogue({Emotion? emotion, bool auHasard = true}) async {
@@ -56,10 +56,10 @@ class SourceJellyfin implements SourceFilms {
       'Accept': 'application/json',
     });
     if (rep.statusCode == 401) {
-      throw const ErreurSource('Jellyfin refuse la connexion : vérifie le jeton dans les réglages.');
+      throw const ErreurSource('Jellyfin refuse la connexion : vérifie la clé d\'API dans les réglages.');
     }
     if (rep.statusCode != 200) {
-      throw ErreurSource('Jellyfin a répondu ${rep.statusCode}. Réessaie dans un instant.');
+      throw ErreurSource('Jellyfin a renvoyé une erreur (${rep.statusCode}). Réessaie dans un instant.');
     }
     final json = jsonDecode(utf8.decode(rep.bodyBytes)) as Map<String, dynamic>;
     final items = (json['Items'] as List? ?? const []).cast<Map<String, dynamic>>();
@@ -121,11 +121,12 @@ class ErreurSource implements Exception {
   String toString() => message;
 }
 
-/// Un petit catalogue d'exemple, pour jouer sans serveur. Les notes sont
-/// arrondies et servent seulement à la démonstration.
+/// La sélection de démonstration, pour jouer sans serveur : des films
+/// reconnus, choisis dans les classements IMDb et SensCritique (notes IMDb
+/// arrondies), avec des synopsis rédigés pour Aura.
 class SourceDemo implements SourceFilms {
   @override
-  String get nom => 'Catalogue de démonstration';
+  String get nom => 'la sélection de démonstration';
 
   @override
   Future<List<Film>> catalogue({Emotion? emotion, bool auHasard = true}) async => _films;
@@ -134,17 +135,44 @@ class SourceDemo implements SourceFilms {
     Film(id: 'd1', titre: 'Le Samouraï', annee: 1967, dureeMinutes: 105, note: 7.9, genres: ['Crime', 'Thriller'], pays: ['France'], realisateur: 'Jean-Pierre Melville', synopsis: 'Un tueur à gages solitaire et méthodique se retrouve traqué à la fois par la police et par ceux qui l\'ont engagé.'),
     Film(id: 'd2', titre: 'La Isla Mínima', annee: 2014, dureeMinutes: 105, note: 7.2, genres: ['Thriller', 'Crime'], pays: ['Espagne'], realisateur: 'Alberto Rodríguez', synopsis: 'En 1980, deux policiers que tout oppose enquêtent sur la disparition de deux adolescentes dans les marais andalous.'),
     Film(id: 'd3', titre: 'Les Diaboliques', annee: 1955, dureeMinutes: 117, note: 8.0, genres: ['Thriller', 'Mystery'], pays: ['France'], realisateur: 'Henri-Georges Clouzot', synopsis: 'L\'épouse et la maîtresse d\'un directeur d\'école tyrannique s\'allient pour le tuer, mais le corps disparaît.'),
-    Film(id: 'd4', titre: 'Memories of Murder', annee: 2003, dureeMinutes: 132, note: 8.0, genres: ['Crime', 'Thriller'], pays: ['Corée du Sud'], realisateur: 'Bong Joon-ho', synopsis: 'En 1986, dans la campagne coréenne, deux inspecteurs aux méthodes opposées traquent l\'auteur d\'une série de meurtres.'),
-    Film(id: 'd5', titre: 'Le Dîner de cons', annee: 1998, dureeMinutes: 80, note: 7.5, genres: ['Comedy'], pays: ['France'], realisateur: 'Francis Veber', synopsis: 'Un éditeur qui invite chaque semaine un « con » à dîner pour s\'en moquer voit sa soirée tourner au désastre à cause de son invité.'),
-    Film(id: 'd6', titre: 'Le Voyage de Chihiro', annee: 2001, dureeMinutes: 125, note: 8.5, genres: ['Animation', 'Fantasy'], pays: ['Japon'], realisateur: 'Hayao Miyazaki', synopsis: 'Une fillette piégée dans un monde d\'esprits doit travailler dans des bains publics pour sauver ses parents changés en cochons.'),
-    Film(id: 'd7', titre: 'Intouchables', annee: 2011, dureeMinutes: 112, note: 8.3, genres: ['Comedy', 'Drama'], pays: ['France'], realisateur: 'Olivier Nakache, Éric Toledano', synopsis: 'Un riche aristocrate tétraplégique engage comme auxiliaire de vie un jeune homme de banlieue tout juste sorti de prison.'),
-    Film(id: 'd8', titre: 'Les Temps modernes', annee: 1936, dureeMinutes: 87, note: 8.3, genres: ['Comedy', 'Drama'], pays: ['États-Unis'], realisateur: 'Charlie Chaplin', synopsis: 'Un ouvrier broyé par le travail à la chaîne enchaîne les mésaventures et croise la route d\'une jeune orpheline.'),
-    Film(id: 'd9', titre: 'Une séparation', annee: 2011, dureeMinutes: 123, note: 7.9, genres: ['Drama'], pays: ['Iran'], realisateur: 'Asghar Farhadi', synopsis: 'À Téhéran, un couple en instance de divorce se retrouve pris dans un conflit avec l\'aide-soignante engagée pour le père malade.'),
-    Film(id: 'd10', titre: 'Les Parapluies de Cherbourg', annee: 1964, dureeMinutes: 91, note: 7.6, genres: ['Drama', 'Romance'], pays: ['France'], realisateur: 'Jacques Demy', synopsis: 'Une jeune vendeuse de parapluies et un garagiste s\'aiment, mais la guerre d\'Algérie les sépare. Tout est chanté.'),
-    Film(id: 'd11', titre: 'Mad Max: Fury Road', annee: 2015, dureeMinutes: 120, note: 7.6, genres: ['Adventure', 'Science Fiction'], pays: ['Australie'], realisateur: 'George Miller', synopsis: 'Dans un désert post-apocalyptique, Max et l\'impératrice Furiosa fuient un tyran à bord d\'un camion de guerre.'),
-    Film(id: 'd12', titre: 'Le Salaire de la peur', annee: 1953, dureeMinutes: 131, note: 8.0, genres: ['Adventure', 'Thriller'], pays: ['France'], realisateur: 'Henri-Georges Clouzot', synopsis: 'En Amérique du Sud, quatre hommes sans le sou acceptent de transporter de la nitroglycérine sur des routes défoncées.'),
-    Film(id: 'd13', titre: 'Shoah', annee: 1985, dureeMinutes: 566, note: 8.6, genres: ['Documentary', 'History'], pays: ['France'], realisateur: 'Claude Lanzmann', synopsis: 'Neuf heures de témoignages de survivants, de témoins et d\'anciens bourreaux de l\'extermination des Juifs d\'Europe.'),
-    Film(id: 'd14', titre: 'Persepolis', annee: 2007, dureeMinutes: 96, note: 7.8, genres: ['Animation', 'Drama'], pays: ['Iran', 'France'], realisateur: 'Marjane Satrapi, Vincent Paronnaud', synopsis: 'Une jeune Iranienne grandit pendant la révolution islamique puis la guerre, avant de partir vivre en Europe.'),
-    Film(id: 'd15', titre: 'Rec', annee: 2007, dureeMinutes: 78, note: 7.0, genres: ['Horror'], pays: ['Espagne'], realisateur: 'Jaume Balagueró, Paco Plaza', synopsis: 'Une journaliste et son caméraman suivent des pompiers dans un immeuble de Barcelone soudain placé en quarantaine.'),
+    Film(id: 'd4', titre: 'Memories of Murder', annee: 2003, dureeMinutes: 132, note: 8.1, genres: ['Crime', 'Thriller'], pays: ['Corée du Sud'], realisateur: 'Bong Joon-ho', synopsis: 'En 1986, dans la campagne coréenne, deux inspecteurs aux méthodes opposées traquent l\'auteur d\'une série de meurtres.'),
+    Film(id: 'd5', titre: 'Le Dîner de cons', annee: 1998, dureeMinutes: 80, note: 7.6, genres: ['Comedy'], pays: ['France'], realisateur: 'Francis Veber', synopsis: 'Un éditeur qui invite chaque semaine un « con » à dîner pour s\'en moquer voit sa soirée tourner au désastre à cause de son invité.'),
+    Film(id: 'd6', titre: 'Le Voyage de Chihiro', annee: 2001, dureeMinutes: 125, note: 8.6, genres: ['Animation', 'Fantasy'], pays: ['Japon'], realisateur: 'Hayao Miyazaki', synopsis: 'Une fillette piégée dans un monde d\'esprits doit travailler dans des bains publics pour sauver ses parents changés en cochons.'),
+    Film(id: 'd7', titre: 'Intouchables', annee: 2011, dureeMinutes: 112, note: 8.5, genres: ['Comedy', 'Drama'], pays: ['France'], realisateur: 'Olivier Nakache, Éric Toledano', synopsis: 'Un riche aristocrate tétraplégique engage comme auxiliaire de vie un jeune homme de banlieue tout juste sorti de prison.'),
+    Film(id: 'd8', titre: 'Les Temps modernes', annee: 1936, dureeMinutes: 87, note: 8.5, genres: ['Comedy', 'Drama'], pays: ['États-Unis'], realisateur: 'Charlie Chaplin', synopsis: 'Un ouvrier broyé par le travail à la chaîne enchaîne les mésaventures et croise la route d\'une jeune orpheline.'),
+    Film(id: 'd9', titre: 'Une séparation', annee: 2011, dureeMinutes: 123, note: 8.3, genres: ['Drama'], pays: ['Iran'], realisateur: 'Asghar Farhadi', synopsis: 'À Téhéran, un couple en instance de divorce se retrouve pris dans un conflit avec l\'aide-soignante engagée pour le père malade.'),
+    Film(id: 'd10', titre: 'Les Parapluies de Cherbourg', annee: 1964, dureeMinutes: 91, note: 7.8, genres: ['Drama', 'Romance'], pays: ['France'], realisateur: 'Jacques Demy', synopsis: 'Une jeune vendeuse de parapluies et un garagiste s\'aiment, mais la guerre d\'Algérie les sépare. Tout est chanté.'),
+    Film(id: 'd11', titre: 'Mad Max: Fury Road', annee: 2015, dureeMinutes: 120, note: 8.1, genres: ['Adventure', 'Science Fiction'], pays: ['Australie'], realisateur: 'George Miller', synopsis: 'Dans un désert post-apocalyptique, Max et l\'impératrice Furiosa fuient un tyran à bord d\'un camion de guerre.'),
+    Film(id: 'd12', titre: 'Le Salaire de la peur', annee: 1953, dureeMinutes: 131, note: 8.1, genres: ['Adventure', 'Thriller'], pays: ['France'], realisateur: 'Henri-Georges Clouzot', synopsis: 'En Amérique du Sud, quatre hommes sans le sou acceptent de transporter de la nitroglycérine sur des routes défoncées.'),
+    Film(id: 'd13', titre: 'Persepolis', annee: 2007, dureeMinutes: 96, note: 8.0, genres: ['Animation', 'Drama'], pays: ['France'], realisateur: 'Marjane Satrapi, Vincent Paronnaud', synopsis: 'Une jeune Iranienne grandit pendant la révolution islamique puis la guerre, avant de partir vivre en Europe.'),
+    Film(id: 'd14', titre: 'Rec', annee: 2007, dureeMinutes: 78, note: 7.4, genres: ['Horror'], pays: ['Espagne'], realisateur: 'Jaume Balagueró, Paco Plaza', synopsis: 'Une journaliste et son caméraman suivent des pompiers dans un immeuble de Barcelone soudain placé en quarantaine.'),
+    Film(id: 'd15', titre: 'Le Parrain', annee: 1972, dureeMinutes: 175, note: 9.2, genres: ['Crime', 'Drama'], pays: ['États-Unis'], realisateur: 'Francis Ford Coppola', synopsis: 'Le chef vieillissant d\'une famille de la mafia new-yorkaise transmet son empire à son plus jeune fils, d\'abord réticent.'),
+    Film(id: 'd16', titre: 'Les Évadés', annee: 1994, dureeMinutes: 142, note: 9.3, genres: ['Drama'], pays: ['États-Unis'], realisateur: 'Frank Darabont', synopsis: 'Condamné à tort pour le meurtre de sa femme, un banquier se lie d\'amitié avec un autre détenu au fil de longues années de prison.'),
+    Film(id: 'd17', titre: 'Le Bon, la Brute et le Truand', annee: 1966, dureeMinutes: 178, note: 8.8, genres: ['Western'], pays: ['Italie'], realisateur: 'Sergio Leone', synopsis: 'Pendant la guerre de Sécession, trois hommes sans scrupules se disputent un trésor enterré dans un cimetière.'),
+    Film(id: 'd18', titre: 'Parasite', annee: 2019, dureeMinutes: 132, note: 8.5, genres: ['Comedy', 'Thriller', 'Drama'], pays: ['Corée du Sud'], realisateur: 'Bong Joon-ho', synopsis: 'Une famille pauvre s\'infiltre, un membre après l\'autre, au service d\'une riche famille de Séoul.'),
+    Film(id: 'd19', titre: 'Le Fabuleux Destin d\'Amélie Poulain', annee: 2001, dureeMinutes: 122, note: 8.3, genres: ['Comedy', 'Romance'], pays: ['France'], realisateur: 'Jean-Pierre Jeunet', synopsis: 'Une jeune serveuse de Montmartre décide de faire en secret le bonheur des gens qui l\'entourent.'),
+    Film(id: 'd20', titre: 'La Haine', annee: 1995, dureeMinutes: 98, note: 8.1, genres: ['Drama', 'Crime'], pays: ['France'], realisateur: 'Mathieu Kassovitz', synopsis: 'Au lendemain d\'une émeute, trois amis d\'une cité de banlieue errent pendant vingt-quatre heures entre la cité et Paris.'),
+    Film(id: 'd21', titre: 'Alien, le huitième passager', annee: 1979, dureeMinutes: 117, note: 8.5, genres: ['Horror', 'Science Fiction'], pays: ['Royaume-Uni'], realisateur: 'Ridley Scott', synopsis: 'L\'équipage d\'un cargo spatial recueille à son bord une créature qui l\'élimine un membre après l\'autre.'),
+    Film(id: 'd22', titre: 'Retour vers le futur', annee: 1985, dureeMinutes: 116, note: 8.5, genres: ['Adventure', 'Comedy', 'Science Fiction'], pays: ['États-Unis'], realisateur: 'Robert Zemeckis', synopsis: 'Un adolescent remonte accidentellement le temps jusqu\'en 1955 et doit s\'assurer que ses futurs parents tombent amoureux.'),
+    Film(id: 'd23', titre: 'Le Silence des agneaux', annee: 1991, dureeMinutes: 118, note: 8.6, genres: ['Crime', 'Thriller', 'Horror'], pays: ['États-Unis'], realisateur: 'Jonathan Demme', synopsis: 'Une jeune recrue du FBI sollicite l\'aide d\'un psychiatre cannibale pour arrêter un tueur en série.'),
+    Film(id: 'd24', titre: 'Mon voisin Totoro', annee: 1988, dureeMinutes: 86, note: 8.1, genres: ['Animation', 'Family', 'Fantasy'], pays: ['Japon'], realisateur: 'Hayao Miyazaki', synopsis: 'Deux sœurs installées à la campagne se lient d\'amitié avec les esprits de la forêt voisine.'),
+    Film(id: 'd25', titre: 'Les Quatre Cents Coups', annee: 1959, dureeMinutes: 99, note: 8.1, genres: ['Drama'], pays: ['France'], realisateur: 'François Truffaut', synopsis: 'Délaissé par ses parents et puni à l\'école, le jeune Antoine Doinel multiplie les fugues dans le Paris des années 1950.'),
+    Film(id: 'd26', titre: 'La Grande Vadrouille', annee: 1966, dureeMinutes: 132, note: 7.9, genres: ['Comedy', 'War'], pays: ['France'], realisateur: 'Gérard Oury', synopsis: 'Sous l\'Occupation, un chef d\'orchestre et un peintre en bâtiment aident des aviateurs anglais à gagner la zone libre.'),
+    Film(id: 'd27', titre: 'The Grand Budapest Hotel', annee: 2014, dureeMinutes: 100, note: 8.1, genres: ['Comedy', 'Adventure'], pays: ['États-Unis'], realisateur: 'Wes Anderson', synopsis: 'Le concierge d\'un grand hôtel d\'Europe centrale et son jeune groom se retrouvent mêlés au vol d\'un tableau de grande valeur.'),
+    Film(id: 'd28', titre: 'Get Out', annee: 2017, dureeMinutes: 104, note: 7.8, genres: ['Horror', 'Mystery', 'Thriller'], pays: ['États-Unis'], realisateur: 'Jordan Peele', synopsis: 'Un jeune homme noir rend visite à la famille de sa petite amie blanche, et le week-end prend une tournure inquiétante.'),
+    Film(id: 'd29', titre: 'Le Labyrinthe de Pan', annee: 2006, dureeMinutes: 118, note: 8.2, genres: ['Fantasy', 'Drama', 'War'], pays: ['Espagne'], realisateur: 'Guillermo del Toro', synopsis: 'En 1944, dans l\'Espagne franquiste, une fillette s\'invente un monde merveilleux et inquiétant pour échapper à la violence de son beau-père.'),
+    Film(id: 'd30', titre: 'Whiplash', annee: 2014, dureeMinutes: 106, note: 8.5, genres: ['Drama', 'Music'], pays: ['États-Unis'], realisateur: 'Damien Chazelle', synopsis: 'Un jeune batteur de jazz subit les méthodes impitoyables d\'un professeur prêt à tout pour faire de lui un grand musicien.'),
+    Film(id: 'd31', titre: 'In the Mood for Love', annee: 2000, dureeMinutes: 98, note: 8.1, genres: ['Drama', 'Romance'], pays: ['Hong Kong'], realisateur: 'Wong Kar-wai', synopsis: 'Dans le Hong Kong des années 1960, deux voisins découvrent que leurs conjoints ont une liaison.'),
+    Film(id: 'd32', titre: 'La Cité de Dieu', annee: 2002, dureeMinutes: 130, note: 8.6, genres: ['Crime', 'Drama'], pays: ['Brésil'], realisateur: 'Fernando Meirelles, Kátia Lund', synopsis: 'Dans une favela de Rio, un jeune photographe raconte l\'ascension des gangs qui règnent sur son quartier.'),
+    Film(id: 'd33', titre: 'Coco', annee: 2017, dureeMinutes: 105, note: 8.4, genres: ['Animation', 'Family', 'Fantasy'], pays: ['États-Unis'], realisateur: 'Lee Unkrich', synopsis: 'Un jeune Mexicain passionné de musique se retrouve au pays des morts et part à la recherche de son arrière-arrière-grand-père.'),
+    Film(id: 'd34', titre: 'Le Seigneur des anneaux : La Communauté de l\'anneau', annee: 2001, dureeMinutes: 178, note: 8.9, genres: ['Adventure', 'Fantasy'], pays: ['Nouvelle-Zélande'], realisateur: 'Peter Jackson', synopsis: 'Un jeune hobbit hérite d\'un anneau maléfique et part avec huit compagnons pour le détruire.'),
+    Film(id: 'd35', titre: 'Psychose', annee: 1960, dureeMinutes: 109, note: 8.5, genres: ['Horror', 'Thriller'], pays: ['États-Unis'], realisateur: 'Alfred Hitchcock', synopsis: 'Après avoir volé une grosse somme d\'argent, une secrétaire s\'arrête dans un motel isolé tenu par un jeune homme étrange.'),
+    Film(id: 'd36', titre: 'Shining', annee: 1980, dureeMinutes: 146, note: 8.4, genres: ['Horror'], pays: ['Royaume-Uni'], realisateur: 'Stanley Kubrick', synopsis: 'Gardien d\'un hôtel isolé pendant l\'hiver, un écrivain sombre peu à peu dans la folie sous les yeux de sa femme et de son fils.'),
+    Film(id: 'd37', titre: 'Your Name', annee: 2016, dureeMinutes: 106, note: 8.4, genres: ['Animation', 'Romance', 'Fantasy'], pays: ['Japon'], realisateur: 'Makoto Shinkai', synopsis: 'Un lycéen de Tokyo et une lycéenne de la campagne se réveillent régulièrement dans le corps l\'un de l\'autre.'),
+    Film(id: 'd38', titre: 'OSS 117 : Le Caire, nid d\'espions', annee: 2006, dureeMinutes: 99, note: 7.0, genres: ['Comedy'], pays: ['France'], realisateur: 'Michel Hazanavicius', synopsis: 'En 1955, un agent secret français aussi sûr de lui que maladroit enquête au Caire sur la disparition d\'un collègue.'),
+    Film(id: 'd39', titre: 'Le Cinquième Élément', annee: 1997, dureeMinutes: 126, note: 7.6, genres: ['Science Fiction', 'Adventure'], pays: ['France'], realisateur: 'Luc Besson', synopsis: 'Au XXIIIe siècle, un chauffeur de taxi doit protéger une mystérieuse jeune femme qui détient la clé du salut de la Terre.'),
+    Film(id: 'd40', titre: '12 hommes en colère', annee: 1957, dureeMinutes: 96, note: 9.0, genres: ['Drama'], pays: ['États-Unis'], realisateur: 'Sidney Lumet', synopsis: 'Dans une salle de délibération, un juré tente de convaincre les onze autres que l\'accusé n\'est peut-être pas coupable.'),
+    Film(id: 'd41', titre: 'Shoah', annee: 1985, dureeMinutes: 566, note: 8.6, genres: ['Documentary', 'History'], pays: ['France'], realisateur: 'Claude Lanzmann', synopsis: 'Neuf heures de témoignages de survivants, de témoins et d\'anciens bourreaux de l\'extermination des Juifs d\'Europe.'),
+    Film(id: 'd42', titre: 'Le Goût des autres', annee: 2000, dureeMinutes: 112, note: 7.2, genres: ['Comedy', 'Drama', 'Romance'], pays: ['France'], realisateur: 'Agnès Jaoui', synopsis: 'Un chef d\'entreprise peu cultivé tombe amoureux d\'une comédienne et découvre, maladroitement, le théâtre et l\'art.'),
   ];
 }

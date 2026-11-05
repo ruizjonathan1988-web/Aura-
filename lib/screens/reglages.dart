@@ -142,7 +142,7 @@ class _ReglagesEcranState extends State<ReglagesEcran> {
                           children: [
                             Text('TA BIBLIOTHÈQUE JELLYFIN', style: AuraTexte.titre(16)),
                             const SizedBox(height: 12),
-                            _champ('Adresse du serveur', _adresse, aide: 'Celle que tu tapes dans VJOD, par exemple https://…'),
+                            _champ('Adresse du serveur', _adresse, aide: 'La même que dans VJOD, par exemple https://…'),
                             _champ('Identifiant utilisateur Jellyfin', _utilisateur, aide: 'Tableau de bord Jellyfin, Utilisateurs : l\'identifiant est dans l\'adresse de la page du profil.'),
                             _champ('Clé d\'API', _jeton, secret: true, aide: 'Tableau de bord Jellyfin, Clés API, puis « + ».'),
                             AuraBouton(libelle: _test ? 'Test en cours…' : 'Tester la connexion', principal: false, onPressed: _test || !_connexion.complete ? null : _tester),
