@@ -2,6 +2,8 @@
 
 Document de passation : tout ce qu'il faut savoir pour continuer Aura dans une nouvelle conversation. À coller ou à faire lire en début de session.
 
+Dernière mise à jour : 5 novembre 2026, après la validation automatique, Pop adversaire et le fichier des règles.
+
 ## Qui et quoi
 
 Jon, éducateur spécialisé et développeur pour son usage, en France. Tout est en français : réponses et textes d'interface. Il préfère une prose naturelle, des échanges directs et concis, et des améliorations par petites touches plutôt que des réécritures complètes.
@@ -13,6 +15,17 @@ Il maintient :
 - Un serveur maison avec Jellyfin, Seerr, Prowlarr et qBittorrent.
 
 **Aura** est une application nouvelle, distincte de VJOD : un jeu de société du cinéma qui règle le « qu'est-ce qu'on regarde ce soir ? ». Dépôt : `ruizjonathan1988-web/Aura-` (branche `main`).
+
+## Méthode de travail
+
+Jon travaille avec des crédits limités et plusieurs comptes : ce fichier remplace toute réexplication. À chaque session :
+
+1. Lire ce fichier en entier avant de toucher au code.
+2. Travailler sur une branche, ouvrir une pull request, attendre la CI verte (analyse, tests, APK), puis fusionner dans `main`. La fusion publie l'APK.
+3. Toute règle du jeu nouvelle ou modifiée a son test dans `test/regles_test.dart`, numéroté comme dans le tableau ci-dessous. Un test qui casse veut dire qu'une règle a bougé : on le décide exprès, jamais en passant.
+4. Avant de finir, mettre à jour ce fichier : date en haut, « Fait », « Prochaines étapes », tableau des règles. Petites touches, pas de réécriture.
+
+Pas de Flutter dans l'environnement des sessions (le téléchargement du SDK Dart est bloqué) : c'est la CI qui compile et teste. Écrire le code avec soin, puis lire l'onglet Actions de la pull request.
 
 ## Le concept
 
@@ -28,7 +41,28 @@ Les règles qui ne se discutent pas :
 - **La télé est partagée** : rien de secret à l'écran (rôles cachés, notes) ; les secrets restent sur le téléphone.
 - **Tout se joue à la télécommande** : flèches, OK, Retour. Pas de saisie de texte sur la télé.
 
-Les rythmes du jeu (tous asynchrones, personne ne regarde en même temps) :
+## Les règles et leurs tests
+
+Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (les tests plus anciens de `test/jeu_test.dart` restent valables).
+
+| Règle | Ce qui est vérifié | Où dans le code |
+|---|---|---|
+| R1 Zéro navet | Tirage, Plan du jour et Affiche ne proposent rien sous 6/10 ni sans assez d'avis (150, ou 30 avant 1990) ; l'Affiche n'est jamais un film déjà vu | `Tirage.assezBon` |
+| R2 3 cases par jour | La 2e carte du jour ne rapporte plus ; un film vu hier compte sur hier | `Regles.casesAccordees`, `EtatJeu.casesLe` |
+| R3 Pas de points au temps passé | Un film de 5 h rapporte autant qu'un film court ; la durée ne fait que filtrer | `TypeCarte`, `Tirage` |
+| R4 Revenir ne punit jamais | Une séance sans case ne fait pas reculer ; la position survit à la fermeture | `EtatJeu` |
+| R5 Plateau du mois | Retour en case 1 le 1er, plafond à 30, une séance du mois dernier ne compte pas | `EtatJeu._nouveauMois` |
+| R6 Plan du jour | Un seul essai par jour, 3 indices, 4 réponses à choisir | `PlanDuJour`, `EtatJeu.planDuJour` |
+| R7 Affiche de la semaine | Curseur secret jusqu'au dimanche, gardé d'une ouverture à l'autre | `Affiche`, écran Semaine |
+| R8 Pop | 1 case par jour, 5 triches au plus par mois, pari fixe sur la semaine, recul de 2 une seule fois par pari, toujours entre 1 et 30 | `Pop` |
+| R9 Aucune séance perdue | Carte jouée gardée ; une note suffit ; billet automatique noté après coup ; Jellyfin ne compte que les films vus après la carte ; taux mesuré | `EtatJeu`, `SourceJellyfin.dateDeVisionnage` |
+| R10 Tout à la télécommande | À partir de 900 de large, mode télé : les champs de texte deviennent « ça s'écrit depuis ton téléphone » | `ChampAura`, `estLargeurTele` |
+
+Règles sans test automatique : « pas de pochettes surprises payantes » (rien à vendre pour l'instant), le plafond de 3 cases côté serveur (trigger SQL `plafonner_cases`, pas exécuté en CI), et la navigation aux flèches (à vérifier à la main sur la box). Exception connue à R10 : les Réglages Jellyfin demandent encore l'adresse et la clé au clavier.
+
+## Les rythmes du jeu
+
+Tous asynchrones, personne ne regarde en même temps :
 
 - **Chaque jour** : le Plan du jour (un film à deviner en 3 indices, résultat partageable sans spoiler).
 - **Chaque soir** : Ce soir (envie, durée, plateformes, puis 3 cartes défis en éventail ; pronostic avant, billet et Verdict après).
@@ -61,7 +95,8 @@ Fait :
 
 - Ce soir (envie, durée, main de 3 cartes en éventail, pronostic, billet et Verdict).
 - Plateau du mois contre Pop, profils et figurines, réglages.
-- Tirage avec règle zéro navet et plafond de 3 cases par jour (`lib/services/tirage.dart`), tests dans `test/jeu_test.dart`.
+- Tirage avec règle zéro navet et plafond de 3 cases par jour (`lib/services/tirage.dart`).
+- Tests : une règle, un test, dans `test/regles_test.dart` (voir le tableau plus haut) ; tests historiques dans `test/jeu_test.dart`.
 - Édition VJOD : source Jellyfin (`MinCommunityRating=6`) et lancement direct dans VJOD par `moonfin://play?id=<itemId>&serverId=<serverId>`, que VJOD comprend déjà.
 - Onglets alignés sur le prototype : Ce soir, Plateau, Semaine, Ligue ; le Profil s'ouvre par la pastille ronde en haut, la pastille des pions mène à la Ligue, les Réglages sont en bas du Profil.
 - Plan du jour (`lib/services/plan_du_jour.dart`) : même film pour tous le même jour, 3 indices à ouvrir, 1 essai parmi 4 titres (rien à taper), résultat à copier sans spoiler.
@@ -70,6 +105,7 @@ Fait :
 - Ligues Supabase branchées (`lib/services/ligues.dart`) : compte anonyme avec pseudo, création de ligue, rejointe par code à 6 caractères, classement du mois (`supabase/migrations/0002_classement.sql`), séances envoyées au serveur et renvoyées si hors ligne. Sans les secrets, l'appli reste en solo. Sur la télé, la ligue s'affiche mais se gère au téléphone.
 - Validation sans effort : une carte jouée devient une « séance en cours » gardée sur l'appareil. En édition VJOD, Aura demande à Jellyfin si le film a été vu (Played ou 90 %, après la carte) au démarrage et au retour dans l'appli : le billet se crée tout seul, il ne reste qu'à noter en un geste. Sinon, « Alors, ce film ? » avec les étoiles dans Ce soir. Taux cartes jouées / billets affiché dans le Profil.
 - Pop adversaire (`lib/services/pop.dart`) : pari de la semaine (il recule de 2 cases s'il le perd), petites triches avouées, répliques sur le plateau et chambrage du pronostic (vraie note demandée après la séance).
+- Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
 ## Prochaines étapes, dans l'ordre
