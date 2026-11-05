@@ -2,7 +2,7 @@
 
 Document de passation : tout ce qu'il faut savoir pour continuer Aura dans une nouvelle conversation. À coller ou à faire lire en début de session.
 
-Dernière mise à jour : 5 novembre 2026, après le premier soir (test, figurine, Bluff contre Pop).
+Dernière mise à jour : 5 novembre 2026, après le branchement du projet Supabase.
 
 ## Qui et quoi
 
@@ -103,7 +103,7 @@ Fait :
 - Plan du jour (`lib/services/plan_du_jour.dart`) : même film pour tous le même jour, 3 indices à ouvrir, 1 essai parmi 4 titres (rien à taper), résultat à copier sans spoiler.
 - Semaine en solo : Affiche choisie par Pop (même film du lundi au dimanche), séance à +2 cases, Curseur secret, Révélation le dimanche. Bluff et Faussaire attendent les ligues.
 - Plateau du mois : la position repart de la case 1 le 1er du mois.
-- Ligues Supabase branchées (`lib/services/ligues.dart`) : compte anonyme avec pseudo, création de ligue, rejointe par code à 6 caractères, classement du mois (`supabase/migrations/0002_classement.sql`), séances envoyées au serveur et renvoyées si hors ligne. Sans les secrets, l'appli reste en solo. Sur la télé, la ligue s'affiche mais se gère au téléphone.
+- Ligues Supabase branchées (`lib/services/ligues.dart`) : compte anonyme avec pseudo, création de ligue, rejointe par code à 6 caractères, classement du mois (`supabase/migrations/0002_classement.sql`), séances envoyées au serveur et renvoyées si hors ligne. Projet Supabase : `trjocwmslkxtluuhsvgx` (Francfort). Adresse et clé anon dans `lib/services/config.dart` (publiques par nature ; les secrets GitHub, s'ils existent, passent avant). Les sessions ne peuvent ni écrire les secrets GitHub ni joindre Supabase (proxy) : les vérifications serveur se font par Jon. Sur la télé, la ligue s'affiche mais se gère au téléphone.
 - Validation sans effort : une carte jouée devient une « séance en cours » gardée sur l'appareil. En édition VJOD, Aura demande à Jellyfin si le film a été vu (Played ou 90 %, après la carte) au démarrage et au retour dans l'appli : le billet se crée tout seul, il ne reste qu'à noter en un geste. Sinon, « Alors, ce film ? » avec les étoiles dans Ce soir. Taux cartes jouées / billets affiché dans le Profil.
 - Pop adversaire (`lib/services/pop.dart`) : pari de la semaine (il recule de 2 cases s'il le perd), petites triches avouées, répliques sur le plateau et chambrage du pronostic (vraie note demandée après la séance).
 - Premier soir (`lib/screens/premier_soir.dart`, `lib/services/premier_soir.dart`) : au premier lancement, Pop accueille, test « Quel spectateur es-tu ? » en 6 questions, figurine qui sort de sa boîte (copiable pour partager), puis mini-Bluff : un film de la bibliothèque (synopsis Jellyfin « Overview », ramené à sa première phrase) ou de la démo, son vrai synopsis et deux faux de Pop. Trouver le vrai donne le Joker du Bluff (+1 case sur la prochaine séance). « Refaire le test » est dans le Profil.
@@ -119,7 +119,7 @@ La priorité est la rétention : d'abord colmater les fuites, ensuite l'effet «
 3. Pop, suite : il prend une région de la carte des genres si on ne la défend pas, il bluffe.
 4. Revenir après une pause sans être puni : Pop garde ta place, carte de rattrapage.
 5. Mesurer : retour J+1, J+7, J+30 et taux cartes jouées / billets (le taux est déjà compté sur l'appareil ; à remonter dans Supabase).
-6. Activer Supabase (lancer `0001` puis `0002`, connexions anonymes, secrets `SUPABASE_URL` et `SUPABASE_ANON_KEY`), puis les événements d'amis (« Léa a deviné ton Curseur ») et la figurine débloquée pour les deux quand on invite un ami.
+6. Supabase : vérifier que `0001` puis `0002` ont bien été lancés et que les connexions anonymes sont activées (à confirmer par Jon), puis les événements d'amis (« Léa a deviné ton Curseur ») et la figurine débloquée pour les deux quand on invite un ami.
 7. Le Duel du canapé : la logique est prête dans `docs/brouillons/duel.dart.txt`, à remettre dans `lib/services/` (6 cartes, écarts à tour de rôle, un Veto chacun, mini-quiz de cinéma).
 8. Version publique : notification du lendemain « Alors, Le Samouraï ? » avec les étoiles, plateformes via TMDB (JustWatch), import Letterboxd ou Trakt, licences.
 
