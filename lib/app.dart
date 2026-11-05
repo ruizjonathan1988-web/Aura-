@@ -1,0 +1,238 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'screens/ce_soir.dart';
+import 'screens/ligue.dart';
+import 'screens/plateau.dart';
+import 'screens/profil.dart';
+import 'screens/reglages.dart';
+import 'services/etat.dart';
+import 'theme/aura_theme.dart';
+import 'widgets/aura_widgets.dart';
+
+/// Donne l'état du joueur à tous les écrans, et les reconstruit quand il change.
+class PorteeEtat extends InheritedNotifier<EtatJeu> {
+  const PorteeEtat({super.key, required EtatJeu etat, required super.child}) : super(notifier: etat);
+
+  static EtatJeu of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<PorteeEtat>()!.notifier!;
+}
+
+class AuraApp extends StatelessWidget {
+  const AuraApp({super.key, required this.etat});
+  final EtatJeu etat;
+
+  @override
+  Widget build(BuildContext context) {
+    return PorteeEtat(
+      etat: etat,
+      child: MaterialApp(
+        title: 'Aura',
+        debugShowCheckedModeBanner: false,
+        theme: construireTheme(),
+        // La touche OK des télécommandes Android TV valide partout.
+        shortcuts: {
+          ...WidgetsApp.defaultShortcuts,
+          const SingleActivator(LogicalKeyboardKey.select): const ActivateIntent(),
+        },
+        home: const Coquille(),
+      ),
+    );
+  }
+}
+
+enum Onglet {
+  ceSoir('Ce soir', Icons.style_rounded),
+  plateau('Plateau', Icons.flag_rounded),
+  ligue('Ligue', Icons.emoji_events_rounded),
+  profil('Profil', Icons.face_rounded);
+
+  const Onglet(this.libelle, this.icone);
+  final String libelle;
+  final IconData icone;
+}
+
+/// La structure de l'appli : en-tête, écran courant, et navigation en bas
+/// (téléphone) ou en haut (télé, écran large).
+class Coquille extends StatefulWidget {
+  const Coquille({super.key});
+
+  @override
+  State<Coquille> createState() => _CoquilleState();
+}
+
+class _CoquilleState extends State<Coquille> {
+  Onglet _onglet = Onglet.ceSoir;
+
+  void _aller(Onglet o) => setState(() => _onglet = o);
+
+  @override
+  Widget build(BuildContext context) {
+    final etat = PorteeEtat.of(context);
+    final tele = MediaQuery.sizeOf(context).width >= 900;
+    final ecran = switch (_onglet) {
+      Onglet.ceSoir => CeSoirEcran(versPlateau: () => _aller(Onglet.plateau)),
+      Onglet.plateau => const PlateauEcran(),
+      Onglet.ligue => const LigueEcran(),
+      Onglet.profil => const ProfilEcran(),
+    };
+    return PopScope(
+      canPop: _onglet == Onglet.ceSoir,
+      onPopInvokedWithResult: (aQuitte, _) {
+        if (!aQuitte) _aller(Onglet.ceSoir);
+      },
+      child: Scaffold(
+        body: FondTrame(
+          child: SafeArea(
+            bottom: false,
+            child: FocusTraversalGroup(
+              child: Column(
+                children: [
+                  _EnTete(
+                    position: etat.position,
+                    onProfil: () => _aller(Onglet.profil),
+                    onReglages: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReglagesEcran())),
+                    onglets: tele ? _Onglets(actif: _onglet, onChoisir: _aller, compact: true) : null,
+                  ),
+                  Expanded(child: KeyedSubtree(key: ValueKey(_onglet), child: ecran)),
+                  if (!tele) _Onglets(actif: _onglet, onChoisir: _aller),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EnTete extends StatelessWidget {
+  const _EnTete({required this.position, required this.onProfil, required this.onReglages, this.onglets});
+
+  final int position;
+  final VoidCallback onProfil;
+  final VoidCallback onReglages;
+  final Widget? onglets;
+
+  @override
+  Widget build(BuildContext context) {
+    final etat = PorteeEtat.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
+      child: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const TitreCartoon('Aura', taille: 34, inclinaison: -0.05),
+              const SizedBox(height: 2),
+              Container(
+                padding: const EdgeInsets.fromLTRB(8, 2, 6, 2),
+                decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(7), border: Border.all(width: 2)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text('un jeu ', style: AuraTexte.corps(11, poids: FontWeight.w900, couleur: AuraCouleurs.creme)),
+                  Image.asset('assets/marque/vjod-transparent.png', height: 15, semanticLabel: 'VJOD'),
+                ]),
+              ),
+            ],
+          ),
+          if (onglets != null) ...[const SizedBox(width: 24), Expanded(child: onglets!)] else const Spacer(),
+          Touchable(
+            etiquette: 'Réglages',
+            onTap: onReglages,
+            builder: (context, focus, appui) => Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: AuraCouleurs.creme,
+                shape: BoxShape.circle,
+                border: Border.all(width: 3),
+                boxShadow: [
+                  if (focus) const BoxShadow(color: AuraCouleurs.jaune, spreadRadius: 4),
+                  if (!appui) const BoxShadow(color: AuraCouleurs.noir, offset: Offset(3, 3)),
+                ],
+              ),
+              child: const Icon(Icons.settings_rounded, color: AuraCouleurs.noir),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Touchable(
+            etiquette: 'Mon profil : ${etat.profil.nom}, case $position',
+            onTap: onProfil,
+            builder: (context, focus, appui) => Container(
+              padding: const EdgeInsets.fromLTRB(6, 2, 12, 2),
+              decoration: BoxDecoration(
+                color: AuraCouleurs.creme,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(width: 3),
+                boxShadow: [
+                  if (focus) const BoxShadow(color: AuraCouleurs.jaune, spreadRadius: 4),
+                  if (!appui) const BoxShadow(color: AuraCouleurs.noir, offset: Offset(3, 3)),
+                ],
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Figurine.profil(etat.profil, hauteur: 40),
+                const SizedBox(width: 6),
+                Text('$position/30', style: AuraTexte.corps(14, poids: FontWeight.w900)),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Onglets extends StatelessWidget {
+  const _Onglets({required this.actif, required this.onChoisir, this.compact = false});
+
+  final Onglet actif;
+  final ValueChanged<Onglet> onChoisir;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final rangee = Row(
+      children: [
+        for (final o in Onglet.values)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: Touchable(
+                etiquette: o.libelle,
+                selectionne: o == actif,
+                onTap: () => onChoisir(o),
+                onFocus: compact ? () => onChoisir(o) : null,
+                builder: (context, focus, appui) => Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: o == actif ? AuraCouleurs.jaune : Colors.transparent,
+                    borderRadius: BorderRadius.circular(14),
+                    border: o == actif || focus ? Border.all(width: 2.5) : null,
+                    boxShadow: focus ? const [BoxShadow(color: AuraCouleurs.jaune, spreadRadius: 3)] : null,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (!compact) Icon(o.icone, size: 20, color: AuraCouleurs.noir),
+                      Text(o.libelle.toUpperCase(), style: AuraTexte.titre(compact ? 17 : 14)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+    if (compact) return rangee;
+    return Container(
+      decoration: const BoxDecoration(
+        color: AuraCouleurs.creme,
+        border: Border(top: BorderSide(width: 3)),
+      ),
+      padding: EdgeInsets.fromLTRB(8, 6, 8, 8 + MediaQuery.paddingOf(context).bottom),
+      child: rangee,
+    );
+  }
+}

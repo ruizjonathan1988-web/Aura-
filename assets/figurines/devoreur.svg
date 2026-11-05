@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 136" width="100" height="136">
+<rect x="6" y="116" width="88" height="17" rx="4" fill="#B5793F" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M12 120 V50 A38 38 0 0 1 88 50 V120 Z" fill="#FF8FB8" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M18 116 V52 A32 32 0 0 1 82 52 V116" fill="none" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="2.5"/>
+
+<path d="M22 120 C16 84 24 46 50 44 C76 46 84 84 78 120 Z" fill="#9B7BFF" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M36 46 L30 30 M64 46 L70 30" fill="none" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="30" cy="28" r="5" fill="#FFD23F" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70" cy="28" r="5" fill="#FFD23F" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="39" cy="62" r="10" fill="#FFFFFF" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="42" cy="64" r="4.2" fill="#141414"/><circle cx="62" cy="60" r="8" fill="#FFFFFF" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="60" cy="63" r="3.4" fill="#141414"/>
+<path d="M28 82 Q50 74 72 82 Q70 110 50 110 Q30 110 28 82 Z" fill="#141414" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M31 83 L36 92 L41 81 L46 91 L51 80 L56 91 L61 81 L66 92 L69 83" fill="#FFFFFF" stroke="#141414" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="58" y="94" width="34" height="12" rx="2" fill="#FFD23F" stroke="#141414" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" transform="rotate(-18 75 100)"/>
+<g fill="#141414" transform="rotate(-18 75 100)"><rect x="62" y="96" width="4" height="3"/><rect x="70" y="96" width="4" height="3"/><rect x="78" y="96" width="4" height="3"/><rect x="62" y="102" width="4" height="3"/><rect x="70" y="102" width="4" height="3"/><rect x="78" y="102" width="4" height="3"/></g>
+</svg>

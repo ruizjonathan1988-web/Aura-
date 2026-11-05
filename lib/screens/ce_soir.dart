@@ -1,0 +1,350 @@
+import 'package:flutter/material.dart';
+
+import '../app.dart';
+import '../models/modeles.dart';
+import '../services/etat.dart';
+import '../services/sources.dart';
+import '../services/tirage.dart';
+import '../services/vjod_lien.dart';
+import '../theme/aura_theme.dart';
+import '../widgets/aura_widgets.dart';
+
+enum _Etape { envie, cartes, pronostic, billet }
+
+/// Ce soir : l'envie, le tirage des trois cartes, le pronostic, le billet.
+class CeSoirEcran extends StatefulWidget {
+  const CeSoirEcran({super.key, required this.versPlateau});
+  final VoidCallback versPlateau;
+
+  @override
+  State<CeSoirEcran> createState() => _CeSoirEcranState();
+}
+
+class _CeSoirEcranState extends State<CeSoirEcran> {
+  _Etape _etape = _Etape.envie;
+  Emotion _emotion = Emotion.frissonner;
+  Duree _duree = Duree.moyenne;
+  List<CarteDefi> _cartes = const [];
+  int _choisie = 0;
+  int _pronostic = 4;
+  bool _chargement = false;
+  String? _message;
+  final _verdict = TextEditingController();
+  final _tirage = Tirage();
+
+  CarteDefi get _carte => _cartes[_choisie];
+
+  @override
+  void dispose() {
+    _verdict.dispose();
+    super.dispose();
+  }
+
+  Future<void> _tirer(EtatJeu etat) async {
+    setState(() {
+      _chargement = true;
+      _message = null;
+    });
+    try {
+      final catalogue = await etat.source.catalogue(emotion: _emotion);
+      final cartes = _tirage.tirer(catalogue: catalogue, emotion: _emotion, duree: _duree, profil: etat.profil);
+      setState(() {
+        _cartes = cartes;
+        _choisie = 0;
+        if (cartes.isEmpty) {
+          _message = 'Rien à 3 étoiles ou plus pour cette envie et cette durée. Change d\'envie ou prends plus de temps.';
+        } else {
+          _etape = _Etape.cartes;
+        }
+      });
+    } on ErreurSource catch (e) {
+      setState(() => _message = e.message);
+    } catch (_) {
+      setState(() => _message = 'Impossible de joindre ta bibliothèque. Vérifie l\'adresse dans les réglages.');
+    } finally {
+      if (mounted) setState(() => _chargement = false);
+    }
+  }
+
+  Future<void> _lancerDansVjod() async {
+    final erreur = await VjodLien.ouvrir(_carte.film);
+    if (!mounted) return;
+    if (erreur != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(erreur)));
+    } else {
+      setState(() => _etape = _Etape.billet);
+    }
+  }
+
+  Future<void> _valider(EtatJeu etat) async {
+    final gagnees = await etat.validerSeance(_carte, pronostic: _pronostic, verdict: _verdict.text.trim());
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(gagnees > 0
+          ? 'Ton pion avance de $gagnees case${gagnees > 1 ? 's' : ''} !'
+          : 'Séance gardée dans tes billets. Ton pion a déjà avancé de 3 cases aujourd\'hui.'),
+    ));
+    setState(() {
+      _etape = _Etape.envie;
+      _verdict.clear();
+    });
+    widget.versPlateau();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final etat = PorteeEtat.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: KeyedSubtree(
+              key: ValueKey(_etape),
+              child: switch (_etape) {
+                _Etape.envie => _envie(etat),
+                _Etape.cartes => _main(),
+                _Etape.pronostic => _pronosticVue(),
+                _Etape.billet => _billet(etat),
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _envie(EtatJeu etat) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 150,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(right: 120, top: 8),
+                child: TitreCartoon('Qu\'est-ce qu\'on ressent ce soir ?', taille: 38),
+              ),
+              Positioned(
+                right: -4,
+                top: -6,
+                child: Transform.rotate(
+                  angle: 0.1,
+                  child: Image.asset('assets/marque/pop.png', height: 150, semanticLabel: 'Pop, la mascotte VJOD'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 8,
+          runSpacing: 10,
+          children: [
+            for (final e in Emotion.values)
+              Pastille(
+                libelle: e.libelle,
+                choisie: e == _emotion,
+                autofocus: e == _emotion,
+                onTap: () => setState(() => _emotion = e),
+              ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        Panneau(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('COMBIEN DE TEMPS ?', style: AuraTexte.titre(16)),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 10, children: [
+                for (final d in Duree.values)
+                  Pastille(libelle: d.libelle, choisie: d == _duree, onTap: () => setState(() => _duree = d)),
+              ]),
+              const SizedBox(height: 12),
+              Text('Le jeu pioche dans : ${etat.source.nom}. Que des titres à 3 étoiles ou plus.',
+                  style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
+            ],
+          ),
+        ),
+        if (_message != null) ...[
+          const SizedBox(height: 14),
+          Panneau(couleur: AuraCouleurs.jaune, child: Text(_message!, style: AuraTexte.corps(14, poids: FontWeight.w900))),
+        ],
+        const SizedBox(height: 20),
+        AuraBouton(
+          libelle: _chargement ? 'Pop mélange les cartes…' : 'Tirer mes 3 cartes',
+          onPressed: _chargement ? null : () => _tirer(etat),
+        ),
+      ],
+    );
+  }
+
+  Widget _main() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const TitreCartoon('Tire ta carte !', taille: 44),
+        const SizedBox(height: 8),
+        Text('${_emotion.libelle}, ${_duree.libelle.toLowerCase()}. Gauche et droite pour choisir, OK pour jouer.',
+            style: AuraTexte.corps(15)),
+        const SizedBox(height: 10),
+        PopQuiParle(texte: _carte.bulleDePop, taille: 76),
+        const SizedBox(height: 6),
+        MainDeCartes(
+          cartes: _cartes,
+          choisie: _choisie,
+          onChoisir: (i) => setState(() => _choisie = i),
+          onJouer: () => setState(() => _etape = _Etape.pronostic),
+        ),
+        Panneau(child: Text('${_carte.joker}.', style: AuraTexte.corps(14))),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Expanded(flex: 2, child: AuraBouton(libelle: 'Changer d\'envie', principal: false, onPressed: () => setState(() => _etape = _Etape.envie))),
+            const SizedBox(width: 10),
+            Expanded(flex: 3, child: AuraBouton(libelle: 'Jouer cette carte !', onPressed: () => setState(() => _etape = _Etape.pronostic))),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _pronosticVue() {
+    final f = _carte.film;
+    final etoiles = f.etoiles == null ? '' : '${f.etoiles!.toStringAsFixed(1).replaceAll('.', ',')} étoiles';
+    final vjod = VjodLien.disponible(f);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Transform.rotate(
+          angle: -0.025,
+          child: Container(
+            decoration: AuraTrait.panneau(),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  color: _carte.type.couleur,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  child: Text('CARTE RÉVÉLÉE !', style: AuraTexte.titre(16)),
+                ),
+                const Divider(height: 3, thickness: 3, color: AuraCouleurs.noir),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(f.titre.toUpperCase(), style: AuraTexte.titre(34)),
+                      const SizedBox(height: 6),
+                      Text(f.infos, style: AuraTexte.corps(14, couleur: AuraCouleurs.texteDoux)),
+                      if (etoiles.isNotEmpty) Text(etoiles, style: AuraTexte.corps(14, poids: FontWeight.w900)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Panneau(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('TON PRONOSTIC : QUELLE NOTE LUI DONNERAS-TU ?', style: AuraTexte.titre(16)),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (var n = 1; n <= 5; n++)
+                  Pastille(libelle: '$n', choisie: n == _pronostic, autofocus: n == _pronostic, onTap: () => setState(() => _pronostic = n)),
+              ]),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        if (vjod)
+          AuraBouton(libelle: 'Lancer dans VJOD', icone: Icons.play_arrow_rounded, onPressed: _lancerDansVjod)
+        else
+          AuraBouton(libelle: 'C\'est parti, je regarde', onPressed: () => setState(() => _etape = _Etape.billet)),
+        const SizedBox(height: 12),
+        AuraBouton(libelle: 'Revoir ma main', principal: false, onPressed: () => setState(() => _etape = _Etape.cartes)),
+      ],
+    );
+  }
+
+  Widget _billet(EtatJeu etat) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const TitreCartoon('Alors, ce film ?', taille: 40),
+        const SizedBox(height: 16),
+        Transform.rotate(
+          angle: 0.02,
+          child: Container(
+            decoration: AuraTrait.panneau(),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Billet n° ${(etat.billets.length + 1).toString().padLeft(3, '0')}', style: AuraTexte.corps(13, poids: FontWeight.w900)),
+                      const SizedBox(height: 4),
+                      Text(_carte.film.titre.toUpperCase(), style: AuraTexte.titre(30)),
+                      Text('${_emotion.libelle}, ${_carte.defi.toLowerCase()}', style: AuraTexte.corps(14, couleur: AuraCouleurs.texteDoux)),
+                    ],
+                  ),
+                ),
+                Container(
+                  color: const Color(0xFFFFE9A8),
+                  padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
+                  child: Row(children: [
+                    Expanded(child: _ligneBillet('Pronostic', '$_pronostic / 5')),
+                    Expanded(child: _ligneBillet('Plateau', '+${_carte.cases}')),
+                  ]),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Panneau(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('TON VERDICT EN UNE PHRASE', style: AuraTexte.titre(16)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _verdict,
+                maxLength: 120,
+                style: AuraTexte.corps(15),
+                decoration: InputDecoration(
+                  hintText: 'À voir seul, un soir de pluie',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(width: 2.5)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        AuraBouton(libelle: 'Valider et avancer mon pion', autofocus: true, onPressed: () => _valider(etat)),
+        const SizedBox(height: 12),
+        AuraBouton(libelle: 'Je ne l\'ai pas vu finalement', principal: false, onPressed: () => setState(() => _etape = _Etape.cartes)),
+      ],
+    );
+  }
+
+  Widget _ligneBillet(String a, String b) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [Text(a, style: AuraTexte.corps(12, poids: FontWeight.w900)), Text(b, style: AuraTexte.titre(24))],
+      );
+}

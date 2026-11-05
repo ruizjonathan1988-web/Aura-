@@ -1,0 +1,19 @@
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+pubspec.lock.bak
+*.iml
+.idea/
+.vscode/
+
+# Dossiers natifs générés par la compilation (flutter create)
+android/
+ios/
+web/
+linux/
+macos/
+windows/
+.metadata
