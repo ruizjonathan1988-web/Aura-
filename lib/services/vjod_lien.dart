@@ -26,7 +26,7 @@ abstract final class VjodLien {
   /// Renvoie null si VJOD a été ouvert, sinon le message à afficher.
   static Future<String?> ouvrir(Film film, {bool lecture = true}) async {
     if (!disponible(film)) {
-      return 'Le lancement dans VJOD marche sur Android, pour les titres de ta bibliothèque.';
+      return 'Le lancement dans VJOD fonctionne sur Android, pour les films de ta bibliothèque Jellyfin.';
     }
     try {
       final ok = await launchUrl(pour(film, lecture: lecture), mode: LaunchMode.externalApplication);

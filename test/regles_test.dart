@@ -58,6 +58,17 @@ void main() {
       }
     });
 
+    test('R1 le tirage privilégie les films les mieux notés', () {
+      final lot = [
+        for (var i = 0; i < 50; i++) _film('moyen$i', note: 6.0 + (i % 10) / 20),
+        for (var i = 0; i < 10; i++) _film('top$i', note: 8.5, annee: 1960 + i * 5),
+      ];
+      for (var graine = 0; graine < 20; graine++) {
+        final cartes = Tirage(hasard: Random(graine)).tirer(catalogue: lot, emotion: Emotion.frissonner, duree: Duree.soiree, profil: Profil.fidele);
+        expect(cartes.every((c) => (c.film.note ?? 0) >= 6.3), isTrue);
+      }
+    });
+
     test('R1 un film récent a besoin d\'assez d\'avis, un vieux film un peu moins', () {
       expect(Tirage.assezBon(_film('a', votes: 149)), isFalse);
       expect(Tirage.assezBon(_film('b', votes: 150)), isTrue);

@@ -81,7 +81,7 @@ class PlateauEcran extends StatelessWidget {
             children: [
               TitreCartoon('Le plateau de ${_mois[maintenant.month - 1]}', taille: 38),
               const SizedBox(height: 8),
-              Text('Pas de dé : on avance en regardant, 3 cases par jour au maximum. Pop avance d\'une case par jour, et il triche un peu : passe-le !',
+              Text('Pas de dé : on avance en regardant des films, 3 cases par jour au maximum. Pop avance d\'une case par jour et triche un peu. À toi de le dépasser !',
                   style: AuraTexte.corps(15)),
               const SizedBox(height: 12),
               PopQuiParle(texte: etat.motDePop ?? Pop.surPlateau(joueur: etat.position, pop: pop, jour: maintenant), taille: 70),
@@ -112,7 +112,7 @@ class PlateauEcran extends StatelessWidget {
                   Text(
                     pariReleve
                         ? 'Pari relevé ! Pop recule de ${Pop.recul} cases.'
-                        : 'Pour lui donner tort : ${pari.defi.toLowerCase()} avant dimanche. Il reculera de ${Pop.recul} cases.',
+                        : 'Pour lui donner tort : ${pari.defi.toLowerCase()} avant dimanche soir. Il reculera alors de ${Pop.recul} cases.',
                     style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux),
                   ),
                 ]),
@@ -134,7 +134,7 @@ class PlateauEcran extends StatelessWidget {
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text(b.titre, style: AuraTexte.corps(15, poids: FontWeight.w900)),
-                            Text(b.verdict.isNotEmpty ? '« ${b.verdict} »' : '${b.type}, pronostic ${b.pronostic}/5${b.note != null ? ', note ${b.note}/5' : ''}${b.auto ? ', validé tout seul' : ''}',
+                            Text(b.verdict.isNotEmpty ? '« ${b.verdict} »' : 'Carte ${b.type} · pronostic ${b.pronostic}/5${b.note != null ? ' · note ${b.note}/5' : ''}${b.auto ? ' · validé automatiquement' : ''}',
                                 style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
                           ]),
                         ),
@@ -277,7 +277,7 @@ class _PanneauCentral extends StatelessWidget {
           Column(children: [
             const TitreCartoon('Saison', taille: 34, inclinaison: -0.06),
             const SizedBox(height: 6),
-            Text(enTete ? 'Tu mènes devant Pop !' : 'Pop a ${positionPop - positionJoueur} case${positionPop - positionJoueur > 1 ? 's' : ''} d\'avance',
+            Text(enTete ? 'Tu es devant Pop !' : 'Pop a ${positionPop - positionJoueur} case${positionPop - positionJoueur > 1 ? 's' : ''} d\'avance',
                 textAlign: TextAlign.center, style: AuraTexte.corps(14, poids: FontWeight.w900, couleur: AuraCouleurs.creme)),
           ]),
           Image.asset('assets/marque/vjod-transparent.png', height: 26, semanticLabel: 'VJOD'),
@@ -338,7 +338,7 @@ class _CarteDesGenresVue extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Une séance dans une région la rend tienne. Chaque région de Pop lui donne une case d\'avance : reprends-la en y regardant un film.',
+          'Regarde un film d\'une région pour la prendre. Chaque région tenue par Pop lui vaut une case d\'avance : reprends-la en y regardant un film.',
           style: AuraTexte.corps(13, couleur: AuraCouleurs.creme),
         ),
       ],

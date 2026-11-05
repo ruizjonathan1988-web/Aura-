@@ -69,7 +69,7 @@ class ServiceLigues extends ChangeNotifier {
 
   Future<void> inscrire(String nom, Profil profil) async {
     final p = nom.trim();
-    if (p.length < 2 || p.length > 24) throw const ErreurLigue('Ton pseudo doit faire entre 2 et 24 lettres.');
+    if (p.length < 2 || p.length > 24) throw const ErreurLigue('Ton pseudo doit compter entre 2 et 24 caractères.');
     await _proteger(() async {
       if (monId == null) await _client.auth.signInAnonymously();
       await _client.from('joueurs').upsert({'id': monId, 'pseudo': p, 'profil': profil.name});
@@ -87,7 +87,7 @@ class ServiceLigues extends ChangeNotifier {
 
   Future<Ligue> creer(String nom) async {
     final n = nom.trim();
-    if (n.length < 2 || n.length > 40) throw const ErreurLigue('Le nom de la ligue doit faire entre 2 et 40 lettres.');
+    if (n.length < 2 || n.length > 40) throw const ErreurLigue('Le nom de la ligue doit compter entre 2 et 40 caractères.');
     final ligue = await _proteger(() async {
       final j = await _client.from('ligues').insert({'nom': n, 'cree_par': monId}).select().single();
       return Ligue.depuisJson(j);
@@ -99,7 +99,7 @@ class ServiceLigues extends ChangeNotifier {
 
   Future<void> rejoindre(String code) async {
     final c = code.trim().toUpperCase();
-    if (c.length != 6) throw const ErreurLigue('Le code d\'invitation fait 6 caractères.');
+    if (c.length != 6) throw const ErreurLigue('Le code d\'invitation compte 6 caractères.');
     await _proteger(() async {
       await _client.rpc('rejoindre_ligue', params: {'code': c});
     });

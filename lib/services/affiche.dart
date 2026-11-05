@@ -32,10 +32,10 @@ class Affiche {
   static String questionPour(Film f) {
     final g = f.genres.map((x) => x.toLowerCase()).toSet();
     bool a(List<String> l) => l.any(g.contains);
-    if (a(['horror', 'horreur', 'thriller', 'mystery', 'mystère'])) return 'À quel point ça fait peur ?';
-    if (a(['comedy', 'comédie'])) return 'À quel point ça fait rire ?';
-    if (a(['drama', 'drame', 'romance'])) return 'À quel point ça bouleverse ?';
-    if (a(['documentary', 'documentaire', 'history', 'histoire', 'war', 'guerre'])) return 'À quel point ça fait réfléchir ?';
-    return 'À quel point ça fait voyager ?';
+    if (a(['horror', 'horreur', 'thriller', 'mystery', 'mystère'])) return 'À quel point fait-il peur ?';
+    if (a(['comedy', 'comédie'])) return 'À quel point est-il drôle ?';
+    if (a(['drama', 'drame', 'romance'])) return 'À quel point est-il émouvant ?';
+    if (a(['documentary', 'documentaire', 'history', 'histoire', 'war', 'guerre'])) return 'À quel point fait-il réfléchir ?';
+    return 'À quel point fait-il voyager ?';
   }
 }

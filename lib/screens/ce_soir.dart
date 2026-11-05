@@ -55,7 +55,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         _cartes = cartes;
         _choisie = 0;
         if (cartes.isEmpty) {
-          _message = 'Rien à 3 étoiles ou plus pour cette envie et cette durée. Change d\'envie ou prends plus de temps.';
+          _message = 'Aucun film à 3 étoiles ou plus ne correspond à cette envie et à cette durée. Change d\'envie ou accorde-toi plus de temps.';
         } else {
           _etape = _Etape.cartes;
         }
@@ -86,7 +86,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(gagnees > 0
           ? 'Ton pion avance de $gagnees case${gagnees > 1 ? 's' : ''} !'
-          : 'Séance gardée dans tes billets. Ton pion a déjà avancé de 3 cases aujourd\'hui.'),
+          : 'Séance enregistrée dans tes billets. Ton pion a déjà avancé de 3 cases aujourd\'hui : c\'est le maximum.'),
     ));
     setState(() {
       _etape = _Etape.envie;
@@ -150,7 +150,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
             children: [
               const Padding(
                 padding: EdgeInsets.only(right: 120, top: 8),
-                child: TitreCartoon('Qu\'est-ce qu\'on ressent ce soir ?', taille: 38),
+                child: TitreCartoon('Envie de quoi ce soir ?', taille: 38),
               ),
               Positioned(
                 right: -4,
@@ -182,14 +182,14 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('COMBIEN DE TEMPS ?', style: AuraTexte.titre(16)),
+              Text('COMBIEN DE TEMPS AS-TU ?', style: AuraTexte.titre(16)),
               const SizedBox(height: 10),
               Wrap(spacing: 8, runSpacing: 10, children: [
                 for (final d in Duree.values)
                   Pastille(libelle: d.libelle, choisie: d == _duree, onTap: () => setState(() => _duree = d)),
               ]),
               const SizedBox(height: 12),
-              Text('Le jeu pioche dans : ${etat.source.nom}. Que des titres à 3 étoiles ou plus.',
+              Text('Les cartes viennent de ${etat.source.nom}. Uniquement des films notés 3 étoiles ou plus.',
                   style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
             ],
           ),
@@ -211,9 +211,9 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const TitreCartoon('Tire ta carte !', taille: 44),
+        const TitreCartoon('Choisis ta carte !', taille: 44),
         const SizedBox(height: 8),
-        Text('${_emotion.libelle}, ${_duree.libelle.toLowerCase()}. Gauche et droite pour choisir, OK pour jouer.',
+        Text('${_emotion.libelle} · ${_duree.libelle}. Flèches gauche et droite pour choisir, OK pour jouer.',
             style: AuraTexte.corps(15)),
         const SizedBox(height: 10),
         PopQuiParle(texte: _carte.bulleDePop, taille: 76),
@@ -224,7 +224,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           onChoisir: (i) => setState(() => _choisie = i),
           onJouer: () => setState(() => _etape = _Etape.pronostic),
         ),
-        Panneau(child: Text('${_carte.joker}.', style: AuraTexte.corps(14))),
+        Panneau(child: Text('${_carte.joker} Tous les films proposés sont notés 3 étoiles ou plus.', style: AuraTexte.corps(14))),
         const SizedBox(height: 18),
         Row(
           children: [
@@ -239,7 +239,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
 
   Widget _pronosticVue() {
     final f = _carte.film;
-    final etoiles = f.etoiles == null ? '' : '${f.etoiles!.toStringAsFixed(1).replaceAll('.', ',')} étoiles';
+    final etoiles = f.etoiles == null ? '' : 'Noté ${f.etoiles!.toStringAsFixed(1).replaceAll('.', ',')} sur 5';
     final vjod = VjodLien.disponible(f);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -279,7 +279,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('TON PRONOSTIC : QUELLE NOTE LUI DONNERAS-TU ?', style: AuraTexte.titre(16)),
+              Text('TON PRONOSTIC : COMBIEN D\'ÉTOILES LUI DONNERAS-TU ?', style: AuraTexte.titre(16)),
               const SizedBox(height: 10),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 for (var n = 1; n <= 5; n++)
@@ -293,7 +293,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           AuraBouton(libelle: 'Lancer dans VJOD', icone: Icons.play_arrow_rounded, onPressed: () => _lancerDansVjod(PorteeEtat.of(context)))
         else
           AuraBouton(
-            libelle: 'C\'est parti, je regarde',
+            libelle: 'C\'est parti, je le regarde',
             onPressed: () async {
               await PorteeEtat.of(context).commencerSeance(_carte, pronostic: _pronostic);
               if (mounted) setState(() => _etape = _Etape.billet);
@@ -327,7 +327,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
                       Text('Billet n° ${(etat.billets.length + 1).toString().padLeft(3, '0')}', style: AuraTexte.corps(13, poids: FontWeight.w900)),
                       const SizedBox(height: 4),
                       Text(_carte.film.titre.toUpperCase(), style: AuraTexte.titre(30)),
-                      Text('${_emotion.libelle}, ${_carte.defi.toLowerCase()}', style: AuraTexte.corps(14, couleur: AuraCouleurs.texteDoux)),
+                      Text('${_emotion.libelle} · ${_carte.defi}', style: AuraTexte.corps(14, couleur: AuraCouleurs.texteDoux)),
                     ],
                   ),
                 ),
@@ -348,14 +348,14 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('TA VRAIE NOTE (TU AVAIS DIT $_pronostic)', style: AuraTexte.titre(16)),
+              Text('TA NOTE APRÈS LE FILM (TU AVAIS PRÉDIT $_pronostic)', style: AuraTexte.titre(16)),
               const SizedBox(height: 10),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 for (var n = 1; n <= 5; n++)
                   Pastille(libelle: '$n', choisie: n == _note, onTap: () => setState(() => _note = n)),
               ]),
               const SizedBox(height: 6),
-              Text('Pop compare avec ton pronostic. Prépare-toi.', style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
+              Text('Pop va la comparer à ton pronostic. Prépare-toi.', style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
             ],
           ),
         ),
@@ -373,7 +373,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         const SizedBox(height: 18),
         AuraBouton(libelle: 'Valider et avancer mon pion', autofocus: true, onPressed: () => _valider(etat)),
         const SizedBox(height: 12),
-        AuraBouton(libelle: 'Je ne l\'ai pas vu finalement', principal: false, onPressed: () => setState(() => _etape = _Etape.cartes)),
+        AuraBouton(libelle: 'Finalement, je ne l\'ai pas vu', principal: false, onPressed: () => setState(() => _etape = _Etape.cartes)),
       ],
     );
   }
@@ -434,7 +434,7 @@ class _CartePlanDuJour extends StatelessWidget {
                     ? 'Un film à deviner, 3 indices, 1 essai'
                     : r.trouve
                         ? 'Trouvé au ${r.indices == 1 ? '1er' : '${r.indices}e'} indice. À demain !'
-                        : 'Raté aujourd\'hui. Revanche demain !',
+                        : 'Raté pour aujourd\'hui. Revanche demain !',
                 style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux),
               ),
             ]),
@@ -462,11 +462,11 @@ class _ANoter extends StatelessWidget {
       couleur: AuraCouleurs.vert,
       inclinaison: -0.012,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(billet.cases > 0 ? 'BILLET VALIDÉ TOUT SEUL : +${billet.cases} !' : 'BILLET VALIDÉ TOUT SEUL !', style: AuraTexte.titre(16)),
+        Text(billet.cases > 0 ? 'BILLET VALIDÉ AUTOMATIQUEMENT : +${billet.cases} !' : 'BILLET VALIDÉ AUTOMATIQUEMENT !', style: AuraTexte.titre(16)),
         const SizedBox(height: 4),
         Text('Alors, ${billet.titre} ?', style: AuraTexte.titre(26)),
         const SizedBox(height: 4),
-        Text('Ta note, et Pop la compare à ton pronostic (${billet.pronostic}).', style: AuraTexte.corps(13)),
+        Text('Donne ta note : Pop la comparera à ton pronostic (${billet.pronostic} sur 5).', style: AuraTexte.corps(13)),
         const SizedBox(height: 10),
         _Etoiles(autofocus: true, onNote: (n) => etat.noterBillet(billet, n)),
       ]),
@@ -488,7 +488,7 @@ class _AlorsCeFilm extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text('Alors, ${seance.titre} ?', style: AuraTexte.titre(26)),
         const SizedBox(height: 4),
-        Text('Tu l\'as vu ? Donne ta note et ton pion avance de ${seance.cases}.', style: AuraTexte.corps(13)),
+        Text('Tu l\'as vu ? Donne ta note, et ton pion avance de ${seance.cases} case${seance.cases > 1 ? 's' : ''}.', style: AuraTexte.corps(13)),
         const SizedBox(height: 10),
         _Etoiles(
           autofocus: true,
@@ -496,14 +496,14 @@ class _AlorsCeFilm extends StatelessWidget {
             final gagnees = await etat.validerEnCours(seance, note: n);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(gagnees > 0 ? 'Billet validé : +$gagnees !' : 'Billet validé. Ton pion a déjà fait ses 3 cases ce jour-là.'),
+                content: Text(gagnees > 0 ? 'Billet validé : +$gagnees !' : 'Billet validé. Ton pion avait déjà avancé de 3 cases ce jour-là.'),
               ));
             }
           },
         ),
         const SizedBox(height: 10),
         Wrap(spacing: 8, runSpacing: 8, children: [
-          Pastille(libelle: 'Pas encore vu', choisie: false, onTap: () => etat.reporterSeance(seance)),
+          Pastille(libelle: 'Pas encore', choisie: false, onTap: () => etat.reporterSeance(seance)),
           Pastille(libelle: 'Je ne le regarderai pas', choisie: false, onTap: () => etat.abandonnerSeance(seance)),
         ]),
       ]),
