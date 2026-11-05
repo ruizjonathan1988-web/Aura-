@@ -2,7 +2,7 @@
 
 Document de passation : tout ce qu'il faut savoir pour continuer Aura dans une nouvelle conversation. À coller ou à faire lire en début de session.
 
-Dernière mise à jour : 5 novembre 2026, après le branchement du projet Supabase.
+Dernière mise à jour : 6 novembre 2026, après la carte des genres contre Pop.
 
 ## Qui et quoi
 
@@ -58,6 +58,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R9 Aucune séance perdue | Carte jouée gardée ; une note suffit ; billet automatique noté après coup ; Jellyfin ne compte que les films vus après la carte ; taux mesuré | `EtatJeu`, `SourceJellyfin.dateDeVisionnage` |
 | R10 Tout à la télécommande | À partir de 900 de large, mode télé : les champs de texte deviennent « ça s'écrit depuis ton téléphone » | `ChampAura`, `estLargeurTele` |
 | R11 Premier soir | Test équilibré (chaque profil 3 fois sur 6 questions), égalité au plus récent ; Bluff : un vrai synopsis et deux faux de Pop, jamais de navet ni de documentaire ; Joker +1 case une seule fois, plafond de 3 respecté | `TestSpectateur`, `BluffDePop`, `EtatJeu.jokerBluff` |
+| R12 Carte des genres | Une séance rend la région tienne (un film peut en couvrir plusieurs) ; Pop vise une région libre chaque lundi et la prend si rien n'y est vu avant dimanche ; elle se reprend ; rien de visé avant le premier lundi ; chaque région de Pop = 1 case | `CarteDesGenres`, `Pop.position` |
 
 Règles sans test automatique : « pas de pochettes surprises payantes » (rien à vendre pour l'instant), le plafond de 3 cases côté serveur (trigger SQL `plafonner_cases`, pas exécuté en CI), et la navigation aux flèches (à vérifier à la main sur la box). Exception connue à R10 : les Réglages Jellyfin demandent encore l'adresse et la clé au clavier.
 
@@ -107,8 +108,13 @@ Fait :
 - Validation sans effort : une carte jouée devient une « séance en cours » gardée sur l'appareil. En édition VJOD, Aura demande à Jellyfin si le film a été vu (Played ou 90 %, après la carte) au démarrage et au retour dans l'appli : le billet se crée tout seul, il ne reste qu'à noter en un geste. Sinon, « Alors, ce film ? » avec les étoiles dans Ce soir. Taux cartes jouées / billets affiché dans le Profil.
 - Pop adversaire (`lib/services/pop.dart`) : pari de la semaine (il recule de 2 cases s'il le perd), petites triches avouées, répliques sur le plateau et chambrage du pronostic (vraie note demandée après la séance).
 - Premier soir (`lib/screens/premier_soir.dart`, `lib/services/premier_soir.dart`) : au premier lancement, Pop accueille, test « Quel spectateur es-tu ? » en 6 questions, figurine qui sort de sa boîte (copiable pour partager), puis mini-Bluff : un film de la bibliothèque (synopsis Jellyfin « Overview », ramené à sa première phrase) ou de la démo, son vrai synopsis et deux faux de Pop. Trouver le vrai donne le Joker du Bluff (+1 case sur la prochaine séance). « Refaire le test » est dans le Profil.
+- Carte des genres (`lib/services/carte_genres.dart`, section du Plateau) : 8 régions (Polar, Comédie, Drame, Évasion, Animation, Frissons, Classiques avant 1980, Cinéma d'ailleurs hors France et États-Unis). Les billets gardent désormais genres, année et pays. Chaque lundi Pop vise une région libre et la prend si on ne la défend pas avant dimanche ; chacune lui vaut une case ; on la reprend en y regardant un film.
 - Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
+
+## Retours de Jon à traiter
+
+- **6 nov. : « le quiz est mal écrit, les propositions de films sont franchement mauvaises. »** À reprendre avec des bases reconnues : IMDb (Top 250, notes et nombre de votes), SensCritique (tops et notes de la communauté française), Letterboxd, TMDB. Concerne au moins le catalogue de démonstration (`SourceDemo`, 15 films choisis à la main), les questions du test « Quel spectateur es-tu ? », du mini-quiz du Duel (`docs/brouillons/duel.dart.txt`) et les faux synopsis de Pop. Demander à Jon lequel il visait en premier s'il n'a pas précisé. Licences : les jeux de données IMDb sont réservés à l'usage non commercial ; SensCritique n'a pas d'API publique ; TMDB est gratuit avec mention et demande un accord pour un usage commercial. Pour l'édition VJOD, les films viennent de sa bibliothèque Jellyfin : le seuil zéro navet peut aussi s'appuyer sur le nombre de votes TMDB/IMDb que Jellyfin récupère.
 
 ## Prochaines étapes, dans l'ordre
 
@@ -116,7 +122,7 @@ La priorité est la rétention : d'abord colmater les fuites, ensuite l'effet «
 
 1. Vérifier l'APK sur la box et le téléphone, et la validation automatique avec un vrai film Jellyfin.
 2. Vérifier le premier soir sur la box (focus aux flèches à chaque question, animation de la boîte, Bluff avec un vrai synopsis Jellyfin en français).
-3. Pop, suite : il prend une région de la carte des genres si on ne la défend pas, il bluffe.
+3. Pop, suite : il bluffe (par exemple un faux synopsis glissé dans les indices, ou une carte piégée dans la main). La carte des genres est faite.
 4. Revenir après une pause sans être puni : Pop garde ta place, carte de rattrapage.
 5. Mesurer : retour J+1, J+7, J+30 et taux cartes jouées / billets (le taux est déjà compté sur l'appareil ; à remonter dans Supabase).
 6. Supabase : vérifier que `0001` puis `0002` ont bien été lancés et que les connexions anonymes sont activées (à confirmer par Jon), puis les événements d'amis (« Léa a deviné ton Curseur ») et la figurine débloquée pour les deux quand on invite un ami.

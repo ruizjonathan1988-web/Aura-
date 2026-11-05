@@ -1,3 +1,4 @@
+import 'carte_genres.dart';
 import 'etat.dart';
 import 'tirage.dart';
 
@@ -49,12 +50,14 @@ abstract final class Pop {
   /// Les jours où Pop triche : un peu moins d'un jour sur huit.
   static bool triche(DateTime d) => (d.day * 7 + d.month * 3 + d.year) % 8 == 0;
 
-  /// La case de Pop : un pas par jour, plus ses triches, moins ses paris perdus.
+  /// La case de Pop : un pas par jour, plus ses triches et ses régions de la
+  /// carte des genres, moins ses paris perdus.
   static int position(DateTime maintenant, List<Billet> billets) {
     var p = maintenant.day;
     for (var j = 1; j <= maintenant.day; j++) {
       if (triche(DateTime(maintenant.year, maintenant.month, j))) p++;
     }
+    p += CarteDesGenres.de(maintenant, billets).regionsDePop;
     p -= recul * parisPerdus(maintenant, billets);
     return p.clamp(1, Regles.taillePlateau);
   }
@@ -101,6 +104,17 @@ abstract final class Pop {
       'Tu ne le voyais qu\'à $pronostic, et il te met $note ? Ouvre ton cœur, voyons.',
       'Sous-estimé à $pronostic, adoré à $note. Je te l\'avais dit. Enfin, j\'y pensais très fort.',
     ], graine);
+  }
+
+  /// Ce que Pop dit de la carte des genres.
+  static String surLaCarte(CarteDesGenres carte) {
+    if (carte.prisesCetteSemaine.isNotEmpty) {
+      final r = carte.prisesCetteSemaine.first.libelle;
+      return 'Personne ne gardait la région $r : je l\'ai prise. Une case de plus pour moi. Viens la chercher.';
+    }
+    final c = carte.cible;
+    if (c == null) return 'Tu tiens toute la carte. Je boude.';
+    return 'Cette semaine, je vise la région ${c.libelle}. Si tu n\'y regardes rien avant dimanche, elle est à moi.';
   }
 
   /// Ce que Pop dit en te voyant sur le plateau.

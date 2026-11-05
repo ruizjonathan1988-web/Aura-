@@ -24,6 +24,9 @@ class Billet {
     this.note,
     this.auto = false,
     this.envoye = false,
+    this.genres = const [],
+    this.annee,
+    this.pays = const [],
   });
 
   final String titre;
@@ -35,6 +38,11 @@ class Billet {
 
   /// La vraie note donnée après la séance, à comparer au pronostic.
   final int? note;
+
+  /// De quoi placer la séance sur la carte des genres.
+  final List<String> genres;
+  final int? annee;
+  final List<String> pays;
 
   /// Vrai si le billet s'est créé tout seul (Jellyfin a vu le film passer).
   final bool auto;
@@ -55,6 +63,9 @@ class Billet {
         note: note ?? this.note,
         auto: auto,
         envoye: envoye ?? this.envoye,
+        genres: genres,
+        annee: annee,
+        pays: pays,
       );
 
   Billet marqueEnvoye() => copie(envoye: true);
@@ -69,6 +80,9 @@ class Billet {
         if (note != null) 'note': note,
         'auto': auto,
         'envoye': envoye,
+        if (genres.isNotEmpty) 'genres': genres,
+        if (annee != null) 'annee': annee,
+        if (pays.isNotEmpty) 'pays': pays,
       };
 
   static Billet depuisJson(Map<String, dynamic> j) => Billet(
@@ -81,6 +95,9 @@ class Billet {
         note: j['note'] as int?,
         auto: (j['auto'] as bool?) ?? false,
         envoye: (j['envoye'] as bool?) ?? false,
+        genres: (j['genres'] as List? ?? const []).cast<String>(),
+        annee: j['annee'] as int?,
+        pays: (j['pays'] as List? ?? const []).cast<String>(),
       );
 }
 
@@ -95,10 +112,16 @@ class SeanceEnCours {
     required this.cases,
     required this.pronostic,
     required this.debut,
+    this.genres = const [],
+    this.annee,
+    this.pays = const [],
   });
 
   final String titre;
   final String filmId;
+  final List<String> genres;
+  final int? annee;
+  final List<String> pays;
 
   /// Vrai si le film vient de la bibliothèque Jellyfin : on peut alors
   /// demander au serveur s'il a été vu.
@@ -116,6 +139,9 @@ class SeanceEnCours {
         'cases': cases,
         'pronostic': pronostic,
         'debut': debut.toIso8601String(),
+        if (genres.isNotEmpty) 'genres': genres,
+        if (annee != null) 'annee': annee,
+        if (pays.isNotEmpty) 'pays': pays,
       };
 
   static SeanceEnCours depuisJson(Map<String, dynamic> j) => SeanceEnCours(
@@ -126,6 +152,9 @@ class SeanceEnCours {
         cases: j['cases'] as int,
         pronostic: j['pronostic'] as int,
         debut: DateTime.parse(j['debut'] as String),
+        genres: (j['genres'] as List? ?? const []).cast<String>(),
+        annee: j['annee'] as int?,
+        pays: (j['pays'] as List? ?? const []).cast<String>(),
       );
 }
 
@@ -250,6 +279,7 @@ class EtatJeu extends ChangeNotifier {
       note: note,
       verdict: verdict,
       date: DateTime.now(),
+      film: carte.film,
     );
   }
 
@@ -262,6 +292,10 @@ class EtatJeu extends ChangeNotifier {
     int? note,
     String verdict = '',
     bool auto = false,
+    Film? film,
+    List<String> genres = const [],
+    int? annee,
+    List<String> pays = const [],
   }) async {
     _nouveauMois();
     final maintenant = DateTime.now();
@@ -271,7 +305,19 @@ class EtatJeu extends ChangeNotifier {
     if (joker) await _prefs.setBool('joker_bluff', false);
     final pariAvant = Pop.parisPerdus(maintenant, billets);
     billets = [
-      Billet(titre: titre, type: type, pronostic: pronostic, cases: cases, date: date, verdict: verdict, note: note, auto: auto),
+      Billet(
+        titre: titre,
+        type: type,
+        pronostic: pronostic,
+        cases: cases,
+        date: date,
+        verdict: verdict,
+        note: note,
+        auto: auto,
+        genres: film?.genres ?? genres,
+        annee: film?.annee ?? annee,
+        pays: film?.pays ?? pays,
+      ),
       ...billets,
     ]..sort((a, b) => b.date.compareTo(a.date));
     final pariGagne = Pop.parisPerdus(maintenant, billets) > pariAvant;
@@ -308,6 +354,9 @@ class EtatJeu extends ChangeNotifier {
         cases: carte.cases,
         pronostic: pronostic,
         debut: DateTime.now(),
+        genres: carte.film.genres,
+        annee: carte.film.annee,
+        pays: carte.film.pays,
       ),
       ...enCours,
     ].take(5).toList();
@@ -328,6 +377,9 @@ class EtatJeu extends ChangeNotifier {
       note: note,
       date: vuLe ?? DateTime.now(),
       auto: auto,
+      genres: s.genres,
+      annee: s.annee,
+      pays: s.pays,
     );
   }
 
