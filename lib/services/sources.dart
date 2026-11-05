@@ -66,6 +66,32 @@ class SourceJellyfin implements SourceFilms {
     return items.map(filmDepuisJellyfin).toList();
   }
 
+  /// Si le film a été vu depuis [debut], renvoie le moment où il l'a été
+  /// (ou maintenant si Jellyfin ne le précise pas) ; sinon null.
+  Future<DateTime?> vuDepuis(String itemId, DateTime debut) async {
+    final rep = await _client.get(connexion.url('/Users/${connexion.utilisateurId}/Items/$itemId', const {}), headers: {
+      'X-Emby-Token': connexion.jeton,
+      'Accept': 'application/json',
+    });
+    if (rep.statusCode != 200) return null;
+    final j = jsonDecode(utf8.decode(rep.bodyBytes)) as Map<String, dynamic>;
+    return dateDeVisionnage(j['UserData'] as Map<String, dynamic>?, debut);
+  }
+
+  /// Jellyfin marque un film « vu » quand il a été regardé presque jusqu'au
+  /// bout. On ne compte que les visionnages qui suivent la carte jouée.
+  static DateTime? dateDeVisionnage(Map<String, dynamic>? userData, DateTime debut) {
+    if (userData == null) return null;
+    final vu = (userData['Played'] as bool?) ?? false;
+    final pourcentage = (userData['PlayedPercentage'] as num?)?.toDouble() ?? 0;
+    if (!vu && pourcentage < 90) return null;
+    final brut = userData['LastPlayedDate'] as String?;
+    final derniere = brut == null ? null : DateTime.tryParse(brut)?.toLocal();
+    if (derniere == null) return DateTime.now();
+    if (derniere.isBefore(debut.subtract(const Duration(minutes: 5)))) return null;
+    return derniere;
+  }
+
   static Film filmDepuisJellyfin(Map<String, dynamic> j) {
     final ticks = j['RunTimeTicks'];
     final people = (j['People'] as List? ?? const []).cast<Map<String, dynamic>>();

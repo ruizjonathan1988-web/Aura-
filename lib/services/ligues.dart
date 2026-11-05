@@ -129,6 +129,7 @@ class ServiceLigues extends ChangeNotifier {
         'titre': b.titre,
         'type_carte': b.type,
         'pronostic': b.pronostic,
+        if (b.note != null) 'note': b.note,
         if (b.verdict.isNotEmpty) 'verdict': b.verdict,
         'cases': b.cases,
         'vu_le': b.date.toUtc().toIso8601String(),

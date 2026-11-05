@@ -16,6 +16,10 @@ class PorteeEtat extends InheritedNotifier<EtatJeu> {
 
   static EtatJeu of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<PorteeEtat>()!.notifier!;
+
+  /// Pour agir hors de build (rappels, retour dans l'appli) sans s'abonner.
+  static EtatJeu lire(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<PorteeEtat>()!.notifier!;
 }
 
 class AuraApp extends StatelessWidget {
@@ -65,8 +69,27 @@ class Coquille extends StatefulWidget {
   State<Coquille> createState() => _CoquilleState();
 }
 
-class _CoquilleState extends State<Coquille> {
+class _CoquilleState extends State<Coquille> with WidgetsBindingObserver {
   Onglet _onglet = Onglet.ceSoir;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Au retour dans Aura (après VJOD, par exemple), on regarde si le film
+  /// de la carte jouée a été vu : le billet se crée tout seul.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) PorteeEtat.lire(context).verifierSeances();
+  }
 
   void _aller(Onglet o) => setState(() => _onglet = o);
 

@@ -136,6 +136,13 @@ class ProfilEcran extends StatelessWidget {
                   ],
                 );
               }),
+              if (etat.tauxDeValidation != null) ...[
+                const SizedBox(height: 18),
+                Text(
+                  'Cartes jouées devenues billets : ${(etat.tauxDeValidation! * 100).round()} %',
+                  style: AuraTexte.corps(13, poids: FontWeight.w900, couleur: AuraCouleurs.creme),
+                ),
+              ],
               const SizedBox(height: 22),
               AuraBouton(
                 libelle: 'Réglages',
