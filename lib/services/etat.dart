@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/modeles.dart';
+import 'fidelite.dart';
 import 'ligues.dart';
 import 'plan_du_jour.dart';
 import 'pop.dart';
@@ -209,6 +210,7 @@ class EtatJeu extends ChangeNotifier {
     position = _prefs.getInt('position') ?? 1;
     final brut = _prefs.getStringList('billets') ?? const [];
     billets = brut.map((s) => Billet.depuisJson(jsonDecode(s) as Map<String, dynamic>)).toList();
+    _noterVisite();
     enCours = (_prefs.getStringList('en_cours') ?? const [])
         .map((s) => SeanceEnCours.depuisJson(jsonDecode(s) as Map<String, dynamic>))
         .toList();
@@ -248,6 +250,28 @@ class EtatJeu extends ChangeNotifier {
 
   /// Vrai une fois le parcours d'accueil terminé (ou passé).
   bool get accueilFait => _prefs.getBool('accueil_fait') ?? false;
+
+  /// Après une pause de quelques jours : le nombre de jours d'absence, pour
+  /// l'accueil « Bon retour » de cette ouverture (null sinon).
+  int? bonRetour;
+
+  void _noterVisite() {
+    final maintenant = DateTime.now();
+    final brut = _prefs.getString('derniere_visite');
+    final jours = Fidelite.joursDAbsence(brut == null ? null : DateTime.tryParse(brut), maintenant);
+    if (jours != null && jours >= Fidelite.pause && (_prefs.getStringList('billets') ?? const []).isNotEmpty) {
+      bonRetour = jours;
+      _prefs.setBool('carte_rattrapage', true);
+    }
+    _prefs.setString('derniere_visite', maintenant.toIso8601String());
+  }
+
+  /// La carte de rattrapage offerte au retour : +2 cases sur la prochaine
+  /// séance, dans la limite des 3 cases du jour.
+  bool get carteRattrapage => _prefs.getBool('carte_rattrapage') ?? false;
+
+  /// La série en semaines (pauses gratuites comprises).
+  int get serie => Fidelite.serie(DateTime.now(), billets);
 
   /// Le Joker gagné au Bluff du premier soir : +1 case sur la prochaine
   /// séance, dans la limite des 3 cases du jour.
@@ -312,8 +336,11 @@ class EtatJeu extends ChangeNotifier {
     final maintenant = DateTime.now();
     final ceMois = moisDe(date) == moisDe(maintenant);
     final joker = jokerBluff && ceMois;
-    final cases = ceMois ? Regles.casesAccordees(demandees: demandees + (joker ? 1 : 0), dejaGagneesAujourdhui: casesLe(date)) : 0;
+    final rattrapage = carteRattrapage && ceMois;
+    final bonus = (joker ? 1 : 0) + (rattrapage ? Fidelite.rattrapage : 0);
+    final cases = ceMois ? Regles.casesAccordees(demandees: demandees + bonus, dejaGagneesAujourdhui: casesLe(date)) : 0;
     if (joker) await _prefs.setBool('joker_bluff', false);
+    if (rattrapage) await _prefs.setBool('carte_rattrapage', false);
     final pariAvant = Pop.parisPerdus(maintenant, billets);
     billets = [
       Billet(

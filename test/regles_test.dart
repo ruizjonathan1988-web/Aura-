@@ -12,6 +12,7 @@ import 'package:aura/services/carte_genres.dart';
 import 'package:aura/services/connexion_vjod.dart';
 import 'package:aura/services/duel.dart';
 import 'package:aura/services/etat.dart';
+import 'package:aura/services/fidelite.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/pop.dart';
 import 'package:aura/services/premier_soir.dart';
@@ -488,6 +489,40 @@ void main() {
       }
       final tirees = Quiz.tirer(6, Random(1));
       expect(tirees.map((q) => q.texte).toSet(), hasLength(6));
+    });
+  });
+
+  group('R15 Revenir après une pause', () {
+    Billet le(DateTime d) => Billet(titre: 'T', type: 'Envie', pronostic: 3, cases: 1, date: d);
+
+    test('R15 après 3 jours d\'absence, une carte de rattrapage (+2 cases, plafond respecté)', () async {
+      final ilYa = maintenant.subtract(const Duration(days: 4)).toIso8601String();
+      final ancien = '{"titre":"T","type":"Envie","pronostic":3,"cases":1,"date":"$ilYa","verdict":""}';
+      final e = await _etat({'derniere_visite': ilYa, 'billets': [ancien]});
+      expect(e.bonRetour, 4);
+      expect(e.carteRattrapage, isTrue);
+      expect(await e.validerSeance(_carte('a', type: TypeCarte.envie, cases: 1), pronostic: 3), 3);
+      expect(e.carteRattrapage, isFalse);
+    });
+
+    test('R15 pas de carte de rattrapage au premier lancement ni après une courte absence', () async {
+      expect((await _etat()).bonRetour, isNull);
+      final hier = maintenant.subtract(const Duration(days: 1)).toIso8601String();
+      expect((await _etat({'derniere_visite': hier, 'billets': ['{"titre":"T","type":"Envie","pronostic":3,"cases":1,"date":"$hier","verdict":""}']})).carteRattrapage, isFalse);
+    });
+
+    test('R15 la série se compte en semaines, et une semaine de pause ne la casse pas', () {
+      final jeudi = DateTime(2026, 11, 5, 21);
+      expect(Fidelite.serie(jeudi, const []), 0);
+      final avecPause = [le(DateTime(2026, 11, 3)), le(DateTime(2026, 10, 20)), le(DateTime(2026, 10, 13))];
+      expect(Fidelite.serie(jeudi, avecPause), 3, reason: 'la semaine du 26 octobre est une pause gratuite');
+      final cassee = [le(DateTime(2026, 11, 3)), le(DateTime(2026, 10, 13))];
+      expect(Fidelite.serie(jeudi, cassee), 1, reason: 'deux semaines vides remettent à zéro');
+    });
+
+    test('R15 un lundi matin sans film ne fait pas perdre la série', () {
+      final lundi = DateTime(2026, 11, 9, 8);
+      expect(Fidelite.serie(lundi, [le(DateTime(2026, 11, 5)), le(DateTime(2026, 10, 29))]), 2);
     });
   });
 }

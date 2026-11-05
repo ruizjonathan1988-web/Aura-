@@ -150,6 +150,21 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           ),
           const SizedBox(height: 18),
         ],
+        if (etat.bonRetour != null) ...[
+          PopQuiParle(
+            texte: 'Te revoilà ! Ça faisait ${etat.bonRetour} jours. Pas de souci : j\'ai gardé ta place au chaud. Et voilà une carte de rattrapage pour repartir.',
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (etat.carteRattrapage) ...[
+          Panneau(
+            couleur: AuraCouleurs.vert,
+            inclinaison: -0.012,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Text('Carte de rattrapage en main : +2 cases sur ta prochaine séance.', style: AuraTexte.corps(14, poids: FontWeight.w900)),
+          ),
+          const SizedBox(height: 18),
+        ],
         if (etat.jokerBluff) ...[
           Panneau(
             couleur: AuraCouleurs.vert,

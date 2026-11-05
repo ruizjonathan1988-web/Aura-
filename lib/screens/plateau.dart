@@ -83,6 +83,18 @@ class PlateauEcran extends StatelessWidget {
               const SizedBox(height: 8),
               Text('Pas de dé : on avance en regardant des films, 3 cases par jour au maximum. Pop avance d\'une case par jour et triche un peu. À toi de le dépasser !',
                   style: AuraTexte.corps(15)),
+              if (etat.serie > 0) ...[
+                const SizedBox(height: 10),
+                Panneau(
+                  couleur: AuraCouleurs.jaune,
+                  inclinaison: -0.012,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  child: Text(
+                    'Ta série : ${etat.serie} semaine${etat.serie > 1 ? 's' : ''} de cinéma. Une semaine sans film ne la casse pas.',
+                    style: AuraTexte.corps(14, poids: FontWeight.w900),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               PopQuiParle(texte: etat.motDePop ?? Pop.surPlateau(joueur: etat.position, pop: pop, jour: maintenant), taille: 70),
               const SizedBox(height: 16),
