@@ -67,6 +67,8 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R18 Amis | Le fil raconte la séance d'un ami en une phrase (« Léa a vu « … » et lui donne 4 sur 5. ») ; ses propres séances à la deuxième personne | `Nouvelle` |
 | R19 Animations | Coupées si l'appareil demande moins d'animations ; sinon les entrées se font en fondu | `animationsReduites`, `Entree` |
 
+Tests d'écrans (`test/ecrans_test.dart`) : l'appli est ouverte comme par un joueur, sur un téléphone (390 × 844) et sur une télé (960 × 540) ; ouverture, premier soir complet, tous les onglets, une soirée complète (tirage, carte, billet, plateau), Plan du jour, Duel. Un débordement ou un plantage fait échouer la CI. Possible parce que les polices sont embarquées (`assets/polices`, licence OFL) au lieu d'être téléchargées.
+
 Règles sans test automatique : « pas de pochettes surprises payantes » (rien à vendre pour l'instant), le plafond de 3 cases côté serveur (trigger SQL `plafonner_cases`, pas exécuté en CI), et la navigation aux flèches (à vérifier à la main sur la box). Exception connue à R10 : sur la télé, l'adresse du serveur VJOD se tape encore dans les Réglages (sauf si `VJOD_SERVEUR` est fourni à la compilation) ; la connexion elle-même passe par un code Quick Connect.
 
 ## Les rythmes du jeu
@@ -126,6 +128,7 @@ Fait :
 - Amis (`supabase/migrations/0004_invitation.sql`, onglet Ligue) : fil de la ligue (les 8 dernières séances des membres, avec note et Verdict) ; inviter un ami qui rejoint par code donne une figurine dorée aux deux. **Jon doit lancer `0004_invitation.sql`.**
 - Animations (`lib/widgets/animations.dart`, d'après le prototype du canevas mis à jour le 6 nov.) : ouverture en salle de cinéma à chaque lancement (rideau de velours qui s'écarte, projecteur, Pop qui tournoie, « AURA » qui claque, les 8 figurines en file, « Entrer dans la salle ») ; cartes distribuées une à une avec rebond ; carte jouée qui se retourne en affiche illustrée (rayons, cercles, titre, pastille de note) ; tampon « Vu ! » et confettis à la validation ; pion qui fait trois sauts sur sa nouvelle case ; pastilles qui rebondissent ; Pop qui arrive et se dandine. Tout est coupé si l'appareil demande moins d'animations.
 - Ce soir enrichi : encarts « Ta course contre Pop » (jauge et figurines) et « Ta série » ; fil « Pendant ce temps, à la ligue » sous le tirage (ou invitation à créer sa ligue).
+- Polices embarquées (Anton, Nunito 700/800/900, sous-ensemble latin, converties depuis Google Fonts) : plus de téléchargement au premier lancement, l'appli marche hors ligne sur la box. Le paquet `google_fonts` est retiré.
 - Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 

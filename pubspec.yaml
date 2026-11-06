@@ -10,7 +10,6 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_svg: ^2.0.10
-  google_fonts: ^6.2.1
   http: ^1.2.2
   shared_preferences: ^2.3.2
   supabase_flutter: ^2.6.0
@@ -26,3 +25,17 @@ flutter:
   assets:
     - assets/figurines/
     - assets/marque/
+  # Polices embarquées : l'appli marche hors ligne sur la box, dès le premier
+  # lancement (licence dans assets/polices/LICENCES.txt).
+  fonts:
+    - family: Anton
+      fonts:
+        - asset: assets/polices/Anton-Regular.ttf
+    - family: Nunito
+      fonts:
+        - asset: assets/polices/Nunito-Bold.ttf
+          weight: 700
+        - asset: assets/polices/Nunito-ExtraBold.ttf
+          weight: 800
+        - asset: assets/polices/Nunito-Black.ttf
+          weight: 900

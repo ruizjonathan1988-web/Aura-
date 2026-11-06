@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Les couleurs d'Aura : le rouge VJOD en fond de jeu, le noir des contours,
 /// le crème du carton, l'ambre VJOD pour les actions, et les couleurs vives
@@ -52,11 +51,11 @@ abstract final class AuraTrait {
 abstract final class AuraTexte {
   /// Police des titres : la même famille condensée que VJOD.
   static TextStyle titre(double taille, {Color couleur = AuraCouleurs.noir}) =>
-      GoogleFonts.anton(fontSize: taille, height: 1.0, color: couleur, letterSpacing: .3);
+      TextStyle(fontFamily: 'Anton', fontSize: taille, height: 1.0, color: couleur, letterSpacing: .3);
 
   static TextStyle corps(double taille,
           {FontWeight poids = FontWeight.w800, Color couleur = AuraCouleurs.noir}) =>
-      GoogleFonts.nunito(fontSize: taille, fontWeight: poids, color: couleur, height: 1.35);
+      TextStyle(fontFamily: 'Nunito', fontSize: taille, fontWeight: poids, color: couleur, height: 1.35);
 }
 
 ThemeData construireTheme() {
@@ -70,7 +69,8 @@ ThemeData construireTheme() {
     scaffoldBackgroundColor: AuraCouleurs.rouge,
   );
   return base.copyWith(
-    textTheme: GoogleFonts.nunitoTextTheme(base.textTheme).apply(
+    textTheme: base.textTheme.apply(
+      fontFamily: 'Nunito',
       bodyColor: AuraCouleurs.noir,
       displayColor: AuraCouleurs.noir,
     ),
