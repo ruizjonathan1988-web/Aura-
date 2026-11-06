@@ -127,6 +127,13 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
     await _publier(PartieSoiree.distribuer(joueurs, mains, Quiz.tirer(PartieSoiree.nbQuestions, hasard), hasard, public: _publicInscrit()));
   }
 
+  /// Pop tire le jeu au sort : le Pitch demande au moins trois joueurs.
+  Future<void> _popChoisit() async {
+    final pitch = _inscrits.length >= 3 && math.Random().nextBool();
+    setState(() => _erreur = null);
+    await (pitch ? _pitch() : _distribuer());
+  }
+
   /// Au-delà de quatre, les inscrits forment le public.
   List<Map<String, dynamic>> _publicInscrit() => [
         for (final j in _inscrits.skip(PartieSoiree.maxJoueurs)) {'id': j['joueur_id'], 'pseudo': j['pseudo']},
@@ -237,9 +244,12 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
         else ...[
           if (_inscrits.length > PartieSoiree.maxJoueurs)
             Text('Quatre joueurs au plus : les premiers arrivés jouent.', style: AuraTexte.corps(15, poids: FontWeight.w900, couleur: AuraCouleurs.creme)),
-          AuraBouton(libelle: 'Partie classique : cartes et quiz (${_inscrits.length.clamp(2, PartieSoiree.maxJoueurs)} joueurs)', autofocus: true, onPressed: _distribuer),
+          AuraBouton(libelle: 'Pop choisit le jeu du soir (${_inscrits.length.clamp(2, PartieSoiree.maxJoueurs)} joueurs)', autofocus: true, onPressed: _popChoisit),
           const SizedBox(height: 10),
-          AuraBouton(libelle: 'Le Pitch : décrire un film en trois mots', principal: false, onPressed: _pitch),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            Pastille(libelle: 'Cartes et quiz', choisie: false, onTap: _distribuer),
+            if (_inscrits.length >= 3) Pastille(libelle: 'Le Pitch', choisie: false, onTap: _pitch),
+          ]),
           if (_inscrits.length > PartieSoiree.maxJoueurs)
             Text('Les suivants forment le public : ils votent et soufflent depuis leur téléphone.', style: AuraTexte.corps(14, couleur: AuraCouleurs.creme)),
         ],
