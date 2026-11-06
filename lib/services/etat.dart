@@ -534,6 +534,18 @@ class EtatJeu extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Le Bluff de la semaine contre Pop : un seul essai par semaine.
+
+  /// null si pas encore joué, sinon vrai si le vrai synopsis a été trouvé.
+  bool? bluffDe(String semaine) => _prefs.getBool('bluff_$semaine');
+
+  Future<void> jouerBluff(String semaine, {required bool trouve}) async {
+    if (bluffDe(semaine) != null) return;
+    await _prefs.setBool('bluff_$semaine', trouve);
+    if (trouve) await _prefs.setBool('joker_bluff', true);
+    notifyListeners();
+  }
+
   // L'Affiche de la semaine : le Curseur placé après la séance.
 
   int? curseurDe(String semaine) => _prefs.getInt('curseur_$semaine');

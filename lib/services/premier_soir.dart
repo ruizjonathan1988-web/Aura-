@@ -107,6 +107,16 @@ class BluffDePop {
     return BluffDePop(film: film, synopsis: liste, vrai: liste.indexOf(vrai));
   }
 
+  /// Le Bluff sur un film donné (l'Affiche de la semaine), ou null s'il n'a
+  /// pas de synopsis exploitable.
+  static BluffDePop? pourFilm(Film film, Random hasard) {
+    final vrai = premierePhrase(film.synopsis);
+    if (vrai.length < 30) return null;
+    final faux = [...fauxDePop]..shuffle(hasard);
+    final liste = [vrai, faux[0], faux[1]]..shuffle(hasard);
+    return BluffDePop(film: film, synopsis: liste, vrai: liste.indexOf(vrai));
+  }
+
   /// La première phrase d'un synopsis, pour qu'il ait la même allure que
   /// ceux de Pop (une phrase, pas un roman).
   static String premierePhrase(String? texte) {

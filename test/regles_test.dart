@@ -525,6 +525,27 @@ void main() {
       expect(Fidelite.serie(lundi, [le(DateTime(2026, 11, 5)), le(DateTime(2026, 10, 29))]), 2);
     });
   });
+
+  group('R16 Le Bluff de la semaine contre Pop', () {
+    test('R16 le vrai synopsis de l\'Affiche est parmi trois, avec deux faux de Pop', () async {
+      final film = (await SourceDemo().catalogue()).first;
+      final b = BluffDePop.pourFilm(film, Random(3))!;
+      expect(b.synopsis[b.vrai], BluffDePop.premierePhrase(film.synopsis));
+      expect(b.synopsis.where(BluffDePop.fauxDePop.contains), hasLength(2));
+      expect(BluffDePop.pourFilm(_film('sans'), Random(3)), isNull, reason: 'pas de Bluff sans synopsis');
+    });
+
+    test('R16 un seul essai par semaine, et le vrai trouvé donne un Joker', () async {
+      final e = await _etat();
+      expect(e.bluffDe('2026-11-02'), isNull);
+      await e.jouerBluff('2026-11-02', trouve: true);
+      expect(e.bluffDe('2026-11-02'), isTrue);
+      expect(e.jokerBluff, isTrue);
+      await e.jouerBluff('2026-11-02', trouve: false);
+      expect(e.bluffDe('2026-11-02'), isTrue, reason: 'le premier essai compte');
+      expect(e.bluffDe('2026-11-09'), isNull);
+    });
+  });
 }
 
 /// Rouvre l'état sur les mêmes préférences, comme après une fermeture.
