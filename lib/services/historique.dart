@@ -147,8 +147,8 @@ class SourceAvecHistorique implements SourceFilms {
   String get nom => source.nom;
 
   @override
-  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true}) async {
-    final films = await source.catalogue(emotion: emotion, duree: duree, auHasard: auHasard);
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async {
+    final films = await source.catalogue(emotion: emotion, duree: duree, epoque: epoque, auHasard: auHasard);
     return [for (final f in films) Historique.dejaVu(f, vus) ? f.vu() : f];
   }
 }

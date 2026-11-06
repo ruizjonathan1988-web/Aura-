@@ -175,7 +175,7 @@ class _ReglagesEcranState extends State<ReglagesEcran> {
                         Text(
                           _vjod
                               ? 'Les cartes viennent de ta bibliothèque VJOD, et « Lancer dans VJOD » ouvre le film directement, sur la télé comme sur le téléphone. Les films que tu termines sont validés automatiquement.'
-                              : 'Une sélection de 42 films reconnus, pour découvrir le jeu sans serveur.',
+                              : 'Une sélection de 73 films reconnus, pour découvrir le jeu sans serveur.',
                           style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux),
                         ),
                         if (branche) ...[

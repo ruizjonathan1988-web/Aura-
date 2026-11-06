@@ -10,9 +10,9 @@ abstract class SourceFilms {
 
   /// Les films de la source. Sans [emotion], tous les genres. [duree] aide les
   /// sources qui filtrent côté serveur (TMDB) ; les autres l'ignorent, le
-  /// tirage refiltre de toute façon. [auHasard] à faux donne toujours le même
+  /// tirage refiltre de toute façon ; de même pour [epoque]. [auHasard] à faux donne toujours le même
   /// ordre (utile au Plan du jour et à l'Affiche).
-  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true});
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true});
 }
 
 /// Réglages de connexion à Jellyfin (édition VJOD).
@@ -58,7 +58,7 @@ class SourceJellyfin implements SourceFilms {
   String get nom => 'ta bibliothèque Jellyfin';
 
   @override
-  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true}) async {
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async {
     final uri = connexion.url('/Users/${connexion.utilisateurId}/Items', {
       'IncludeItemTypes': 'Movie',
       'Recursive': 'true',
@@ -67,6 +67,8 @@ class SourceJellyfin implements SourceFilms {
       'Limit': auHasard ? '120' : '400',
       'Fields': 'Genres,ProductionLocations,People,ProductionYear,RunTimeTicks,CommunityRating,UserData,Overview,OriginalTitle,ProviderIds',
       if (emotion != null) 'Genres': emotion.genres.join('|'),
+      if (epoque?.depuis != null) 'MinPremiereDate': '${epoque!.depuis}-01-01T00:00:00Z',
+      if (epoque?.jusqua != null) 'MaxPremiereDate': '${epoque!.jusqua}-12-31T23:59:59Z',
     });
     final rep = await _client.get(uri, headers: connexion.entetes);
     if (rep.statusCode == 401) {
@@ -142,7 +144,7 @@ class SourceDemo implements SourceFilms {
   String get nom => 'la sélection de démonstration';
 
   @override
-  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true}) async => _films;
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async => _films;
 
   static const _films = <Film>[
     Film(id: 'd1', titre: 'Le Samouraï', annee: 1967, dureeMinutes: 105, note: 7.9, genres: ['Crime', 'Thriller'], pays: ['France'], realisateur: 'Jean-Pierre Melville', synopsis: 'Un tueur à gages solitaire et méthodique se retrouve traqué à la fois par la police et par ceux qui l\'ont engagé.', autresTitres: ['Le Samourai']),
@@ -210,5 +212,14 @@ class SourceDemo implements SourceFilms {
     Film(id: 'd63', titre: 'Les Sentiers de la gloire', annee: 1957, dureeMinutes: 88, note: 8.4, genres: ['Drama', 'War'], pays: ['États-Unis'], realisateur: 'Stanley Kubrick', synopsis: 'En 1916, un colonel français défend devant un tribunal militaire trois soldats accusés de lâcheté après une attaque impossible.', autresTitres: ['Paths of Glory']),
     Film(id: 'd64', titre: 'Le Peuple migrateur', annee: 2001, dureeMinutes: 98, note: 7.8, genres: ['Documentary'], pays: ['France'], realisateur: 'Jacques Perrin', synopsis: 'Au plus près des oiseaux, le film suit leurs grandes migrations au-dessus des océans, des déserts et des villes.', autresTitres: ['Winged Migration']),
     Film(id: 'd65', titre: 'Être et avoir', annee: 2002, dureeMinutes: 104, note: 7.4, genres: ['Documentary'], pays: ['France'], realisateur: 'Nicolas Philibert', synopsis: 'Une année dans la classe unique d\'une école de campagne d\'Auvergne, auprès d\'un instituteur et de ses élèves de 4 à 11 ans.', autresTitres: ['To Be and to Have']),
+    // Les années 2020.
+    Film(id: 'd66', titre: 'Anatomie d\'une chute', annee: 2023, dureeMinutes: 151, note: 7.7, genres: ['Drama', 'Mystery', 'Crime'], pays: ['France'], realisateur: 'Justine Triet', synopsis: 'Un homme est retrouvé mort au pied de son chalet. Sa femme, romancière, est accusée, et leur fils malvoyant reste le seul témoin.', autresTitres: ['Anatomy of a Fall']),
+    Film(id: 'd67', titre: 'The Father', annee: 2020, dureeMinutes: 97, note: 8.1, genres: ['Drama'], pays: ['Royaume-Uni'], realisateur: 'Florian Zeller', synopsis: 'Un vieil homme refuse l\'aide de sa fille, alors que sa mémoire lui joue des tours et que la réalité se dérobe autour de lui.'),
+    Film(id: 'd68', titre: 'Petite Maman', annee: 2021, dureeMinutes: 72, note: 7.2, genres: ['Drama', 'Fantasy', 'Family'], pays: ['France'], realisateur: 'Céline Sciamma', synopsis: 'Après la mort de sa grand-mère, Nelly, huit ans, rencontre dans les bois une fillette de son âge qui lui ressemble étrangement.'),
+    Film(id: 'd69', titre: 'Everything Everywhere All at Once', annee: 2022, dureeMinutes: 139, note: 7.8, genres: ['Action', 'Adventure', 'Science Fiction', 'Comedy'], pays: ['États-Unis'], realisateur: 'Daniel Kwan et Daniel Scheinert', synopsis: 'Une patronne de laverie débordée découvre qu\'elle peut emprunter les talents de ses autres vies, dans des univers parallèles, pour sauver le monde.'),
+    Film(id: 'd70', titre: 'Le Garçon et le Héron', annee: 2023, dureeMinutes: 124, note: 7.4, genres: ['Animation', 'Adventure', 'Fantasy'], pays: ['Japon'], realisateur: 'Hayao Miyazaki', synopsis: 'Pendant la guerre, un garçon endeuillé suit un héron qui parle jusque dans un monde caché où vivants et morts se croisent.', autresTitres: ['The Boy and the Heron']),
+    Film(id: 'd71', titre: 'Aftersun', annee: 2022, dureeMinutes: 102, note: 7.6, genres: ['Drama'], pays: ['Royaume-Uni'], realisateur: 'Charlotte Wells', synopsis: 'Vingt ans plus tard, une femme revoit les vacances en Turquie qu\'elle a passées à onze ans avec son jeune père, et ce qu\'elle n\'avait pas compris.'),
+    Film(id: 'd72', titre: 'Drive My Car', annee: 2021, dureeMinutes: 179, note: 7.6, genres: ['Drama'], pays: ['Japon'], realisateur: 'Ryūsuke Hamaguchi', synopsis: 'Deux ans après la mort de sa femme, un metteur en scène monte Oncle Vania à Hiroshima, conduit par une jeune chauffeuse silencieuse.'),
+    Film(id: 'd73', titre: 'Dune', annee: 2021, dureeMinutes: 155, note: 7.8, genres: ['Science Fiction', 'Adventure'], pays: ['États-Unis'], realisateur: 'Denis Villeneuve', synopsis: 'Héritier d\'une grande famille, Paul Atréides part pour Arrakis, la planète des sables, la plus dangereuse et la plus convoitée de l\'univers.'),
   ];
 }

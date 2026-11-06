@@ -1449,6 +1449,47 @@ void main() {
       expect(horsServeur(7).avecVod(true).vu().enVod, isTrue);
     });
   });
+
+  group('R36 Les époques par décennie', () {
+    test('R36 depuis 2000, une époque par décennie', () {
+      expect(Epoque.values.map((e) => e.libelle), ['Peu importe', 'Avant 1980', 'Années 80 et 90', 'Années 2000', 'Années 2010', 'Années 2020']);
+      expect(Epoque.annees2000.contient(2009), isTrue);
+      expect(Epoque.annees2000.contient(2010), isFalse);
+      expect(Epoque.annees2010.contient(2010), isTrue);
+      expect(Epoque.annees2010.contient(2019), isTrue);
+      expect(Epoque.annees2020.contient(2019), isFalse);
+      expect(Epoque.annees2020.contient(2025), isTrue);
+      expect(Epoque.annees2020.contient(null), isFalse);
+      expect(Epoque.toutes.contient(null), isTrue);
+    });
+
+    test('R36 TMDB et Jellyfin ne cherchent que dans la décennie choisie', () async {
+      final q = SourceTmdb.parametres(epoque: Epoque.annees2010, page: 1);
+      expect(q['primary_release_date.gte'], '2010-01-01');
+      expect(q['primary_release_date.lte'], '2019-12-31');
+      expect(SourceTmdb.parametres(epoque: Epoque.annees2020, page: 1).containsKey('primary_release_date.lte'), isFalse);
+      expect(SourceTmdb.parametres(page: 1).containsKey('primary_release_date.gte'), isFalse);
+
+      late Uri appel;
+      final client = MockClient((r) async {
+        appel = r.url;
+        return http.Response('{"Items": []}', 200);
+      });
+      await SourceJellyfin(const ConnexionJellyfin(adresse: 'https://vjod.exemple.fr', utilisateurId: 'u7', jeton: 'j'), client: client)
+          .catalogue(epoque: Epoque.annees2000);
+      expect(appel.queryParameters['MinPremiereDate'], '2000-01-01T00:00:00Z');
+      expect(appel.queryParameters['MaxPremiereDate'], '2009-12-31T23:59:59Z');
+    });
+
+    test('R36 la sélection de démonstration a trois idées pour chaque décennie', () async {
+      final films = await SourceDemo().catalogue();
+      for (final e in Epoque.values) {
+        final idees = JusteUnFilm(hasard: Random(2)).proposer(films, duree: Duree.soiree, epoque: e);
+        expect(idees, hasLength(3), reason: e.libelle);
+        expect(idees.every((f) => e.contient(f.annee)), isTrue, reason: e.libelle);
+      }
+    });
+  });
 }
 
 class _SourceFixe implements SourceFilms {
@@ -1457,14 +1498,14 @@ class _SourceFixe implements SourceFilms {
   @override
   String get nom => 'fixe';
   @override
-  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true}) async => films;
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async => films;
 }
 
 class _SourceEnPanne implements SourceFilms {
   @override
   String get nom => 'en panne';
   @override
-  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true}) async => throw Exception('TMDB ne répond pas');
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async => throw Exception('TMDB ne répond pas');
 }
 
 /// Rouvre l'état sur les mêmes préférences, comme après une fermeture.
