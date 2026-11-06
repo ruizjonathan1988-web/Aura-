@@ -70,6 +70,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R21 Révélation du dimanche | Pari du Médium entre 0 et 10, fixe sur la semaine ; raté de 3 crans ou plus = Joker, une fois par semaine | `Affiche.pariDuMedium`, `EtatJeu.terminerRevelation` |
 | R22 Collection | Exploits mérités par le jeu (première séance, Rétro, globe-trotteur, devin, Pop dépassé, Bluffs…) ; figurine de saison à la case 20, au nom du mois ; un exploit obtenu reste pour toujours | `Collection`, `EtatJeu.collection` |
 | R23 Affiche en ligue | Chacun programme à son tour ; Faussaire jamais Programmateur (pas de Faussaire à deux) ; la première Affiche compte ; on départage le vrai synopsis et les faux des autres, jamais le sien, dans un ordre stable ; points : vrai trouvé +2, ami piégé +1, Curseur le plus proche de la moyenne +1, Faussaire démasqué +2, ami trompé +1 au Faussaire | `SemaineDeLigue` |
+| R24 Soirée jeu | Code de 4 lettres lisibles ; chacun joue à son tour depuis son téléphone, gestes interdits refusés (pas son tour, sa propre carte, carte protégée) ; partie complète jusqu'au film du gagnant ; une seule réponse par question ; la télé révèle même si quelqu'un ne répond pas | `PartieSoiree` |
 
 Tests d'écrans (`test/ecrans_test.dart`) : l'appli est ouverte comme par un joueur, sur un téléphone (390 × 844) et sur une télé (960 × 540) ; ouverture, premier soir complet, tous les onglets, une soirée complète (tirage, carte, billet, plateau), Plan du jour, Duel. Un débordement ou un plantage fait échouer la CI. Possible parce que les polices sont embarquées (`assets/polices`, licence OFL) au lieu d'être téléchargées.
 
@@ -137,6 +138,7 @@ Fait :
 - Révélation du dimanche (`lib/screens/revelation.dart`, bouton dans Semaine le dimanche) : quatre tableaux à faire défiler avec OK, en direction D, lisibles sur la télé ; Pop « le Médium » devine le Curseur (Joker s'il se trompe de 3 crans ou plus), rappel du Bluff, plateau en bandeau, carte des genres.
 - Collection (`lib/services/collection.dart`, section du Profil) : 10 exploits à débloquer (gardés pour toujours, annoncés par Pop) et une figurine de saison par mois, gagnée à la case 20, qui ne revient jamais.
 - Affiche de la semaine en ligue (`lib/screens/semaine_ligue.dart`, `lib/services/semaine_ligue.dart`, migration `0005_semaine_et_soiree.sql`), en haut de l'onglet Semaine quand on a une ligue : le Programmateur (chacun son tour) choisit parmi trois films, sinon Pop dès le mercredi ; chacun écrit un faux synopsis et cherche le vrai ; rôle secret Faussaire ou Témoin sur le téléphone seulement ; Curseur et Verdict ; le dimanche, vote pour démasquer le Faussaire et Révélation avec points et classement. **Jon doit lancer `0005_semaine_et_soiree.sql`.**
+- Soirée jeu (`lib/screens/soiree.dart`, `lib/services/soiree.dart`, migration `0005`) : sur la télé, « Soirée jeu » ouvre un plateau avec un code de 4 lettres ; sur les téléphones, « Rejoindre une soirée jeu » avec ce code et son envie. La télé distribue 3 cartes à chacun, chacun écarte les cartes de l'autre en secret depuis son téléphone (Veto compris), puis quiz de 5 questions auquel on répond en même temps ; le gagnant lance le film. La télé tient l'état (table `soirees`) et applique les gestes des téléphones (table `soiree_actions`), interrogés toutes les 1,5 s. Accessible quand les ligues sont branchées.
 - Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
@@ -147,7 +149,7 @@ Jon a demandé une appli « finie, présentable, jouable, rigolote, avec une for
 **À faire par Jon :**
 
 1. Installer le dernier APK : https://github.com/ruizjonathan1988-web/Aura-/releases/download/derniere/aura.apk
-2. Dans Supabase, éditeur SQL : lancer `supabase/migrations/0003_mesures.sql` puis `0004_invitation.sql` (et vérifier que `0001`, `0002` et les connexions anonymes sont bien en place). Lire les chiffres avec `select * from public.mesures;`.
+2. Dans Supabase, éditeur SQL : lancer `supabase/migrations/0003_mesures.sql`, `0004_invitation.sql` puis `0005_semaine_et_soiree.sql` (et vérifier que `0001`, `0002` et les connexions anonymes sont bien en place). Lire les chiffres avec `select * from public.mesures;`.
 3. Donner l'adresse de son serveur VJOD pour la pré-remplir chez ses utilisateurs (ajouter `--dart-define=VJOD_SERVEUR=…` dans `.github/workflows/construire.yml`).
 4. Tester sur la box : flèches et OK partout, ouverture, Duel, Révélation (le dimanche), connexion par code Quick Connect.
 
@@ -165,7 +167,7 @@ La priorité est la rétention : d'abord colmater les fuites, ensuite l'effet «
 3. Pop bluffe : fait (Bluff de la semaine sur l'Affiche). Carte des genres faite.
 4. Revenir après une pause : fait (carte de rattrapage, série en semaines avec pauses gratuites).
 5. Mesures : fait côté appli ; lancer `0003_mesures.sql` dans Supabase, puis lire `select * from public.mesures;`.
-6. Supabase : vérifier que `0001` puis `0002` ont bien été lancés et que les connexions anonymes sont activées (à confirmer par Jon), puis les événements d'amis (« Léa a deviné ton Curseur ») et la figurine débloquée pour les deux quand on invite un ami.
+6. Supabase : vérifier que `0001` à `0005` ont bien été lancés et que les connexions anonymes sont activées (à confirmer par Jon). Affiche en ligue et Soirée jeu faites : à essayer à plusieurs (deux téléphones et la box).
 7. Duel du canapé : fait. À vérifier sur la box (focus des cartes aux flèches, lisibilité à 3 mètres).
 8. Version publique : plateformes via TMDB (JustWatch), import Letterboxd ou Trakt, licences. (La notification du lendemain est faite.)
 

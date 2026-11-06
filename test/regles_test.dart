@@ -21,6 +21,7 @@ import 'package:aura/services/pop.dart';
 import 'package:aura/services/premier_soir.dart';
 import 'package:aura/services/rappels.dart';
 import 'package:aura/services/semaine_ligue.dart';
+import 'package:aura/services/soiree.dart';
 import 'package:aura/services/sources.dart';
 import 'package:aura/services/tirage.dart';
 import 'package:aura/widgets/animations.dart';
@@ -787,6 +788,76 @@ void main() {
     test('R23 on compte où en est la ligue', () {
       final s = semaine([g('jon', 'curseur', {'valeur': 3}), g('lea', 'curseur', {'valeur': 5}), g('inconnu', 'curseur', {'valeur': 1})]);
       expect(s.combien('curseur'), 2, reason: 'seuls les membres comptent');
+    });
+  });
+
+  group('R24 La Soirée jeu (téléphones en manettes)', () {
+    final joueurs = [
+      {'id': 'jon', 'pseudo': 'Jon', 'profil': 'fidele'},
+      {'id': 'lea', 'pseudo': 'Léa', 'profil': 'critique'},
+    ];
+    Map<String, dynamic> partie() => PartieSoiree.distribuer(
+          joueurs,
+          [for (var i = 0; i < 3; i++) _carte('a$i')],
+          [for (var i = 0; i < 3; i++) _carte('b$i')],
+          Quiz.tirer(PartieSoiree.nbQuestions, Random(2)),
+          Random(2),
+        );
+
+    test('R24 le code de soirée : 4 lettres faciles à lire', () {
+      for (var i = 0; i < 50; i++) {
+        expect(PartieSoiree.code(Random(i)), matches(RegExp(r'^[ABCDEFGHJKMNPRSTUVWXYZ]{4}$')));
+      }
+    });
+
+    test('R24 chacun joue à son tour depuis son téléphone ; les gestes interdits sont refusés', () {
+      var e = partie();
+      expect(PartieSoiree.appliquer(e, 'lea', {'type': 'ecarter', 'carte': 0}), isNull, reason: 'pas son tour');
+      expect(PartieSoiree.appliquer(e, 'jon', {'type': 'ecarter', 'carte': 0}), isNull, reason: 'pas sa propre carte');
+      expect(PartieSoiree.appliquer(e, 'inconnu', {'type': 'ecarter', 'carte': 3}), isNull);
+      e = PartieSoiree.appliquer(e, 'jon', {'type': 'ecarter', 'carte': 3})!;
+      expect(e['tour'], 1);
+      e = PartieSoiree.appliquer(e, 'lea', {'type': 'veto', 'carte': 4})!;
+      expect(PartieSoiree.appliquer(e, 'jon', {'type': 'ecarter', 'carte': 4}), isNull, reason: 'carte protégée par le Veto');
+    });
+
+    test('R24 une partie complète : table, quiz en simultané, film du gagnant', () {
+      final hasard = Random(5);
+      var e = partie();
+      var coups = 0;
+      while (e['phase'] == 'table' && coups < 20) {
+        final tour = e['tour'] as int;
+        final qui = tour == 0 ? 'jon' : 'lea';
+        final possibles = [for (var i = 0; i < 6; i++) if (PartieSoiree.peutEcarter(e, i)) i];
+        expect(possibles, isNotEmpty);
+        e = PartieSoiree.appliquer(e, qui, {'type': 'ecarter', 'carte': possibles[hasard.nextInt(possibles.length)]})!;
+        coups++;
+      }
+      expect(e['phase'], 'quiz');
+      for (var q = 0; q < PartieSoiree.nbQuestions; q++) {
+        final bonne = ((e['questions'] as List)[q] as Map)['bonne'] as String;
+        e = PartieSoiree.appliquer(e, 'jon', {'type': 'reponse', 'question': q, 'choix': bonne})!;
+        expect(PartieSoiree.appliquer(e, 'jon', {'type': 'reponse', 'question': q, 'choix': bonne}), isNull, reason: 'une seule réponse');
+        e = PartieSoiree.appliquer(e, 'lea', {'type': 'reponse', 'question': q, 'choix': 'faux'})!;
+        expect(e['revele'], isTrue);
+        e = PartieSoiree.suivante(e);
+      }
+      expect(e['phase'], 'fin');
+      expect(e['points'], [PartieSoiree.nbQuestions, 0]);
+      expect(e['gagnant'], 0);
+      final film = PartieSoiree.filmDepuisJson((e['film'] as Map).cast<String, dynamic>());
+      expect(film.id, startsWith('a'));
+    });
+
+    test('R24 si quelqu\'un ne répond pas, la télé révèle quand même', () {
+      var e = partie();
+      e['phase'] = 'quiz';
+      e = PartieSoiree.appliquer(e, 'jon', {'type': 'reponse', 'question': 0, 'choix': 'x'})!;
+      expect(e['revele'], isFalse);
+      e = PartieSoiree.suivante(e);
+      expect(e['revele'], isTrue);
+      e = PartieSoiree.suivante(e);
+      expect(e['question'], 1);
     });
   });
 }
