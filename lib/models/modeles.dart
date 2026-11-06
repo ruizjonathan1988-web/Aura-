@@ -86,6 +86,7 @@ class Film {
     this.pays = const [],
     this.realisateur,
     this.synopsis,
+    this.autresTitres = const [],
     this.dejaVu = false,
     this.serveurId,
     this.source = SourceFilm.demo,
@@ -105,7 +106,29 @@ class Film {
 
   /// Le résumé du film (Jellyfin « Overview »), utile au Bluff.
   final String? synopsis;
+
+  /// Titre original et titres connus ailleurs (pour reconnaître le film dans
+  /// un historique Letterboxd, souvent en anglais).
+  final List<String> autresTitres;
   final bool dejaVu;
+
+  /// Le même film, marqué comme déjà vu.
+  Film vu() => Film(
+        id: id,
+        titre: titre,
+        annee: annee,
+        dureeMinutes: dureeMinutes,
+        note: note,
+        nombreVotes: nombreVotes,
+        genres: genres,
+        pays: pays,
+        realisateur: realisateur,
+        synopsis: synopsis,
+        autresTitres: autresTitres,
+        dejaVu: true,
+        serveurId: serveurId,
+        source: source,
+      );
 
   /// Identifiant du serveur Jellyfin, utile au lien profond VJOD.
   final String? serveurId;

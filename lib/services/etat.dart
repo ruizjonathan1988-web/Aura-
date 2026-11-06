@@ -8,6 +8,7 @@ import '../models/modeles.dart';
 import 'affiche.dart';
 import 'collection.dart';
 import 'fidelite.dart';
+import 'historique.dart';
 import 'ligues.dart';
 import 'mesures.dart';
 import 'plan_du_jour.dart';
@@ -252,8 +253,28 @@ class EtatJeu extends ChangeNotifier {
     return id;
   }
 
-  SourceFilms get source =>
-      mode == ModeJeu.vjod && connexion.complete ? SourceJellyfin(connexion) : SourceDemo();
+  SourceFilms get source {
+    final base = mode == ModeJeu.vjod && connexion.complete ? SourceJellyfin(connexion) : SourceDemo();
+    final vus = historique;
+    return vus.isEmpty ? base : SourceAvecHistorique(base, vus);
+  }
+
+  /// L'historique importé (Letterboxd) : des clés « titre|année ».
+  Set<String> get historique => {...?_prefs.getStringList('historique')};
+
+  /// Ajoute des films vus ailleurs ; renvoie combien sont nouveaux.
+  Future<int> importerHistorique(List<FilmVu> films) async {
+    final deja = historique;
+    final nouveaux = films.map((f) => Historique.cle(f.titre, f.annee)).toSet().difference(deja);
+    await _prefs.setStringList('historique', [...deja, ...nouveaux]);
+    notifyListeners();
+    return nouveaux.length;
+  }
+
+  Future<void> effacerHistorique() async {
+    await _prefs.remove('historique');
+    notifyListeners();
+  }
 
   int get casesAujourdhui => casesLe(DateTime.now());
 

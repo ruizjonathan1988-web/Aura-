@@ -15,6 +15,7 @@ import 'package:aura/services/connexion_vjod.dart';
 import 'package:aura/services/duel.dart';
 import 'package:aura/services/etat.dart';
 import 'package:aura/services/fidelite.dart';
+import 'package:aura/services/historique.dart';
 import 'package:aura/services/ligues.dart';
 import 'package:aura/services/mesures.dart';
 import 'package:aura/services/plan_du_jour.dart';
@@ -907,6 +908,46 @@ void main() {
       expect(e['revele'], isTrue);
       e = PartieSoiree.suivante(e);
       expect(e['question'], 1);
+    });
+  });
+
+  group('R25 L\'historique Letterboxd', () {
+    const csv = 'Date,Name,Year,Letterboxd URI,Rating\n'
+        '2024-01-02,The Godfather,1972,https://boxd.it/x,5\n'
+        '2024-01-03,"Le Bon, la Brute et le Truand",1966,https://boxd.it/y,4.5\n'
+        '2024-01-04,"The ""Quoted"" Film",2001,https://boxd.it/z,\n';
+
+    test('R25 le CSV Letterboxd se lit, virgules et guillemets compris', () {
+      final films = Historique.lireCsv(csv);
+      expect(films.map((f) => f.titre), ['The Godfather', 'Le Bon, la Brute et le Truand', 'The "Quoted" Film']);
+      expect(films.first.annee, 1972);
+      expect(films.first.note, 5);
+      expect(films.last.note, isNull);
+    });
+
+    test('R25 un film est reconnu par son titre ou son titre original, à un an près', () {
+      final vus = {for (final f in Historique.lireCsv(csv)) Historique.cle(f.titre, f.annee)};
+      const parrain = Film(id: 'p', titre: 'Le Parrain', annee: 1972, autresTitres: ['The Godfather']);
+      const samourai = Film(id: 's', titre: 'Le Samouraï', annee: 1967);
+      expect(Historique.dejaVu(parrain, vus), isTrue);
+      expect(Historique.dejaVu(const Film(id: 'b', titre: 'Le bon la brute et le truand', annee: 1967), vus), isTrue);
+      expect(Historique.dejaVu(samourai, vus), isFalse);
+      expect(Historique.normaliser('Le Samouraï'), Historique.normaliser('Le Samourai'));
+    });
+
+    test('R25 les films importés ne sont plus proposés, et ne rapportent aucune case', () async {
+      final e = await _etat();
+      expect(await e.importerHistorique(Historique.lireCsv(csv)), 3);
+      expect(await e.importerHistorique(Historique.lireCsv(csv)), 0, reason: 'pas de doublon');
+      final films = await e.source.catalogue();
+      final parrain = films.firstWhere((f) => f.titre == 'Le Parrain');
+      expect(parrain.dejaVu, isTrue);
+      final cartes = Tirage(hasard: Random(1)).tirer(catalogue: films, emotion: Emotion.frissonner, duree: Duree.soiree, profil: Profil.fidele);
+      expect(cartes.any((c) => c.film.titre == 'Le Parrain'), isFalse);
+      expect(e.billets, isEmpty);
+      expect(e.position, 1);
+      await e.effacerHistorique();
+      expect((await e.source.catalogue()).firstWhere((f) => f.titre == 'Le Parrain').dejaVu, isFalse);
     });
   });
 }
