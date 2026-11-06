@@ -434,7 +434,20 @@ void main() {
       expect(c.utilisateurId, 'u7');
       expect(recue.url.toString(), 'https://vjod.exemple.fr/Users/AuthenticateByName');
       expect(recue.headers['X-Emby-Authorization'], contains('DeviceId="aura-test"'));
+      expect(recue.headers['Authorization'], startsWith('MediaBrowser Client="Aura"'));
+      expect(recue.headers['Authorization'], contains('DeviceId="aura-test"'));
       expect(jsonDecode(recue.body), {'Username': 'jon', 'Pw': 'secret'});
+    });
+
+    test('R13 la bibliothèque est lue avec l\'en-tête des Jellyfin récents', () async {
+      late http.Request recue;
+      final client = MockClient((r) async {
+        recue = r;
+        return http.Response('{"Items": []}', 200);
+      });
+      await SourceJellyfin(const ConnexionJellyfin(adresse: 'https://vjod.exemple.fr', utilisateurId: 'u7', jeton: 'jeton42'), client: client).catalogue();
+      expect(recue.headers['Authorization'], startsWith('MediaBrowser '));
+      expect(recue.headers['Authorization'], contains('Token="jeton42"'));
     });
 
     test('R13 le serveur VJOD de Jon est pré-rempli, chemin /jellyfin compris', () async {
