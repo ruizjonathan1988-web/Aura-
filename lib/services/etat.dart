@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/modeles.dart';
 import 'fidelite.dart';
 import 'ligues.dart';
+import 'mesures.dart';
 import 'plan_du_jour.dart';
 import 'pop.dart';
 import 'sources.dart';
@@ -171,6 +172,13 @@ class EtatJeu extends ChangeNotifier {
 
   /// Le jeu partagé, ou null si Aura tourne sans serveur.
   final ServiceLigues? ligues;
+
+  /// Les mesures anonymes de rétention, ou null sans serveur.
+  ServiceMesures? mesures;
+
+  void _mesurer(String type, [Map<String, Object?> donnees = const {}]) {
+    mesures?.noter(type, donnees);
+  }
 
   Profil profil = Profil.fidele;
   ModeJeu mode = ModeJeu.demo;
@@ -367,6 +375,7 @@ class EtatJeu extends ChangeNotifier {
     await _prefs.setInt('position', position);
     await _sauverBillets();
     await _prefs.setInt('stat_billets', (_prefs.getInt('stat_billets') ?? 0) + 1);
+    _mesurer('billet', {'auto': auto, 'cases': cases, 'type': type});
     notifyListeners();
     synchroniser();
     return cases;
@@ -400,6 +409,7 @@ class EtatJeu extends ChangeNotifier {
     ].take(5).toList();
     await _sauverEnCours();
     await _prefs.setInt('stat_cartes', (_prefs.getInt('stat_cartes') ?? 0) + 1);
+    _mesurer('carte_jouee', {'type': carte.type.libelle, 'source': carte.film.source.name});
     notifyListeners();
   }
 
@@ -531,6 +541,7 @@ class EtatJeu extends ChangeNotifier {
     await _prefs.setString('plan_jour', jourDe(DateTime.now()));
     await _prefs.setInt('plan_indices', r.indices);
     await _prefs.setBool('plan_trouve', r.trouve);
+    _mesurer('plan_du_jour', {'trouve': r.trouve, 'indices': r.indices});
     notifyListeners();
   }
 
@@ -543,6 +554,7 @@ class EtatJeu extends ChangeNotifier {
     if (bluffDe(semaine) != null) return;
     await _prefs.setBool('bluff_$semaine', trouve);
     if (trouve) await _prefs.setBool('joker_bluff', true);
+    _mesurer('bluff', {'trouve': trouve});
     notifyListeners();
   }
 

@@ -13,6 +13,7 @@ import 'package:aura/services/connexion_vjod.dart';
 import 'package:aura/services/duel.dart';
 import 'package:aura/services/etat.dart';
 import 'package:aura/services/fidelite.dart';
+import 'package:aura/services/mesures.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/pop.dart';
 import 'package:aura/services/premier_soir.dart';
@@ -544,6 +545,29 @@ void main() {
       await e.jouerBluff('2026-11-02', trouve: false);
       expect(e.bluffDe('2026-11-02'), isTrue, reason: 'le premier essai compte');
       expect(e.bluffDe('2026-11-09'), isNull);
+    });
+  });
+
+  group('R17 Mesurer sans gêner', () {
+    test('R17 une seule ouverture comptée par jour', () {
+      final soir = DateTime(2026, 11, 6, 21);
+      expect(ServiceMesures.premiereOuvertureDuJour(null, soir), isTrue);
+      expect(ServiceMesures.premiereOuvertureDuJour('2026-11-06', soir), isFalse);
+      expect(ServiceMesures.premiereOuvertureDuJour('2026-11-05', soir), isTrue);
+    });
+
+    test('R17 hors ligne, la file d\'attente ne dépasse jamais 200 événements', () {
+      var file = <String>[];
+      for (var i = 0; i < 250; i++) {
+        file = ServiceMesures.ajouter(file, 'e$i');
+      }
+      expect(file, hasLength(ServiceMesures.maxEnAttente));
+      expect(file.first, 'e50');
+      expect(file.last, 'e249');
+    });
+
+    test('R17 seuls des événements prévus partent, sans titre de film', () {
+      expect(ServiceMesures.types, {'ouverture', 'carte_jouee', 'billet', 'plan_du_jour', 'duel', 'bluff'});
     });
   });
 }

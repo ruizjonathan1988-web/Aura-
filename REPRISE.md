@@ -63,6 +63,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R14 Duel du canapé | On écarte à tour de rôle une carte de l'autre ; un Veto par joueur protège une carte ; la partie finit toujours avec une carte chacun ; quiz : 4 réponses distinctes, pas de question en double | `Duel`, `Quiz` |
 | R15 Revenir après une pause | Après 3 jours d'absence, carte de rattrapage (+2 cases, plafond respecté) ; rien au premier lancement ; série en semaines, une semaine vide est une pause gratuite, deux la remettent à zéro ; un lundi matin ne fait pas perdre la série | `Fidelite`, `EtatJeu.bonRetour` |
 | R16 Bluff de la semaine | Le vrai synopsis de l'Affiche est parmi trois (deux faux de Pop) ; pas de Bluff sans synopsis ; un essai par semaine ; trouvé = Joker +1 case | `BluffDePop.pourFilm`, `EtatJeu.bluffDe` |
+| R17 Mesures | Une ouverture comptée par jour ; file hors ligne plafonnée à 200 ; seulement six types d'événements, sans titre de film | `ServiceMesures` |
 
 Règles sans test automatique : « pas de pochettes surprises payantes » (rien à vendre pour l'instant), le plafond de 3 cases côté serveur (trigger SQL `plafonner_cases`, pas exécuté en CI), et la navigation aux flèches (à vérifier à la main sur la box). Exception connue à R10 : sur la télé, l'adresse du serveur VJOD se tape encore dans les Réglages (sauf si `VJOD_SERVEUR` est fourni à la compilation) ; la connexion elle-même passe par un code Quick Connect.
 
@@ -119,6 +120,7 @@ Fait :
 - Duel du canapé (`lib/screens/duel.dart`, `lib/services/duel.dart`, accès depuis Ce soir) : deux figurines, une envie chacun, 6 cartes retournées sur la table, élimination à tour de rôle avec un Veto chacun, Pop commente, mini-quiz de 6 questions sur des films reconnus (3 chacun), égalité tranchée par la meilleure note ; le gagnant « prend la télécommande » et lance le film (séance gardée pour la validation).
 - Revenir sans être puni (`lib/services/fidelite.dart`) : après 3 jours d'absence, Pop accueille (« j'ai gardé ta place au chaud ») et offre une carte de rattrapage (+2 cases sur la prochaine séance). Série comptée en semaines sur le Plateau, une semaine sans film ne la casse pas.
 - Pop bluffe : chaque semaine, avant la séance de l'Affiche, Bluff en solo contre Pop (trouver le vrai résumé parmi trois). Gagné = Joker +1 case. Pop se dandine quand il parle (animation légère).
+- Mesures anonymes (`lib/services/mesures.dart`, `supabase/migrations/0003_mesures.sql`) : compte anonyme par appareil, événements ouverture (1 par jour), carte jouée, billet, Plan du jour, Duel, Bluff ; file d'attente hors ligne. Les quatre chiffres se lisent dans l'éditeur SQL de Supabase : `select * from public.mesures;` (retour J+1, J+7, J+30, cartes devenues billets). **Jon doit lancer `0003_mesures.sql`** ; sans la table, les événements attendent sur l'appareil.
 - Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
@@ -135,7 +137,7 @@ La priorité est la rétention : d'abord colmater les fuites, ensuite l'effet «
 2. Vérifier le premier soir sur la box (focus aux flèches à chaque question, animation de la boîte, Bluff avec un vrai synopsis Jellyfin en français).
 3. Pop bluffe : fait (Bluff de la semaine sur l'Affiche). Carte des genres faite.
 4. Revenir après une pause : fait (carte de rattrapage, série en semaines avec pauses gratuites).
-5. Mesurer : retour J+1, J+7, J+30 et taux cartes jouées / billets (le taux est déjà compté sur l'appareil ; à remonter dans Supabase).
+5. Mesures : fait côté appli ; lancer `0003_mesures.sql` dans Supabase, puis lire `select * from public.mesures;`.
 6. Supabase : vérifier que `0001` puis `0002` ont bien été lancés et que les connexions anonymes sont activées (à confirmer par Jon), puis les événements d'amis (« Léa a deviné ton Curseur ») et la figurine débloquée pour les deux quand on invite un ami.
 7. Duel du canapé : fait. À vérifier sur la box (focus des cartes aux flèches, lisibilité à 3 mètres).
 8. Version publique : notification du lendemain « Alors, Le Samouraï ? » avec les étoiles, plateformes via TMDB (JustWatch), import Letterboxd ou Trakt, licences.

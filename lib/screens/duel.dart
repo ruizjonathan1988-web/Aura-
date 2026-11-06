@@ -132,6 +132,7 @@ class _DuelEcranState extends State<DuelEcran> {
           _bulle = 'Égalité ! Je tranche : on regarde le film le mieux noté. C\'est moi le Programmateur, après tout.';
         }
         _phase = _Phase.verdict;
+        PorteeEtat.lire(context).mesures?.noter('duel', {'egalite': _points[0] == _points[1]});
       } else {
         _melanger();
       }

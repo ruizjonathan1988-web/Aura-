@@ -183,6 +183,11 @@ class _ReglagesEcranState extends State<ReglagesEcran> {
                       ]),
                     ),
                     if (_vjod) ...[const SizedBox(height: 16), _connexion()],
+                    const SizedBox(height: 16),
+                    Text(
+                      'Aura compte de façon anonyme les ouvertures, les cartes jouées et les séances validées, pour devenir plus amusant. Ni nom, ni e-mail, ni titre de film.',
+                      style: AuraTexte.corps(12, couleur: AuraCouleurs.creme),
+                    ),
                     if (_message != null) ...[
                       const SizedBox(height: 14),
                       Panneau(couleur: AuraCouleurs.jaune, child: Text(_message!, style: AuraTexte.corps(14, poids: FontWeight.w900))),
