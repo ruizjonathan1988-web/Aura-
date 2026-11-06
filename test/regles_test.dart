@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
 import 'package:aura/services/carte_genres.dart';
+import 'package:aura/services/collection.dart';
 import 'package:aura/services/connexion_vjod.dart';
 import 'package:aura/services/duel.dart';
 import 'package:aura/services/etat.dart';
@@ -672,6 +673,39 @@ void main() {
       expect(e.jokerBluff, isTrue);
       expect(e.revelationFaite('2026-11-02'), isTrue);
       expect(await e.terminerRevelation('2026-11-02', pari: 2, curseur: 8), isFalse);
+    });
+  });
+
+  group('R22 La collection', () {
+    Billet b(String type, {int? note, List<String> pays = const ['France']}) =>
+        Billet(titre: 'T', type: type, pronostic: 4, cases: 1, date: maintenant, note: note, pays: pays);
+    Bilan bilan(List<Billet> billets, {int position = 5, int pop = 9, int bluffs = 0}) =>
+        Bilan(billets: billets, position: position, positionDePop: pop, bluffsGagnes: bluffs, maintenant: maintenant);
+
+    test('R22 les exploits se méritent par le jeu', () {
+      expect(Collection.merites(bilan(const [])), isEmpty);
+      expect(Collection.merites(bilan([b('Envie')])), contains('premiere'));
+      expect(Collection.merites(bilan([for (var i = 0; i < 3; i++) b('Rétro')])), contains('retro'));
+      expect(Collection.merites(bilan([for (final p in ['France', 'Japon', 'Iran', 'Brésil', 'Italie']) b('Voyage', pays: [p])])), contains('globe'));
+      expect(Collection.merites(bilan([for (var i = 0; i < 3; i++) b('Envie', note: 4)])), contains('devin'));
+      expect(Collection.merites(bilan([b('Envie')], position: 12, pop: 9)), contains('devant'));
+      expect(Collection.merites(bilan(const [], bluffs: 3)), contains('detecteur'));
+    });
+
+    test('R22 la figurine de saison se gagne à la case 20 et porte le nom du mois', () {
+      expect(Collection.merites(bilan([b('Envie')], position: 19)), isNot(contains(Collection.saison(maintenant))));
+      expect(Collection.merites(bilan([b('Envie')], position: 20)), contains(Collection.saison(maintenant)));
+      expect(Collection.nomDeSaison('saison_2026_11'), 'Figurine de saison, novembre 2026');
+    });
+
+    test('R22 un exploit obtenu reste à toi, même quand le plateau repart à zéro', () async {
+      final e = await _etat({'mois': EtatJeu.moisDe(maintenant), 'position': 29});
+      await e.validerSeance(_carte('a'), pronostic: 3);
+      expect(e.collection, containsAll(['premiere', 'finale', Collection.saison(maintenant)]));
+      expect(e.motDePop, contains('Nouvel exploit'));
+      final relu = await _etat({'mois': '2000-01', 'position': 29, 'collection': e.collection.toList()});
+      expect(relu.position, 1);
+      expect(relu.collection, contains('finale'));
     });
   });
 }
