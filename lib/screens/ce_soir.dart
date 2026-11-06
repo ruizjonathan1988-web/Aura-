@@ -26,7 +26,6 @@ import 'plan_du_jour.dart';
 import 'reglages.dart';
 import 'soiree.dart';
 import 'deck.dart';
-import '../services/festival.dart';
 
 enum _Etape { envie, cartes, pronostic, billet }
 
