@@ -77,10 +77,11 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         duree: _duree,
         profil: etat.profil,
         paysVus: paysVus,
-        niveau: _niveau ?? etat.niveauPropose,
+        niveau: etat.niveauImpose ?? _niveau ?? etat.niveauPropose,
         nombre: pouvoir.nombre,
         revoir: pouvoir.revoir,
       );
+      if (etat.niveauImpose != null && tirage.cartes.isNotEmpty) await etat.oublierNiveauImpose();
       setState(() {
         _cartes = tirage.cartes;
         _choisie = 0;
@@ -310,15 +311,20 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
   /// « Tu te mets combien ? » : dix pastilles, la proposition d'Aura déjà choisie.
   Widget _combien(EtatJeu etat) {
     final propose = etat.niveauPropose;
-    final n = _niveau ?? propose;
+    final impose = etat.niveauImpose;
+    final n = impose ?? _niveau ?? propose;
     final gain = Niveau.cases(n);
     return Panneau(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('TU TE METS COMBIEN ?', style: AuraTexte.titre(16)),
+        if (impose != null) ...[
+          const SizedBox(height: 6),
+          Text('Crasse d\'un ami : ce soir, c\'est $impose, pas de discussion.', style: AuraTexte.corps(14, poids: FontWeight.w900)),
+        ],
         const SizedBox(height: 10),
         Wrap(spacing: 8, runSpacing: 10, children: [
           for (var i = Niveau.min; i <= Niveau.max; i++)
-            Pastille(libelle: '$i', choisie: i == n, onTap: () => setState(() => _niveau = i)),
+            Pastille(libelle: '$i', choisie: i == n, onTap: impose != null ? null : () => setState(() => _niveau = i)),
         ]),
         const SizedBox(height: 12),
         Text('$n · ${Niveau.nom(n).toUpperCase()} : ${gain == 1 ? '1 case' : '$gain cases'} si tu vas au bout.', style: AuraTexte.corps(14, poids: FontWeight.w900)),

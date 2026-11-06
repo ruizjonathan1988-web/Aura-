@@ -14,6 +14,7 @@ import 'package:aura/services/carte_genres.dart';
 import 'package:aura/services/collection.dart';
 import 'package:aura/services/config.dart';
 import 'package:aura/services/connexion_vjod.dart';
+import 'package:aura/services/coups.dart';
 import 'package:aura/services/duel.dart';
 import 'package:aura/services/etat.dart';
 import 'package:aura/services/fidelite.dart';
@@ -37,6 +38,7 @@ import 'package:aura/services/soiree.dart';
 import 'package:aura/services/sources.dart';
 import 'package:aura/services/tirage.dart';
 import 'package:aura/services/vjod_lien.dart';
+import 'package:aura/screens/plateau.dart';
 import 'package:aura/widgets/animations.dart';
 import 'package:aura/widgets/aura_widgets.dart';
 import 'package:aura/widgets/ou_le_voir.dart';
@@ -1750,6 +1752,130 @@ void main() {
       await f.armerPouvoir();
       expect(await f.pouvoirAuTirage(), (nombre: 3, revoir: false));
       expect(f.pouvoirArme, isTrue, reason: 'Slow attend le billet');
+    });
+  });
+
+  group('R40 Coups du sort et crasses', () {
+    String mois(DateTime d) => EtatJeu.moisDe(d);
+    CarteDefi carte(String id, {int cases = 1, int? niveau}) => CarteDefi(
+        type: TypeCarte.envie, defi: 'Défi', indice: '', cases: cases, joker: '', film: _film(id), bulleDePop: '', niveau: niveau);
+
+    test('R40 les cases 4, 14 et 24 sont les Coups de théâtre, avec trois coups différents chaque mois', () {
+      for (var n = 1; n <= Regles.taillePlateau; n++) {
+        expect(CoupsDuSort.estCaseCoup(n), Circuit.typeDe(n) == TypeCase.coup, reason: 'case $n');
+      }
+      for (var m = 1; m <= 24; m++) {
+        final d = DateTime(2026, m);
+        expect({for (final n in [4, 14, 24]) CoupsDuSort.pour(d, n)}, hasLength(3), reason: 'mois $m');
+      }
+    });
+
+    test('R40 ce que chaque coup déplace, toujours entre 1 et 30', () {
+      expect(CoupsDuSort.deplacement(CoupDuSort.toboggan, joueur: 14, pop: 10), (joueur: -2, pop: 0));
+      expect(CoupsDuSort.deplacement(CoupDuSort.toboggan, joueur: 2, pop: 10), (joueur: -1, pop: 0));
+      expect(CoupsDuSort.deplacement(CoupDuSort.echange, joueur: 10, pop: 14), (joueur: 4, pop: -4));
+      expect(CoupsDuSort.deplacement(CoupDuSort.vol, joueur: 10, pop: 29), (joueur: 0, pop: 1));
+      expect(CoupsDuSort.deplacement(CoupDuSort.public, joueur: 30, pop: 10), (joueur: 0, pop: 0));
+      expect(CoupsDuSort.deplacement(CoupDuSort.entracte, joueur: 5, pop: 5), (joueur: 0, pop: 0));
+      expect(CoupsDuSort.faitDuTort(CoupDuSort.echange, joueur: 10, pop: 14), isFalse, reason: 'derrière Pop, l\'échange est une aubaine');
+      expect(CoupsDuSort.faitDuTort(CoupDuSort.echange, joueur: 20, pop: 14), isTrue);
+      expect(CoupsDuSort.faitDuTort(CoupDuSort.toboggan, joueur: 3, pop: 14), isTrue);
+      expect(CoupsDuSort.faitDuTort(CoupDuSort.public, joueur: 3, pop: 14), isFalse);
+    });
+
+    test('R40 s\'arrêter sur une case Coup de théâtre déclenche le coup, une fois par case et par mois', () async {
+      final e = await _etat();
+      await e.validerSeance(carte('a', cases: 3), pronostic: 3);
+      expect(e.position, 4);
+      final c = e.coupEnAttente!;
+      expect(c.numero, 4);
+      expect(c.coup, CoupsDuSort.pour(DateTime.now(), 4));
+      final (avant, pop) = (e.position, e.positionDePop);
+      final d = CoupsDuSort.deplacement(c.coup, joueur: avant, pop: pop);
+      expect(await e.resoudreCoup(), isTrue);
+      expect(e.position, avant + d.joueur);
+      expect(e.positionDePop, pop + d.pop);
+      expect(e.coupEnAttente, isNull);
+      expect(await e.resoudreCoup(), isFalse);
+      final f = await _etat({'coups_${mois(DateTime.now())}': ['4']});
+      await f.validerSeance(carte('a', cases: 3), pronostic: 3);
+      expect(f.coupEnAttente, isNull, reason: 'déjà joué ce mois-ci');
+    });
+
+    test('R40 un coup qui fait du tort se pare : charge de pouvoir ou Bouclier ; sinon pas de parade', () async {
+      final maintenant = DateTime.now();
+      final m = mois(maintenant);
+      final nuisible = [4, 14, 24].where((n) => CoupsDuSort.pour(maintenant, n).nuisible).firstOrNull;
+      final sansTort = [4, 14, 24].firstWhere((n) => !CoupsDuSort.pour(maintenant, n).nuisible);
+      final g = await _etat({'position': 5, 'coup_en_attente': '$m|$sansTort'});
+      if (!CoupsDuSort.faitDuTort(g.coupEnAttente!.coup, joueur: g.position, pop: g.positionDePop)) {
+        expect(await g.resoudreCoup(parade: 'charge'), isFalse);
+        expect(g.coupEnAttente, isNotNull);
+      }
+      if (nuisible == null) return; // ce mois-ci, aucune case n'est nuisible
+      final e = await _etat({'position': 12, 'coup_en_attente': '$m|$nuisible'});
+      expect(e.peutParerAvecCharge, isTrue);
+      expect(await e.resoudreCoup(parade: 'charge'), isTrue);
+      expect(e.position, 12);
+      expect(e.chargesPouvoir, 0);
+      expect(e.coupEnAttente, isNull);
+      final f = await _etat({'position': 12, 'coup_en_attente': '$m|$nuisible'});
+      expect(await f.resoudreCoup(parade: 'bouclier'), isTrue);
+      expect(f.bouclierDispo, isFalse);
+      expect(f.position, 12);
+      final h = await _etat({'position': 12, 'coup_en_attente': '$m|$nuisible', 'bouclier_$m': 1});
+      await h.armerPouvoir();
+      expect(h.peutParerAvecCharge, isFalse, reason: 'la seule charge est déjà armée');
+      expect(await h.resoudreCoup(parade: 'charge'), isFalse);
+    });
+
+    test('R40 une crasse par semaine, un renvoi par mois', () {
+      final mercredi = DateTime(2026, 11, 18);
+      expect(Crasses.peutEnvoyer(mercredi, const []), isTrue);
+      expect(Crasses.peutEnvoyer(mercredi, [DateTime(2026, 11, 16, 9)]), isFalse);
+      expect(Crasses.peutEnvoyer(mercredi, [DateTime(2026, 11, 15, 23)]), isTrue, reason: 'dimanche dernier, c\'était l\'autre semaine');
+      expect(Crasses.peutRenvoyer(mercredi, [DateTime(2026, 11, 2)]), isFalse);
+      expect(Crasses.peutRenvoyer(mercredi, [DateTime(2026, 10, 30)]), isTrue);
+      final c = CrasseRecue.depuisJson({'id': 'x', 'ligue_id': 'l', 'de': 'a', 'pour': 'b', 'type': 'popcorn', 'reponse': 'paree', 'cree_le': '2026-11-06T10:00:00Z', 'renvoi': true})!;
+      expect((c.crasse, c.reponse, c.renvoi), (Crasse.popcorn, Reponse.paree, true));
+      expect(CrasseRecue.depuisJson({'id': 'x', 'ligue_id': 'l', 'de': 'a', 'pour': 'b', 'type': 'inconnue', 'cree_le': '2026-11-06T10:00:00Z'}), isNull);
+    });
+
+    test('R40 encaisser une crasse : chaque effet s\'applique une fois', () async {
+      final e = await _etat();
+      expect(await e.repondreCrasse(Crasse.popcorn, Reponse.encaissee), isTrue);
+      expect(await e.validerSeance(carte('a', cases: 2), pronostic: 3), 1, reason: 'une case de moins');
+      expect(await e.validerSeance(carte('b', cases: 1), pronostic: 3), 1, reason: 'une seule fois');
+      await e.repondreCrasse(Crasse.niveauImpose, Reponse.encaissee);
+      expect(e.niveauImpose, 8);
+      await e.oublierNiveauImpose();
+      expect(e.niveauImpose, isNull);
+      await e.repondreCrasse(Crasse.volDAudace, Reponse.encaissee);
+      expect(e.audaceDuMois, 0, reason: 'jamais d\'audace négative');
+      final f = await _etat();
+      await f.validerSeance(carte('a', cases: Niveau.cases(10), niveau: 10), pronostic: 3);
+      await f.repondreCrasse(Crasse.volDAudace, Reponse.encaissee);
+      expect(f.audaceDuMois, 15);
+      await f.repondreCrasse(Crasse.fauxSpoiler, Reponse.encaissee);
+      expect(f.motDePop, contains('chien'));
+    });
+
+    test('R40 parer coûte une charge, renvoyer une fois par mois, et le voleur touche ses points', () async {
+      final e = await _etat();
+      expect(await e.repondreCrasse(Crasse.popcorn, Reponse.paree), isTrue);
+      expect(e.chargesPouvoir, 0);
+      expect(await e.repondreCrasse(Crasse.popcorn, Reponse.paree), isFalse);
+      expect(await e.repondreCrasse(Crasse.popcorn, Reponse.renvoyee), isTrue);
+      expect(await e.repondreCrasse(Crasse.popcorn, Reponse.renvoyee), isFalse);
+      expect(await e.validerSeance(carte('a', cases: 2), pronostic: 3), 2, reason: 'parée ou renvoyée : aucun effet');
+      expect(e.peutFaireUneCrasse, isTrue);
+      await e.noterCrasseEnvoyee();
+      expect(e.peutFaireUneCrasse, isFalse);
+      final vol = CrasseRecue(id: 'v1', ligueId: 'l', de: 'moi', pour: 'ami', crasse: Crasse.volDAudace, date: DateTime.now(), reponse: Reponse.encaissee);
+      final pare = CrasseRecue(id: 'v2', ligueId: 'l', de: 'moi', pour: 'ami', crasse: Crasse.volDAudace, date: DateTime.now(), reponse: Reponse.paree);
+      expect(await e.encaisserGains([vol, pare]), 5);
+      expect(await e.encaisserGains([vol, pare]), 0);
+      expect(e.audaceDuMois, 5);
     });
   });
 }

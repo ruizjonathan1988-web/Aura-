@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/modeles.dart';
 import 'etat.dart';
 import 'cadeaux.dart';
+import 'coups.dart';
 import 'semaine_ligue.dart';
 import 'soiree.dart';
 
@@ -215,6 +216,24 @@ class ServiceLigues extends ChangeNotifier {
 
   Future<void> noterCadeau(Cadeau c, int note) => _proteger<void>(() async {
         await _client.from('cadeaux').update({'note': note, 'ouvert': true}).eq('id', c.id);
+      });
+
+  /// Les crasses de la ligue (R40), les plus récentes d'abord.
+  Future<List<CrasseRecue>> crasses(Ligue l) => _proteger<List<CrasseRecue>>(() async {
+        final rep = await _client.from('crasses').select().eq('ligue_id', l.id).order('cree_le', ascending: false).limit(40);
+        return rep.map(CrasseRecue.depuisJson).whereType<CrasseRecue>().toList();
+      });
+
+  Future<void> faireUneCrasse(Ligue l, {required String pour, required Crasse crasse, bool renvoi = false}) => _proteger<void>(() async {
+        await _client.from('crasses').insert({'ligue_id': l.id, 'de': monId, 'pour': pour, 'type': crasse.name, 'renvoi': renvoi});
+      });
+
+  /// Répondre à une crasse reçue ; un renvoi repart vers l'expéditeur.
+  Future<void> repondreCrasse(CrasseRecue c, Reponse r) => _proteger<void>(() async {
+        await _client.from('crasses').update({'reponse': r.name}).eq('id', c.id);
+        if (r == Reponse.renvoyee) {
+          await _client.from('crasses').insert({'ligue_id': c.ligueId, 'de': monId, 'pour': c.de, 'type': c.crasse.name, 'renvoi': true});
+        }
       });
 
   /// Vrai si le joueur a gagné la figurine dorée en invitant ou en étant invité.
