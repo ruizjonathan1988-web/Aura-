@@ -186,6 +186,17 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GeneriqueEcran(mois: generique))),
         ),
       _CourseEtSerie(etat: etat),
+      if (etat.festivalDe(DateTime.now()) case final festival?)
+        Panneau(
+          couleur: AuraCouleurs.rose,
+          inclinaison: 0.01,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('FESTIVAL DE LA SEMAINE · ${festival.nom.toUpperCase()}', style: AuraTexte.titre(16)),
+            const SizedBox(height: 4),
+            Text(festival.regle, style: AuraTexte.corps(15, poids: FontWeight.w900)),
+            Text('Pop : « ${festival.annonce} »', style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
+          ]),
+        ),
       if (etat.billets.isNotEmpty && etat.boostersDispo() > 0)
         ChoixLarge(
           libelle: 'TON BOOSTER D\'ATOUTS T\'ATTEND · Trois cartes à collectionner pour ton deck.',

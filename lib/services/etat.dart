@@ -29,6 +29,7 @@ import 'rivaux.dart';
 import 'source_tmdb.dart';
 import 'sources.dart';
 import 'deck.dart';
+import 'festival.dart';
 import 'tirage.dart';
 
 enum ModeJeu { demo, vjod }
@@ -534,29 +535,29 @@ class EtatJeu extends ChangeNotifier {
     final malus = ceMois ? (_prefs.getInt('malus_cases') ?? 0) : 0;
     if (malus > 0) await _prefs.remove('malus_cases');
     // Le Deck d'atouts (R49) : les atouts posés dont le défi est rempli.
-    final effetDeck = ceMois
-        ? Deck.effets(
-            deck,
-            atouts,
-            ContexteAtout(
-              billet: Billet(
-                titre: titre,
-                type: type,
-                pronostic: pronostic,
-                cases: 0,
-                date: date,
-                note: note,
-                genres: film?.genres ?? genres,
-                annee: film?.annee ?? annee,
-                pays: film?.pays ?? pays,
-                niveau: niveau,
-              ),
-              avant: billets,
-              dureeMinutes: film?.dureeMinutes ?? dureeMinutes,
-            ),
-          )
-        : (cases: 0, audace: 0, declenches: const <Atout>[]);
-    final bonus = (joker ? 1 : 0) + (rattrapage ? Fidelite.rattrapage : 0) + bonusPouvoir + effetDeck.cases - malus;
+    final contexte = ContexteAtout(
+      billet: Billet(
+        titre: titre,
+        type: type,
+        pronostic: pronostic,
+        cases: 0,
+        date: date,
+        note: note,
+        genres: film?.genres ?? genres,
+        annee: film?.annee ?? annee,
+        pays: film?.pays ?? pays,
+        niveau: niveau,
+      ),
+      avant: billets,
+      dureeMinutes: film?.dureeMinutes ?? dureeMinutes,
+    );
+    final effetDeck = ceMois ? Deck.effets(deck, atouts, contexte) : (cases: 0, audace: 0, declenches: const <Atout>[]);
+    // Le Festival de la semaine (R50).
+    final festival = festivalDe(date);
+    final enFete = ceMois && festival != null && festival.condition(contexte);
+    final caseFestival = enFete && festival.effet == EffetFestival.caseEnPlus ? 1 : 0;
+    final audaceDeck = enFete && festival.effet == EffetFestival.audaceDouble ? effetDeck.audace * 2 : effetDeck.audace;
+    final bonus = (joker ? 1 : 0) + (rattrapage ? Fidelite.rattrapage : 0) + bonusPouvoir + effetDeck.cases + caseFestival - malus;
     final deja = casesLe(date);
     final cases = ceMois ? Regles.casesAccordees(demandees: max(0, demandees + bonus), dejaGagneesAujourdhui: deja, plafond: plafond) : 0;
     // Le pouvoir n'a « agi » que s'il a vraiment fait passer une case de plus.
@@ -591,7 +592,17 @@ class EtatJeu extends ChangeNotifier {
     // Vent dans le dos (R41) : une séance vue derrière Pop rapporte de l'audace.
     final vent = ceMois && ouvert(Etape.niveaux) && position < popAvant;
     if (vent) await _ajouterAudace(Retournements.ventDansLeDos);
-    if (effetDeck.audace > 0) await _ajouterAudace(effetDeck.audace);
+    if (audaceDeck > 0) await _ajouterAudace(audaceDeck);
+    final popRecule = enFete && festival.effet == EffetFestival.popRecule;
+    if (popRecule) {
+      final m = moisDe(maintenant);
+      await _prefs.setInt('pop_decalage_$m', _decalageDePop(m) - 1);
+    }
+    final boosterFestival = enFete && festival.effet == EffetFestival.booster;
+    if (boosterFestival) {
+      await _prefs.setInt('booster_reserve', min(boostersDispo(maintenant) + 1, Deck.reserveMax));
+      await _prefs.setString('booster_don', jourDe(maintenant));
+    }
     if (cases > 0) pionVientDAvancer = true;
     position = (position + cases).clamp(1, Regles.taillePlateau);
     // Coup de théâtre : le pion s'arrête sur une case 4, 14 ou 24 pas encore jouée ce mois-ci.
@@ -604,7 +615,8 @@ class EtatJeu extends ChangeNotifier {
       if (pouvoir && !pouvoirAgi) 'Pouvoir ${pp.pouvoir} : chou blanc, charge utilisée.',
       if (malus > 0) 'Pop-corn renversé : une case de moins.',
       if (effetDeck.declenches.isNotEmpty)
-        'Atouts : ${effetDeck.declenches.map((a) => a.nom).join(', ')}${effetDeck.cases > 0 ? ' (+1 case)' : ''}${effetDeck.audace > 0 ? ', +${effetDeck.audace} d\'audace' : ''}.',
+        'Atouts : ${effetDeck.declenches.map((a) => a.nom).join(', ')}${effetDeck.cases > 0 ? ' (+1 case)' : ''}${audaceDeck > 0 ? ', +$audaceDeck d\'audace' : ''}.',
+      if (enFete) '${festival.nom} : ${festival.regle}',
       if (vent) 'Vent dans le dos : +${Retournements.ventDansLeDos} points d\'audace (tu étais derrière Pop).',
       if (pariGagne) 'Pari de Pop relevé : il recule de ${Pop.recul} cases.',
       if (coup) 'Case $position : Coup de théâtre !',
@@ -614,6 +626,7 @@ class EtatJeu extends ChangeNotifier {
       if (pouvoir) Pouvoirs.phrase(pp, agi: pouvoirAgi),
       if (note != null) Pop.surPronostic(pronostic: pronostic, note: note, graine: billets.length),
       if (effetDeck.declenches.isNotEmpty) Deck.phraseDePop(effetDeck.declenches, graine: billets.length),
+      if (popRecule) '${festival.nom} : je recule d\'une case. Je l\'avais bien cherché.',
       if (coup) 'Case Coup de théâtre ! Va voir le plateau.',
       if (malus > 0) 'Pop-corn renversé : une case de moins, merci qui ?',
       if (vent) 'Tu étais derrière moi : ${Retournements.ventDansLeDos} points d\'audace pour toi. Profites-en, ça ne durera pas.',
@@ -1385,6 +1398,15 @@ class EtatJeu extends ChangeNotifier {
   Set<String> get collection => {...?_prefs.getStringList('collection')};
 
   int get bluffsGagnes => _prefs.getKeys().where((k) => k.startsWith('bluff_') && (_prefs.getBool(k) ?? false)).length;
+
+  /// Le Festival de la semaine (R50), une fois les niveaux ouverts (R42).
+  /// La préférence « festival » le force (« aucun » le coupe), pour les tests.
+  Festival? festivalDe(DateTime d) {
+    final force = _prefs.getString('festival');
+    if (force == 'aucun') return null;
+    if (force != null) return Festivals.parId(force);
+    return ouvert(Etape.niveaux) ? Festivals.de(d) : null;
+  }
 
   // Le Deck d'atouts (R49).
 
