@@ -86,6 +86,9 @@ class _LigueEcranState extends State<LigueEcran> {
       const SizedBox(height: 16),
       _Classement(key: ValueKey(ligue.id), service: service, ligue: ligue, positionLocale: etat.position),
       const SizedBox(height: 16),
+      _FilDeLaLigue(key: ValueKey('fil${ligue.id}${etat.billets.length}'), service: service, ligue: ligue),
+      const SizedBox(height: 16),
+      _FigurineDoree(service: service),
       Panneau(
         couleur: AuraCouleurs.jaune,
         inclinaison: -0.015,
@@ -430,5 +433,93 @@ class _CreerOuRejoindreState extends State<_CreerOuRejoindre> {
         AuraBouton(libelle: 'Retour à mes ligues', principal: false, onPressed: () => widget.fini(null)),
       ],
     ]);
+  }
+}
+
+/// Le fil de la ligue : ce que les amis ont vu, et ce qu'ils en pensent.
+class _FilDeLaLigue extends StatefulWidget {
+  const _FilDeLaLigue({super.key, required this.service, required this.ligue});
+  final ServiceLigues service;
+  final Ligue ligue;
+
+  @override
+  State<_FilDeLaLigue> createState() => _FilDeLaLigueState();
+}
+
+class _FilDeLaLigueState extends State<_FilDeLaLigue> {
+  late final Future<List<Nouvelle>> _fil = widget.service.fil(widget.ligue);
+
+  static String _quand(DateTime d) {
+    final jours = DateTime.now().difference(d).inDays;
+    if (jours <= 0) return 'aujourd\'hui';
+    if (jours == 1) return 'hier';
+    return 'il y a $jours jours';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Nouvelle>>(
+      future: _fil,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done || snap.hasError) return const SizedBox.shrink();
+        final fil = snap.data ?? const [];
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const TitreCartoon('Le fil de la ligue', taille: 26, inclinaison: 0),
+          const SizedBox(height: 10),
+          if (fil.isEmpty)
+            const PopQuiParle(texte: 'Personne n\'a encore rien vu ce mois-ci. Le premier qui joue une carte donne le ton !', taille: 60)
+          else
+            for (final n in fil.take(8))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Panneau(
+                  couleur: n.moi ? AuraCouleurs.jaune : AuraCouleurs.creme,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Figurine.profil(n.profil, hauteur: 44),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(n.phrase, style: AuraTexte.corps(14, poids: FontWeight.w900)),
+                        if (n.verdict != null && n.verdict!.isNotEmpty) Text('« ${n.verdict} »', style: AuraTexte.corps(13)),
+                        Text(_quand(n.quand), style: AuraTexte.corps(12, couleur: AuraCouleurs.texteDoux)),
+                      ]),
+                    ),
+                  ]),
+                ),
+              ),
+        ]);
+      },
+    );
+  }
+}
+
+/// La récompense d'invitation : une figurine dorée pour l'invité et l'hôte.
+class _FigurineDoree extends StatefulWidget {
+  const _FigurineDoree({required this.service});
+  final ServiceLigues service;
+
+  @override
+  State<_FigurineDoree> createState() => _FigurineDoreeState();
+}
+
+class _FigurineDoreeState extends State<_FigurineDoree> {
+  late final Future<bool> _doree = widget.service.figurineDoree();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _doree,
+      builder: (context, snap) => Panneau(
+        couleur: snap.data == true ? AuraCouleurs.ambre : AuraCouleurs.creme,
+        inclinaison: 0.012,
+        child: Text(
+          snap.data == true
+              ? 'Figurine dorée débloquée ! Tu l\'as gagnée en invitant un ami, ou en rejoignant sa ligue.'
+              : 'Invite un ami avec ton code : quand il rejoint ta ligue, vous gagnez tous les deux une figurine dorée.',
+          style: AuraTexte.corps(14, poids: FontWeight.w900),
+        ),
+      ),
+    );
   }
 }

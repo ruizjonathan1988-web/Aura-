@@ -13,6 +13,7 @@ import 'package:aura/services/connexion_vjod.dart';
 import 'package:aura/services/duel.dart';
 import 'package:aura/services/etat.dart';
 import 'package:aura/services/fidelite.dart';
+import 'package:aura/services/ligues.dart';
 import 'package:aura/services/mesures.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/pop.dart';
@@ -568,6 +569,27 @@ void main() {
 
     test('R17 seuls des événements prévus partent, sans titre de film', () {
       expect(ServiceMesures.types, {'ouverture', 'carte_jouee', 'billet', 'plan_du_jour', 'duel', 'bluff'});
+    });
+  });
+
+  group('R18 Les amis donnent des raisons de revenir', () {
+    test('R18 le fil raconte la séance d\'un ami en une phrase', () {
+      final n = Nouvelle.depuisJson({
+        'titre': 'Le Samouraï',
+        'note': 4,
+        'verdict': 'Froid et parfait',
+        'vu_le': '2026-11-05T21:00:00Z',
+        'joueur_id': 'lea',
+        'joueurs': {'pseudo': 'Léa', 'profil': 'critique'},
+      }, 'jon');
+      expect(n.phrase, 'Léa a vu « Le Samouraï » et lui donne 4 sur 5.');
+      expect(n.profil, Profil.critique);
+      expect(n.moi, isFalse);
+    });
+
+    test('R18 ses propres séances sont racontées à la deuxième personne', () {
+      final n = Nouvelle.depuisJson({'titre': 'Coco', 'vu_le': '2026-11-05T21:00:00Z', 'joueur_id': 'jon', 'joueurs': {'pseudo': 'Jon'}}, 'jon');
+      expect(n.phrase, 'Tu as vu « Coco ».');
     });
   });
 }
