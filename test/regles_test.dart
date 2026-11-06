@@ -1296,7 +1296,7 @@ void main() {
       final appels = <Uri>[];
       final client = MockClient((r) async {
         appels.add(r.url);
-        return http.Response(reponse, 200);
+        return http.Response.bytes(utf8.encode(reponse), 200);
       });
       final films = await SourceTmdb('cle', client: client, hasard: Random(1)).catalogue(emotion: Emotion.frissonner, duree: Duree.courte);
       expect(appels, hasLength(2));
