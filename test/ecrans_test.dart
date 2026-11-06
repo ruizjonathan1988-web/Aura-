@@ -3,7 +3,11 @@
 // (Un débordement de mise en page fait échouer le test.)
 
 import 'package:aura/app.dart';
+import 'package:aura/screens/revelation.dart';
+import 'package:aura/services/affiche.dart';
 import 'package:aura/services/etat.dart';
+import 'package:aura/services/sources.dart';
+import 'package:aura/theme/aura_theme.dart';
 import 'package:aura/services/premier_soir.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -94,6 +98,30 @@ void main() {
         expect(etat.accueilFait, isTrue);
         expect(t.takeException(), isNull);
         await _patienter(t);
+      });
+
+      testWidgets('la Révélation du dimanche se déroule jusqu\'au bout', (t) async {
+        _taille(t, taille, densite);
+        final affiche = Affiche.de(DateTime(2026, 11, 8), await SourceDemo().catalogue(), EtatJeu.jourDe)!;
+        final etat = await _etat({'accueil_fait': true, 'curseur_${affiche.semaine}': 9});
+        await t.pumpWidget(PorteeEtat(
+          etat: etat,
+          child: MaterialApp(theme: construireTheme(), home: Builder(builder: (c) => Scaffold(
+            body: Center(child: TextButton(
+              onPressed: () => Navigator.of(c).push(MaterialPageRoute(builder: (_) => RevelationEcran(affiche: affiche))),
+              child: const Text('ouvrir'),
+            )),
+          ))),
+        ));
+        await _toucher(t, find.text('ouvrir'));
+        for (var i = 0; i < 3; i++) {
+          await _toucher(t, find.text('SUITE'));
+          await _patienter(t, 2);
+        }
+        expect(etat.revelationFaite(affiche.semaine), isTrue);
+        await _toucher(t, find.text('À LA SEMAINE PROCHAINE !'));
+        await _patienter(t, 2);
+        expect(find.text('ouvrir'), findsOneWidget);
       });
 
       testWidgets('Plan du jour, Duel et Réglages s\'ouvrent sans souci', (t) async {

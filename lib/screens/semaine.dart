@@ -10,6 +10,7 @@ import '../services/premier_soir.dart';
 import '../services/vjod_lien.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
+import 'revelation.dart';
 
 /// La semaine : l'Affiche choisie par le Programmateur, la séance, le Curseur,
 /// et la Révélation du dimanche. En solo, Pop programme ; le Bluff et le
@@ -248,10 +249,18 @@ class _SemaineEcranState extends State<SemaineEcran> {
               ] else
                 Text(
                   dimanche
-                      ? 'Révélation ! Tu avais placé ton Curseur sur $place. En ligue, il sera comparé à la moyenne de tes amis.'
+                      ? (etat.revelationFaite(a.semaine) ? 'Révélation faite. Nouvelle Affiche lundi !' : 'C\'est dimanche : place à la Révélation, idéalement sur la télé.')
                       : 'Curseur placé. Rendez-vous dimanche pour la Révélation.',
                   style: AuraTexte.corps(14, poids: FontWeight.w900),
                 ),
+              if (dimanche) ...[
+                const SizedBox(height: 12),
+                AuraBouton(
+                  libelle: 'Lancer la Révélation',
+                  autofocus: place != null,
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RevelationEcran(affiche: a))),
+                ),
+              ],
             ]),
           ),
         const SizedBox(height: 18),

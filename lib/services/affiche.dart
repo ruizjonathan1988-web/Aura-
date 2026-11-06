@@ -19,6 +19,13 @@ class Affiche {
   /// Le Curseur placé ne se dévoile que le dimanche, jour de la Révélation.
   static bool jourDeRevelation(DateTime d) => d.weekday == DateTime.sunday;
 
+  /// Le pari de Pop, « le Médium », sur ton Curseur (0 à 10), fixé pour la
+  /// semaine.
+  static int pariDuMedium(String semaine) => semaine.codeUnits.fold<int>(3, (h, c) => (h * 7 + c) % 1009) % 11;
+
+  /// Si Pop se trompe d'au moins 3 crans, tu gagnes un Joker.
+  static bool mediumRate(int pari, int curseur) => (pari - curseur).abs() >= 3;
+
   static DateTime lundiDe(DateTime d) => DateTime(d.year, d.month, d.day).subtract(Duration(days: d.weekday - 1));
 
   static Affiche? de(DateTime jour, List<Film> catalogue, String Function(DateTime) cle) {

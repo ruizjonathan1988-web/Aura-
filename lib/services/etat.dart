@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/modeles.dart';
+import 'affiche.dart';
 import 'fidelite.dart';
 import 'ligues.dart';
 import 'mesures.dart';
@@ -573,6 +574,21 @@ class EtatJeu extends ChangeNotifier {
     if (trouve) await _prefs.setBool('joker_bluff', true);
     _mesurer('bluff', {'trouve': trouve});
     notifyListeners();
+  }
+
+  // La Révélation du dimanche : une fois par semaine.
+
+  bool revelationFaite(String semaine) => _prefs.getBool('revelation_$semaine') ?? false;
+
+  /// Termine la Révélation ; un Médium raté (écart d'au moins 3) donne un
+  /// Joker. Renvoie vrai si le Joker est gagné.
+  Future<bool> terminerRevelation(String semaine, {required int pari, required int curseur}) async {
+    if (revelationFaite(semaine)) return false;
+    await _prefs.setBool('revelation_$semaine', true);
+    final joker = Affiche.mediumRate(pari, curseur);
+    if (joker) await _prefs.setBool('joker_bluff', true);
+    notifyListeners();
+    return joker;
   }
 
   // L'Affiche de la semaine : le Curseur placé après la séance.
