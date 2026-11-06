@@ -2302,6 +2302,45 @@ void main() {
       expect(Proposition.depuisJson({'id': 'x'}), isNull);
     });
   });
+
+  group('R48 L\'aura dans Aura', () {
+    test('R48 à qui proposer : la maison d\'abord, un par personne, puis les amis de ligue, jamais soi', () {
+      final d = Destinataire.liste(
+        maison: [
+          (pseudo: 'Zoé', personne: 'srv:zoe'),
+          (pseudo: 'Jon', personne: 'srv:jon'),
+          (pseudo: 'Léa', personne: 'srv:lea'),
+          (pseudo: 'Léa tablette', personne: 'srv:lea'),
+          (pseudo: 'Sans personne', personne: null),
+        ],
+        amis: [
+          (joueur: 'j-lea', pseudo: 'Léa', personne: 'srv:lea', ligueId: 'L1'),
+          (joueur: 'j-max', pseudo: 'Max', personne: null, ligueId: 'L1'),
+          (joueur: 'j-max', pseudo: 'Max', personne: null, ligueId: 'L2'),
+          (joueur: 'j-sam', pseudo: 'Sam', personne: 'autre:sam', ligueId: 'L2'),
+          (joueur: 'moi', pseudo: 'Jon', personne: null, ligueId: 'L1'),
+        ],
+        moiPersonne: 'srv:jon',
+        moiJoueur: 'moi',
+      );
+      expect(d.map((x) => x.nom), ['Léa', 'Zoé', 'Max', 'Sam']);
+      expect(d.first.maison, isTrue);
+      expect((d[2].joueur, d[2].personne, d[2].ligueId), ('j-max', null, 'L1'), reason: 'sans VJOD, visé par son joueur');
+      expect((d[3].joueur, d[3].personne), (null, 'autre:sam'), reason: 'avec VJOD, visé par sa personne pour tous ses appareils');
+    });
+
+    test('R48 vu et aimé d\'après Jellyfin, comme dans VJOD ; on n\'enlève jamais', () {
+      final p = Proposition(id: 'p', de: 'u', deNom: 'Jon', pourNom: 'Léa', filmCle: 'tmdb:1', titre: 'X', creeLe: DateTime(2026, 11, 6));
+      final t = DateTime.utc(2026, 11, 6, 22);
+      expect(majDepuisJellyfin({'Played': true, 'IsFavorite': true}, p, t), {'vu_le': '2026-11-06T22:00:00.000Z', 'aime': true});
+      expect(majDepuisJellyfin({'UnplayedItemCount': 5, 'PlayedPercentage': 10}, p, t), {'vu_le': '2026-11-06T22:00:00.000Z'});
+      expect(majDepuisJellyfin({'Rating': 8}, p, t)?['aime'], isTrue);
+      expect(majDepuisJellyfin({'Played': false}, p, t), isNull);
+      expect(majDepuisJellyfin(null, p, t), isNull);
+      final vue = Proposition(id: 'p', de: 'u', deNom: 'Jon', pourNom: 'Léa', filmCle: 'tmdb:1', titre: 'X', vuLe: t, aime: true, creeLe: t);
+      expect(majDepuisJellyfin({'Played': false, 'IsFavorite': false}, vue, t), isNull);
+    });
+  });
 }
 
 class _SourceFixe implements SourceFilms {
@@ -2318,6 +2357,7 @@ class _SourceEnPanne implements SourceFilms {
   String get nom => 'en panne';
   @override
   Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async => throw Exception('TMDB ne répond pas');
+
 }
 
 /// Rouvre l'état sur les mêmes préférences, comme après une fermeture.

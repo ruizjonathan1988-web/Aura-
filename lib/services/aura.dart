@@ -158,3 +158,61 @@ class Proposition {
         if (mot != null && mot.trim().isNotEmpty) 'mot': mot.trim(),
       };
 }
+
+/// À qui proposer : un profil de la maison (même serveur Jellyfin) ou un ami
+/// de ligue. Un ami qui joue aussi depuis VJOD est visé par sa « personne »,
+/// pour qu'il voie la proposition sur tous ses appareils.
+class Destinataire {
+  const Destinataire({required this.nom, this.personne, this.joueur, this.ligueId});
+
+  final String nom;
+  final String? personne;
+  final String? joueur;
+  final String? ligueId;
+
+  bool get maison => ligueId == null;
+
+  /// Les profils de la maison d'abord (un par personne), puis les amis des
+  /// ligues qui n'y sont pas déjà ; jamais soi-même.
+  static List<Destinataire> liste({
+    required List<({String pseudo, String? personne})> maison,
+    required List<({String joueur, String pseudo, String? personne, String ligueId})> amis,
+    String? moiPersonne,
+    required String moiJoueur,
+  }) {
+    final vus = <String>{if (moiPersonne != null) moiPersonne};
+    final joueurs = <String>{moiJoueur};
+    final out = <Destinataire>[];
+    for (final m in maison) {
+      final p = m.personne;
+      if (p == null || !vus.add(p)) continue;
+      out.add(Destinataire(nom: m.pseudo, personne: p));
+    }
+    out.sort((a, b) => a.nom.toLowerCase().compareTo(b.nom.toLowerCase()));
+    final ligue = <Destinataire>[];
+    for (final a in amis) {
+      if (!joueurs.add(a.joueur)) continue;
+      if (a.personne != null && !vus.add(a.personne!)) continue;
+      ligue.add(Destinataire(nom: a.pseudo, personne: a.personne, joueur: a.personne == null ? a.joueur : null, ligueId: a.ligueId));
+    }
+    ligue.sort((a, b) => a.nom.toLowerCase().compareTo(b.nom.toLowerCase()));
+    return [...out, ...ligue];
+  }
+}
+
+/// Ce que Jellyfin dit d'un titre proposé (son UserData), traduit en ce
+/// qu'il faut écrire sur la proposition. Même règle que VJOD : vu dès qu'il
+/// a été joué (une série dès un épisode), aimé en favori, pouce levé ou 8/10 ;
+/// on n'enlève jamais.
+Map<String, dynamic>? majDepuisJellyfin(Map<String, dynamic>? u, Proposition p, DateTime maintenant) {
+  if (u == null) return null;
+  final fois = (u['PlayCount'] as num?)?.toInt() ?? 0;
+  final pourcent = (u['PlayedPercentage'] as num?)?.toDouble() ?? 0;
+  final vu = u['Played'] == true || fois > 0 || (u['UnplayedItemCount'] != null && pourcent > 0);
+  final aime = u['IsFavorite'] == true || u['Likes'] == true || ((u['Rating'] as num?)?.toDouble() ?? 0) >= 8;
+  final maj = <String, dynamic>{
+    if ((vu || aime) && !p.vu) 'vu_le': maintenant.toUtc().toIso8601String(),
+    if (aime && !p.aime) 'aime': true,
+  };
+  return maj.isEmpty ? null : maj;
+}
