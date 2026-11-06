@@ -7,6 +7,7 @@ import 'services/config.dart';
 import 'services/etat.dart';
 import 'services/ligues.dart';
 import 'services/mesures.dart';
+import 'services/rappels.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +22,14 @@ Future<void> main() async {
       // Serveur injoignable au démarrage : on joue en solo.
     }
   }
+  await Rappels.initialiser();
   final etat = await EtatJeu.ouvrir(ligues: ligues);
+  Rappels.surReponse = (film, note) => etat.repondreRappel(film, note);
+  final reponse = Rappels.enAttente;
+  if (reponse != null) {
+    Rappels.enAttente = null;
+    await etat.repondreRappel(reponse.$1, reponse.$2);
+  }
   if (client != null) {
     etat.mesures = ServiceMesures(client, await SharedPreferences.getInstance())..ouverture();
   }
