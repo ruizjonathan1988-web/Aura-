@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
+import 'package:aura/services/apres_seance.dart';
 import 'package:aura/services/cadeaux.dart';
 import 'package:aura/services/campagnes.dart';
 import 'package:aura/services/carte_genres.dart';
@@ -40,6 +41,7 @@ import 'package:aura/services/source_tmdb.dart';
 import 'package:aura/services/soiree.dart';
 import 'package:aura/services/sources.dart';
 import 'package:aura/services/tirage.dart';
+import 'package:aura/services/traduction.dart';
 import 'package:aura/services/vjod_lien.dart';
 import 'package:aura/screens/plateau.dart';
 import 'package:aura/widgets/animations.dart';
@@ -2077,6 +2079,50 @@ void main() {
       } else {
         expect(f.figurineAChoisir, isFalse, reason: 'le choix se fait la première semaine');
       }
+    });
+  });
+
+  group('R44 Défi d\'après-séance et Pop-cartes', () {
+    CarteDefi carte(String id, {int? niveau}) =>
+        CarteDefi(type: TypeCarte.envie, defi: 'Défi', indice: '', cases: 1, joker: '', film: _film(id), bulleDePop: '', niveau: niveau);
+
+    test('R44 trois questions sur le film vu, quatre réponses distinctes dont une juste', () {
+      final q = DefiApres.questions(titre: 'Le Samouraï', annee: 1967, pays: const ['France'], genres: const ['Crime'], graine: 4);
+      expect(q, hasLength(3));
+      for (final x in q) {
+        expect(x.reponses.toSet(), hasLength(4));
+        expect(x.bonne, inInclusiveRange(0, 3));
+      }
+      expect(q[0].reponses[q[0].bonne], 'Années 1960');
+      expect(q[1].reponses[q[1].bonne], 'France');
+      expect(q[2].reponses[q[2].bonne], Traduction.genre('Crime'));
+      expect(DefiApres.questions(titre: 'X', annee: 2001), hasLength(1), reason: 'pas de question sans donnée');
+      expect(DefiApres.questions(titre: 'X'), isEmpty);
+      expect([DefiApres.audace(0, 3), DefiApres.audace(2, 3), DefiApres.audace(3, 3)], [0, 2, 5]);
+    });
+
+    test('R44 après une séance, le défi attend ; un sans-faute rapporte 5 d\'audace et fait briller la Pop-carte', () async {
+      final e = await _etat(_devantPop);
+      await e.validerSeance(carte('a', niveau: 8), pronostic: 3);
+      final b = e.defiApres!;
+      expect(b.titre, 'Film a');
+      expect(await e.repondreDefiApres(justes: 3, total: 3), 5);
+      expect(e.audaceDuMois, 8 + 5);
+      expect(e.defiApres, isNull);
+      expect(e.brillante(e.billets.single), isTrue);
+      expect(await e.repondreDefiApres(justes: 3, total: 3), 0, reason: 'une seule fois');
+      await e.validerSeance(carte('b'), pronostic: 3);
+      await e.passerDefiApres();
+      expect(e.defiApres, isNull);
+      expect(e.brillante(e.billets.first), isFalse);
+      expect(e.albumDuMois.map((b) => b.titre), ['Film a', 'Film b']);
+      final f = await _etat({'tout_ouvert': false});
+      await f.validerSeance(carte('a'), pronostic: 3);
+      expect(f.defiApres, isNull, reason: 'pas avant les niveaux');
+    });
+
+    test('R44 la rareté d\'une Pop-carte vient du niveau visé', () {
+      expect([null, 2, 5, 8, 10].map((n) => Rarete.de(niveau: n)), [Rarete.commune, Rarete.commune, Rarete.rare, Rarete.epique, Rarete.legendaire]);
     });
   });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app.dart';
 import '../models/modeles.dart';
+import '../services/apres_seance.dart';
 import '../services/carte_genres.dart';
 import '../services/coups.dart';
 import '../services/etat.dart';
@@ -243,6 +244,14 @@ class PlateauEcran extends StatelessWidget {
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GeneriqueEcran(mois: DateTime(maintenant.year, maintenant.month)))),
               ),
               const SizedBox(height: 20),
+              if (etat.albumDuMois.isNotEmpty) ...[
+                TitreCartoon('L\'album de ${_mois[maintenant.month - 1]}', taille: 24, inclinaison: 0),
+                const SizedBox(height: 10),
+                Wrap(spacing: 10, runSpacing: 10, children: [
+                  for (final b in etat.albumDuMois) _PopCarte(billet: b, brillante: etat.brillante(b)),
+                ]),
+                const SizedBox(height: 20),
+              ],
               const TitreCartoon('Tes derniers billets', taille: 24, inclinaison: 0),
               const SizedBox(height: 10),
               if (etat.billets.isEmpty)
@@ -598,6 +607,39 @@ class _CrasseDuRival extends StatelessWidget {
             Pastille(libelle: 'Renvoyer (${c.rival.nom} recule de ${Rivaux.reculRenvoi})', choisie: false, onTap: () => etat.repondreAuRival(Reponse.renvoyee)),
         ]),
       ]),
+    );
+  }
+}
+
+/// Une Pop-carte de l'album (R44) : le film vu, sa rareté, et l'éclat d'un sans-faute.
+class _PopCarte extends StatelessWidget {
+  const _PopCarte({required this.billet, required this.brillante});
+
+  final Billet billet;
+  final bool brillante;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = Rarete.de(niveau: billet.niveau);
+    final couleur = switch (r) {
+      Rarete.commune => AuraCouleurs.creme,
+      Rarete.rare => AuraCouleurs.caseBleu,
+      Rarete.epique => AuraCouleurs.violet,
+      Rarete.legendaire => AuraCouleurs.jaune,
+    };
+    return SizedBox(
+      width: 104,
+      child: Panneau(
+        couleur: couleur,
+        padding: const EdgeInsets.all(8),
+        inclinaison: brillante ? -0.03 : 0,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('${brillante ? '✦ ' : ''}${r.nom.toUpperCase()}', style: AuraTexte.corps(10, poids: FontWeight.w900)),
+          const SizedBox(height: 4),
+          Text(billet.titre, maxLines: 3, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(12, poids: FontWeight.w900)),
+          if (billet.annee != null) Text('${billet.annee}', style: AuraTexte.corps(11, couleur: AuraCouleurs.texteDoux)),
+        ]),
+      ),
     );
   }
 }
