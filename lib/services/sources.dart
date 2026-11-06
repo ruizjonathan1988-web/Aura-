@@ -8,9 +8,11 @@ import '../models/modeles.dart';
 abstract class SourceFilms {
   String get nom;
 
-  /// Les films de la source. Sans [emotion], tous les genres. [auHasard] à
-  /// faux donne toujours le même ordre (utile au Plan du jour et à l'Affiche).
-  Future<List<Film>> catalogue({Emotion? emotion, bool auHasard = true});
+  /// Les films de la source. Sans [emotion], tous les genres. [duree] aide les
+  /// sources qui filtrent côté serveur (TMDB) ; les autres l'ignorent, le
+  /// tirage refiltre de toute façon. [auHasard] à faux donne toujours le même
+  /// ordre (utile au Plan du jour et à l'Affiche).
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true});
 }
 
 /// Réglages de connexion à Jellyfin (édition VJOD).
@@ -56,7 +58,7 @@ class SourceJellyfin implements SourceFilms {
   String get nom => 'ta bibliothèque Jellyfin';
 
   @override
-  Future<List<Film>> catalogue({Emotion? emotion, bool auHasard = true}) async {
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true}) async {
     final uri = connexion.url('/Users/${connexion.utilisateurId}/Items', {
       'IncludeItemTypes': 'Movie',
       'Recursive': 'true',
@@ -140,7 +142,7 @@ class SourceDemo implements SourceFilms {
   String get nom => 'la sélection de démonstration';
 
   @override
-  Future<List<Film>> catalogue({Emotion? emotion, bool auHasard = true}) async => _films;
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true}) async => _films;
 
   static const _films = <Film>[
     Film(id: 'd1', titre: 'Le Samouraï', annee: 1967, dureeMinutes: 105, note: 7.9, genres: ['Crime', 'Thriller'], pays: ['France'], realisateur: 'Jean-Pierre Melville', synopsis: 'Un tueur à gages solitaire et méthodique se retrouve traqué à la fois par la police et par ceux qui l\'ont engagé.', autresTitres: ['Le Samourai']),

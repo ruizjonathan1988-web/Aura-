@@ -164,7 +164,9 @@ class Film {
   static String _duree(int m) => m < 60 ? '$m min' : '${m ~/ 60} h ${(m % 60).toString().padLeft(2, '0')}';
 }
 
-enum SourceFilm { demo, jellyfin }
+/// D'où vient un film : la démo, le serveur Jellyfin, ou le reste du cinéma
+/// que VJOD sait lancer en VOD IPTV ou faire demander (Seerr).
+enum SourceFilm { demo, jellyfin, catalogueVjod }
 
 enum TypeCarte {
   retro('Rétro', AuraCouleurs.caseOrange, Color(0xFFFFC772)),

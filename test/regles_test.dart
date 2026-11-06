@@ -28,9 +28,11 @@ import 'package:aura/services/pop.dart';
 import 'package:aura/services/premier_soir.dart';
 import 'package:aura/services/rappels.dart';
 import 'package:aura/services/semaine_ligue.dart';
+import 'package:aura/services/source_tmdb.dart';
 import 'package:aura/services/soiree.dart';
 import 'package:aura/services/sources.dart';
 import 'package:aura/services/tirage.dart';
+import 'package:aura/services/vjod_lien.dart';
 import 'package:aura/widgets/animations.dart';
 import 'package:aura/widgets/aura_widgets.dart';
 import 'package:flutter/material.dart';
@@ -1278,7 +1280,83 @@ void main() {
       expect(t.message, isNull);
     });
   });
+
+  group('R33 Tout le cinéma de VJOD', () {
+    final reponse = jsonEncode({
+      'results': [
+        {'id': 550, 'title': 'Fight Club', 'original_title': 'Fight Club', 'release_date': '1999-10-15', 'vote_average': 8.4, 'vote_count': 30000, 'genre_ids': [18, 53], 'overview': 'Un employé de bureau insomniaque rencontre un vendeur de savon.'},
+        {'id': 680, 'title': 'Pulp Fiction', 'original_title': 'Pulp Fiction', 'release_date': '1994-09-10', 'vote_average': 8.5, 'vote_count': 28000, 'genre_ids': [53, 80], 'overview': ''},
+        {'id': 999, 'title': '', 'vote_average': 9},
+      ],
+    });
+
+    test('R33 TMDB est interrogé sans navet, avec l\'envie et la durée', () async {
+      final appels = <Uri>[];
+      final client = MockClient((r) async {
+        appels.add(r.url);
+        return http.Response(reponse, 200);
+      });
+      final films = await SourceTmdb('cle', client: client, hasard: Random(1)).catalogue(emotion: Emotion.frissonner, duree: Duree.courte);
+      expect(appels, hasLength(2));
+      final q = appels.first.queryParameters;
+      expect(q['vote_average.gte'], '6');
+      expect(int.parse(q['vote_count.gte']!), greaterThanOrEqualTo(150));
+      expect(q['with_runtime.lte'], '90');
+      expect(q['language'], 'fr-FR');
+      expect(q['with_genres']!.split('|'), containsAll(['53', '27', '9648', '80']));
+      expect(q['without_genres']!.split(','), containsAll(['35', '10751', '16']));
+      expect(films.map((f) => f.titre), unorderedEquals(['Fight Club', 'Pulp Fiction']));
+      final fc = films.firstWhere((f) => f.tmdbId == 550);
+      expect(fc.source, SourceFilm.catalogueVjod);
+      expect(fc.annee, 1999);
+      expect(fc.genres, ['Drama', 'Thriller']);
+      expect(Tirage.assezBon(fc), isTrue);
+    });
+
+    test('R33 « toute la soirée » ne limite pas la durée', () {
+      expect(SourceTmdb.parametres(duree: Duree.soiree, page: 1).containsKey('with_runtime.lte'), isFalse);
+    });
+
+    test('R33 un film du serveur passe avant sa version TMDB, et TMDB en panne ne bloque rien', () async {
+      final serveur = _SourceFixe([const Film(id: 'jf1', titre: 'Fight Club', tmdbId: 550, note: 8.4, source: SourceFilm.jellyfin)]);
+      final tmdb = _SourceFixe([
+        const Film(id: 'tmdb:550', titre: 'Fight Club', tmdbId: 550, note: 8.4, source: SourceFilm.catalogueVjod),
+        const Film(id: 'tmdb:680', titre: 'Pulp Fiction', tmdbId: 680, note: 8.5, source: SourceFilm.catalogueVjod),
+      ]);
+      final tout = await SourceToutVjod(serveur, tmdb).catalogue();
+      expect(tout.map((f) => f.id), ['jf1', 'tmdb:680']);
+      final enPanne = await SourceToutVjod(serveur, _SourceEnPanne()).catalogue();
+      expect(enPanne.map((f) => f.id), ['jf1']);
+    });
+
+    test('R33 « Lancer dans VJOD » ouvre la fiche du titre quand il n\'est pas sur le serveur', () {
+      const f = Film(id: 'tmdb:680', titre: 'Pulp Fiction', tmdbId: 680, source: SourceFilm.catalogueVjod);
+      final lien = VjodLien.pour(f);
+      expect(lien.scheme, 'moonfin');
+      expect(lien.host, 'tmdb');
+      expect(lien.queryParameters, {'id': '680', 'type': 'movie', 'title': 'Pulp Fiction'});
+      const jf = Film(id: 'abc', titre: 'X', serveurId: 's', source: SourceFilm.jellyfin);
+      expect(VjodLien.pour(jf).host, 'play');
+    });
+  });
 }
 
-/// Rouvre l'état sur les mêmes préférences, comme après une fermeture.
+class _SourceFixe implements SourceFilms {
+  _SourceFixe(this.films);
+  final List<Film> films;
+  @override
+  String get nom => 'fixe';
+  @override
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true}) async => films;
+}
+
+class _SourceEnPanne implements SourceFilms {
+  @override
+  String get nom => 'en panne';
+  @override
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true}) async => throw Exception('TMDB ne répond pas');
+}
+
+/// Rouvre l'état
+ sur les mêmes préférences, comme après une fermeture.
 Future<EtatJeu> _etatDepuis(EtatJeu _) async => EtatJeu(await SharedPreferences.getInstance());
