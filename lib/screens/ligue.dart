@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../app.dart';
 import '../models/modeles.dart';
 import '../services/coups.dart';
+import '../services/deblocage.dart';
 import '../services/etat.dart';
 import '../services/ligues.dart';
 import '../theme/aura_theme.dart';
@@ -89,8 +90,10 @@ class _LigueEcranState extends State<LigueEcran> {
       _Classement(key: ValueKey(ligue.id), service: service, ligue: ligue, positionLocale: etat.position),
       const SizedBox(height: 16),
       _FilDeLaLigue(key: ValueKey('fil${ligue.id}${etat.billets.length}'), service: service, ligue: ligue),
-      const SizedBox(height: 20),
-      _Crasses(key: ValueKey('crasses${ligue.id}'), etat: etat, service: service, ligue: ligue),
+      if (etat.ouvert(Etape.crasses)) ...[
+        const SizedBox(height: 20),
+        _Crasses(key: ValueKey('crasses${ligue.id}'), etat: etat, service: service, ligue: ligue),
+      ],
       const SizedBox(height: 16),
       CadeauxVue(key: ValueKey('cadeaux${ligue.id}'), service: service, ligue: ligue),
       const SizedBox(height: 16),
