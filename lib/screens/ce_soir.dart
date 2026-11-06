@@ -11,6 +11,7 @@ import '../services/vjod_lien.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
+import '../widgets/ou_le_voir.dart';
 import 'duel.dart';
 import 'plan_du_jour.dart';
 import 'reglages.dart';
@@ -313,6 +314,8 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           const SizedBox(height: 12),
           Panneau(child: Text(f.synopsis!, style: AuraTexte.corps(14))),
         ],
+        const SizedBox(height: 12),
+        OuLeVoir(key: ValueKey(f.id), film: f),
         const SizedBox(height: 18),
         Panneau(
           child: Column(

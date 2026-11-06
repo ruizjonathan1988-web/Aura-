@@ -19,6 +19,7 @@ import 'package:aura/services/historique.dart';
 import 'package:aura/services/ligues.dart';
 import 'package:aura/services/mesures.dart';
 import 'package:aura/services/plan_du_jour.dart';
+import 'package:aura/services/plateformes.dart';
 import 'package:aura/services/pop.dart';
 import 'package:aura/services/premier_soir.dart';
 import 'package:aura/services/rappels.dart';
@@ -948,6 +949,59 @@ void main() {
       expect(e.position, 1);
       await e.effacerHistorique();
       expect((await e.source.catalogue()).firstWhere((f) => f.titre == 'Le Parrain').dejaVu, isFalse);
+    });
+  });
+
+  group('R26 Où voir le film (TMDB, données JustWatch)', () {
+    final fournisseurs = jsonEncode({
+      'results': {
+        'FR': {
+          'link': 'https://www.themoviedb.org/movie/238/watch?locale=FR',
+          'flatrate': [{'provider_name': 'Netflix'}, {'provider_name': 'Canal+'}],
+          'rent': [{'provider_name': 'Apple TV'}],
+          'buy': [{'provider_name': 'Google Play Movies'}],
+        },
+        'US': {'flatrate': [{'provider_name': 'Paramount Plus'}]},
+      },
+    });
+
+    test('R26 on ne garde que la France, abonnement d\'abord', () {
+      final p = Plateformes.depuisJson(jsonDecode(fournisseurs) as Map<String, dynamic>);
+      expect(p.abonnement, ['Netflix', 'Canal+']);
+      expect(p.resume, 'En abonnement : Netflix, Canal+ · En location : Apple TV');
+      expect(Plateformes.depuisJson({'results': {}}).vide, isTrue);
+    });
+
+    test('R26 un film sans identifiant TMDB est cherché par titre et année', () async {
+      final appels = <String>[];
+      final client = MockClient((r) async {
+        appels.add(r.url.path);
+        if (r.url.path.endsWith('/search/movie')) {
+          expect(r.url.queryParameters['year'], '1972');
+          expect(r.url.queryParameters['api_key'], 'cle');
+          return http.Response(jsonEncode({'results': [{'id': 238}]}), 200);
+        }
+        return http.Response(fournisseurs, 200);
+      });
+      final p = await ServicePlateformes('cle', client: client).pour(const Film(id: 'd', titre: 'Le Parrain', annee: 1972));
+      expect(p!.abonnement, contains('Netflix'));
+      expect(appels, ['/3/search/movie', '/3/movie/238/watch/providers']);
+    });
+
+    test('R26 un film Jellyfin donne directement son identifiant TMDB', () async {
+      final appels = <String>[];
+      final client = MockClient((r) async {
+        appels.add(r.url.path);
+        return http.Response(fournisseurs, 200);
+      });
+      await ServicePlateformes('cle', client: client).pour(const Film(id: 'j', titre: 'X', tmdbId: 238, source: SourceFilm.jellyfin));
+      expect(appels, ['/3/movie/238/watch/providers']);
+      expect(SourceJellyfin.filmDepuisJellyfin({'Id': 'j', 'Name': 'X', 'ProviderIds': {'Tmdb': '238'}}).tmdbId, 238);
+    });
+
+    test('R26 si TMDB ne répond pas, rien ne s\'affiche et rien ne plante', () async {
+      final client = MockClient((r) async => http.Response('', 500));
+      expect(await ServicePlateformes('cle', client: client).pour(const Film(id: 'x', titre: 'Inconnu')), isNull);
     });
   });
 }
