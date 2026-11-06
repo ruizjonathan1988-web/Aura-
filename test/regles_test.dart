@@ -81,6 +81,18 @@ void main() {
       }
     });
 
+    test('R1 le Plan du jour et l\'Affiche choisissent des films très bien notés', () {
+      // 40 films : le haut du panier en garde 16, tous parmi les 20 « top ».
+      final lot = [
+        for (var i = 0; i < 20; i++) _film('moyen$i', note: 6.1),
+        for (var i = 0; i < 20; i++) _film('top$i', note: 8.6),
+      ];
+      for (var j = 1; j <= 28; j++) {
+        expect(PlanDuJour.du(DateTime(2026, 11, j), lot)!.film.id, startsWith('top'));
+        expect(Affiche.de(DateTime(2026, 11, j), lot, EtatJeu.jourDe)!.film.id, startsWith('top'));
+      }
+    });
+
     test('R1 un film récent a besoin d\'assez d\'avis, un vieux film un peu moins', () {
       expect(Tirage.assezBon(_film('a', votes: 149)), isFalse);
       expect(Tirage.assezBon(_film('b', votes: 150)), isTrue);

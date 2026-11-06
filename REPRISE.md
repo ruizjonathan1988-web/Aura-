@@ -47,7 +47,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 
 | Règle | Ce qui est vérifié | Où dans le code |
 |---|---|---|
-| R1 Zéro navet | Tirage, Plan du jour et Affiche ne proposent rien sous 6/10 ni sans assez d'avis (150, ou 30 avant 1990) ; l'Affiche n'est jamais un film déjà vu | `Tirage.assezBon` |
+| R1 Zéro navet | Tirage, Plan du jour et Affiche ne proposent rien sous 6/10 ni sans assez d'avis (150, ou 30 avant 1990) ; l'Affiche n'est jamais un film déjà vu ; tirage, Plan du jour et Affiche puisent d'abord dans les 40 % les mieux notés | `Tirage.assezBon` |
 | R2 3 cases par jour | La 2e carte du jour ne rapporte plus ; un film vu hier compte sur hier | `Regles.casesAccordees`, `EtatJeu.casesLe` |
 | R3 Pas de points au temps passé | Un film de 5 h rapporte autant qu'un film court ; la durée ne fait que filtrer | `TypeCarte`, `Tirage` |
 | R4 Revenir ne punit jamais | Une séance sans case ne fait pas reculer ; la position survit à la fermeture | `EtatJeu` |

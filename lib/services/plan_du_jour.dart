@@ -20,7 +20,9 @@ class PlanDuJour {
       ..sort((a, b) => a.id.compareTo(b.id));
     if (bons.length < 4) return null;
     final hasard = Random(jour.year * 10000 + jour.month * 100 + jour.day);
-    final film = bons[hasard.nextInt(bons.length)];
+    // Un film reconnu à deviner ; les mauvaises réponses viennent de partout.
+    final haut = Tirage.hautDuPanier(bons);
+    final film = haut[hasard.nextInt(haut.length)];
     final autres = bons.where((f) => f.id != film.id).toList()..shuffle(hasard);
     final choix = [film, ...autres.take(3)]..shuffle(hasard);
     return PlanDuJour(film: film, indices: indicesPour(film), choix: choix);

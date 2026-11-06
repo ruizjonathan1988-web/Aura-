@@ -25,6 +25,13 @@ class Tirage {
     return votes >= seuil;
   }
 
+  /// Le haut du panier : les 40 % les mieux notés (au moins [minimum]
+  /// films), rangés par identifiant pour que le choix du jour soit stable.
+  static List<Film> hautDuPanier(List<Film> films, {int minimum = 9}) {
+    final parNote = [...films]..sort((a, b) => (b.note ?? 0).compareTo(a.note ?? 0));
+    return parNote.take(max(minimum, (films.length * .4).ceil())).toList()..sort((a, b) => a.id.compareTo(b.id));
+  }
+
   static bool correspond(Film f, Emotion e, Duree d) {
     if (f.dureeMinutes != null && f.dureeMinutes! > d.minutesMax) return false;
     if (f.genres.isEmpty) return true;
