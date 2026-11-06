@@ -8,6 +8,7 @@ import 'package:aura/services/affiche.dart';
 import 'package:aura/services/etat.dart';
 import 'package:aura/services/sources.dart';
 import 'package:aura/theme/aura_theme.dart';
+import 'package:aura/widgets/aura_widgets.dart';
 import 'package:aura/services/premier_soir.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -64,6 +65,8 @@ void main() {
         await t.pumpWidget(AuraApp(etat: etat));
         await _patienter(t);
         await _toucher(t, find.text('ENTRER DANS LA SALLE'));
+        expect(find.text('TU TE METS COMBIEN ?'), findsOneWidget);
+        await _toucher(t, find.descendant(of: find.byType(Pastille), matching: find.text('7')));
         await _toucher(t, find.text('TIRER MES 3 CARTES'));
         expect(find.text('CHOISIS TA CARTE !'), findsWidgets);
         await _toucher(t, find.text('JOUER CETTE CARTE !'));
@@ -73,7 +76,8 @@ void main() {
         await _toucher(t, find.text('VALIDER ET AVANCER MON PION'));
         await _patienter(t);
         expect(etat.billets, hasLength(1));
-        expect(etat.position, greaterThan(1));
+        expect(etat.billets.single.niveau, 7);
+        expect(etat.position, 4, reason: 'niveau 7 : 3 cases');
         expect(etat.enCours, isEmpty);
       });
 

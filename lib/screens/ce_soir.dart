@@ -4,6 +4,7 @@ import '../app.dart';
 import '../models/modeles.dart';
 import '../services/etat.dart';
 import '../services/ligues.dart';
+import '../services/niveau.dart';
 import '../services/plan_du_jour.dart';
 import '../services/sources.dart';
 import '../services/tirage.dart';
@@ -37,6 +38,9 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
   _Etape _etape = _Etape.envie;
   Emotion _emotion = Emotion.frissonner;
   Duree _duree = Duree.moyenne;
+
+  /// « Tu te mets combien ? » ; nul tant que le joueur garde le niveau proposé.
+  int? _niveau;
   List<CarteDefi> _cartes = const [];
   int _choisie = 0;
   int _pronostic = 4;
@@ -65,7 +69,14 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     try {
       final catalogue = await etat.source.catalogue(emotion: _emotion, duree: _duree);
       final paysVus = {for (final b in etat.billets) ...b.pays};
-      final tirage = _tirage.tirerSansImpasse(catalogue: catalogue, emotion: _emotion, duree: _duree, profil: etat.profil, paysVus: paysVus);
+      final tirage = _tirage.tirerSansImpasse(
+        catalogue: catalogue,
+        emotion: _emotion,
+        duree: _duree,
+        profil: etat.profil,
+        paysVus: paysVus,
+        niveau: _niveau ?? etat.niveauPropose,
+      );
       setState(() {
         _cartes = tirage.cartes;
         _choisie = 0;
@@ -224,6 +235,8 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
               ],
             ),
           ),
+          const SizedBox(height: 18),
+          _combien(etat),
           if (_message != null) ...[
             const SizedBox(height: 14),
             Panneau(couleur: AuraCouleurs.jaune, child: Text(_message!, style: AuraTexte.corps(14, poids: FontWeight.w900))),
@@ -284,6 +297,31 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         Expanded(flex: 2, child: _colonne([...haut, ...bas])),
       ]),
     ]);
+  }
+
+  /// « Tu te mets combien ? » : dix pastilles, la proposition d'Aura déjà choisie.
+  Widget _combien(EtatJeu etat) {
+    final propose = etat.niveauPropose;
+    final n = _niveau ?? propose;
+    final gain = Niveau.cases(n);
+    return Panneau(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('TU TE METS COMBIEN ?', style: AuraTexte.titre(16)),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 10, children: [
+          for (var i = Niveau.min; i <= Niveau.max; i++)
+            Pastille(libelle: '$i', choisie: i == n, onTap: () => setState(() => _niveau = i)),
+        ]),
+        const SizedBox(height: 12),
+        Text('$n · ${Niveau.nom(n).toUpperCase()} : ${gain == 1 ? '1 case' : '$gain cases'} si tu vas au bout.', style: AuraTexte.corps(14, poids: FontWeight.w900)),
+        Text(Niveau.promesse(n), style: AuraTexte.corps(13)),
+        const SizedBox(height: 4),
+        Text(
+          n == propose ? 'C\'est le niveau que je te propose, d\'après tes dernières séances.' : 'Je t\'aurais mis $propose, d\'après tes dernières séances. À toi de voir !',
+          style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux),
+        ),
+      ]),
+    );
   }
 
   Widget _main() {
