@@ -23,6 +23,7 @@ class Bilan {
     required this.positionDePop,
     required this.bluffsGagnes,
     required this.maintenant,
+    this.boucliers = const {},
   });
 
   final List<Billet> billets;
@@ -30,6 +31,7 @@ class Bilan {
   final int positionDePop;
   final int bluffsGagnes;
   final DateTime maintenant;
+  final Set<int> boucliers;
 }
 
 abstract final class Collection {
@@ -46,6 +48,9 @@ abstract final class Collection {
     Exploit('devin', 'Devin', 'Tomber 3 fois pile sur ton pronostic.', Icons.auto_awesome_rounded),
     Exploit('detecteur', 'Détecteur de mensonges', 'Démasquer 3 Bluffs de Pop.', Icons.psychology_alt_rounded),
     Exploit('finale', 'Jusqu\'à la finale', 'Atteindre la case 30 en un mois.', Icons.flag_circle_rounded),
+    Exploit('champion', 'Champion de saison', 'Finir un mois devant Pop.', Icons.workspace_premium_rounded),
+    Exploit('campagne', 'Campagne bouclée', 'Terminer une campagne de films.', Icons.military_tech_rounded),
+    Exploit('flair', 'Fin limier', 'Offrir un Cadeau cacheté qui plaît.', Icons.redeem_rounded),
   ];
 
   /// La figurine de saison du mois : elle ne revient jamais. On la gagne en
@@ -66,7 +71,7 @@ abstract final class Collection {
     if (n >= 10) m.add('dix');
     if (b.billets.where((x) => x.type == 'Rétro').length >= 3) m.add('retro');
     if (b.billets.expand((x) => x.pays).toSet().length >= 5) m.add('globe');
-    if (CarteDesGenres.de(b.maintenant, b.billets).regionsDuJoueur >= 6) m.add('carte');
+    if (CarteDesGenres.de(b.maintenant, b.billets, boucliers: b.boucliers).regionsDuJoueur >= 6) m.add('carte');
     if (Fidelite.serie(b.maintenant, b.billets) >= 4) m.add('serie');
     if (n >= 1 && b.position > b.positionDePop) m.add('devant');
     if (b.billets.where((x) => x.note != null && x.note == x.pronostic).length >= 3) m.add('devin');

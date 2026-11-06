@@ -54,7 +54,12 @@ class CarteDesGenres {
 
   static int _numero(DateTime lundi) => DateTime.utc(lundi.year, lundi.month, lundi.day).millisecondsSinceEpoch ~/ 86400000 ~/ 7;
 
-  static CarteDesGenres de(DateTime maintenant, List<Billet> billets) {
+  /// Le numéro de la semaine de [jour] (sert à poser un Bouclier).
+  static int semaineDe(DateTime jour) => _numero(_lundiDe(jour));
+
+  /// [boucliers] : les semaines où le joueur a posé son Bouclier ; Pop ne
+  /// peut pas prendre la région visée ces semaines-là.
+  static CarteDesGenres de(DateTime maintenant, List<Billet> billets, {Set<int> boucliers = const {}}) {
     final debutMois = DateTime(maintenant.year, maintenant.month, 1);
     final duMois = billets.where((b) => !b.date.isBefore(debutMois) && !b.date.isAfter(maintenant)).toList()
       ..sort((a, b) => a.date.compareTo(b.date));
@@ -83,7 +88,7 @@ class CarteDesGenres {
       final finie = !fin.isAfter(maintenant);
       if (finie) {
         prises = [];
-        if (cible != null && proprios[cible] == Proprio.libre) {
+        if (cible != null && proprios[cible] == Proprio.libre && !boucliers.contains(_numero(lundi))) {
           proprios[cible] = Proprio.pop;
           prises.add(cible);
         }

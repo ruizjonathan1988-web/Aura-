@@ -9,6 +9,7 @@ import '../services/tirage.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
+import 'generique.dart';
 
 enum TypeCase {
   depart('Départ', AuraCouleurs.caseBleu),
@@ -140,7 +141,30 @@ class PlateauEcran extends StatelessWidget {
                 ]),
               ),
               const SizedBox(height: 20),
-              _CarteDesGenresVue(carte: CarteDesGenres.de(maintenant, etat.billets), profil: etat.profil),
+              _CarteDesGenresVue(carte: etat.carte, profil: etat.profil),
+              if (etat.carte.cible != null && etat.bouclierCetteSemaine) ...[
+                const SizedBox(height: 10),
+                Panneau(
+                  couleur: AuraCouleurs.vert,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  child: Text('Bouclier posé : Pop ne prendra pas la région ${etat.carte.cible!.libelle} cette semaine.', style: AuraTexte.corps(14, poids: FontWeight.w900)),
+                ),
+              ] else if (etat.carte.cible != null && etat.bouclierDispo) ...[
+                const SizedBox(height: 10),
+                AuraBouton(
+                  libelle: 'Joker Bouclier : protéger ${etat.carte.cible!.libelle}',
+                  icone: Icons.shield_rounded,
+                  principal: false,
+                  onPressed: etat.poserBouclier,
+                ),
+              ],
+              const SizedBox(height: 16),
+              AuraBouton(
+                libelle: 'Le générique de ${_mois[maintenant.month - 1]}',
+                icone: Icons.movie_creation_rounded,
+                principal: false,
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GeneriqueEcran(mois: DateTime(maintenant.year, maintenant.month)))),
+              ),
               const SizedBox(height: 20),
               const TitreCartoon('Tes derniers billets', taille: 24, inclinaison: 0),
               const SizedBox(height: 10),
@@ -358,7 +382,7 @@ class _CarteDesGenresVue extends StatelessWidget {
       children: [
         const TitreCartoon('La carte des genres', taille: 24, inclinaison: 0),
         const SizedBox(height: 10),
-        PopQuiParle(texte: Pop.surLaCarte(carte), taille: 60),
+        PopQuiParle(texte: Pop.surLaCarte(carte, bouclier: PorteeEtat.of(context).bouclierCetteSemaine), taille: 60),
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,

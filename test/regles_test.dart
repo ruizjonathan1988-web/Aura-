@@ -15,6 +15,7 @@ import 'package:aura/services/connexion_vjod.dart';
 import 'package:aura/services/duel.dart';
 import 'package:aura/services/etat.dart';
 import 'package:aura/services/fidelite.dart';
+import 'package:aura/services/generique.dart';
 import 'package:aura/services/historique.dart';
 import 'package:aura/services/ligues.dart';
 import 'package:aura/services/mesures.dart';
@@ -1002,6 +1003,60 @@ void main() {
     test('R26 si TMDB ne répond pas, rien ne s\'affiche et rien ne plante', () async {
       final client = MockClient((r) async => http.Response('', 500));
       expect(await ServicePlateformes('cle', client: client).pour(const Film(id: 'x', titre: 'Inconnu')), isNull);
+    });
+  });
+
+  group('R27 Jokers, finale et générique', () {
+    test('R27 le Bouclier empêche Pop de prendre la région visée cette semaine-là', () {
+      final semaine = CarteDesGenres.semaineDe(DateTime(2026, 11, 4));
+      final sans = CarteDesGenres.de(DateTime(2026, 11, 10), const []);
+      final avec = CarteDesGenres.de(DateTime(2026, 11, 10), const [], boucliers: {semaine});
+      expect(sans.regionsDePop, 1);
+      expect(avec.regionsDePop, 0);
+      expect(Pop.position(DateTime(2026, 11, 10), const [], boucliers: {semaine}), Pop.position(DateTime(2026, 11, 10), const []) - 1);
+    });
+
+    test('R27 un Joker de chaque par mois : Relance et Bouclier', () async {
+      final e = await _etat();
+      expect(e.relanceDispo, isTrue);
+      await e.utiliserRelance();
+      expect(e.relanceDispo, isFalse);
+      expect(e.bouclierDispo, isTrue);
+      await e.poserBouclier();
+      expect(e.bouclierDispo, isFalse);
+      expect(e.bouclierCetteSemaine, isTrue);
+      final moisProchain = await _etat({'relance_2000-01': true});
+      expect(moisProchain.relanceDispo, isTrue, reason: 'nouveau mois, nouveaux Jokers');
+    });
+
+    test('R27 en fin de mois, le résultat contre Pop est gardé ; devant lui, on est champion', () async {
+      final passe = DateTime(maintenant.year, maintenant.month - 1, 10);
+      final mois = EtatJeu.moisDe(passe);
+      final billet = '{"titre":"T","type":"Envie","pronostic":3,"cases":1,"date":"${passe.toIso8601String()}","verdict":""}';
+      final e = await _etat({'mois': mois, 'position': 30, 'billets': [billet]});
+      final r = e.resultatDeSaison(passe)!;
+      expect(r.$1, 30);
+      expect(r.$3, 1);
+      expect(r.$2, inInclusiveRange(1, 30));
+      expect(e.collection.contains('champion'), r.$1 > r.$2, reason: 'champion seulement devant Pop');
+      expect(e.position, 1);
+      expect(e.generiqueAVoir, DateTime(passe.year, passe.month, 1));
+      await e.generiqueVu(DateTime(passe.year, passe.month, 1));
+      expect(e.generiqueAVoir, isNull);
+    });
+
+    test('R27 le générique cite les films dans l\'ordre d\'apparition', () {
+      final b = [
+        Billet(titre: 'Coco', type: 'Envie', pronostic: 3, cases: 1, date: DateTime(2026, 11, 9)),
+        Billet(titre: 'Le Samouraï', type: 'Rétro', pronostic: 4, cases: 3, date: DateTime(2026, 11, 2), verdict: 'Froid et parfait', note: 5),
+        Billet(titre: 'Hors saison', type: 'Envie', pronostic: 3, cases: 1, date: DateTime(2026, 10, 30)),
+      ];
+      final l = Generique.lignes(mois: DateTime(2026, 11), billets: b, position: 12, positionDePop: 9, terminee: true);
+      expect(l, containsAllInOrder(['La saison de novembre 2026', 'Le Samouraï', 'Coco']));
+      expect(l, isNot(contains('Hors saison')));
+      expect(l, contains('Meilleur Verdict : « Froid et parfait »'));
+      expect(l.any((x) => x.startsWith('Champion de la saison')), isTrue);
+      expect(Generique.partage(l), isNot(contains('\n\n')));
     });
   });
 }
