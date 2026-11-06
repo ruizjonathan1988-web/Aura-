@@ -3,7 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/modeles.dart';
 import 'etat.dart';
+import 'cadeaux.dart';
 import 'semaine_ligue.dart';
+import 'soiree.dart';
 
 /// Une ligue dont le joueur fait partie.
 class Ligue {
@@ -188,6 +190,31 @@ class ServiceLigues extends ChangeNotifier {
           'type': type,
           'valeur': valeur,
         });
+      });
+
+  /// Les cadeaux de la ligue (offerts et reçus par tous ses membres).
+  Future<List<Cadeau>> cadeaux(Ligue l) => _proteger<List<Cadeau>>(() async {
+        final rep = await _client.from('cadeaux').select().eq('ligue_id', l.id).order('cree_le', ascending: false);
+        return rep.map(Cadeau.depuisJson).toList();
+      });
+
+  Future<void> offrir(Ligue l, {required String pour, required Film film, required DateTime ouvrirLe, String? mot}) => _proteger<void>(() async {
+        await _client.from('cadeaux').insert({
+          'ligue_id': l.id,
+          'de': monId,
+          'pour': pour,
+          'film': PartieSoiree.filmVersJson(film),
+          'ouvrir_le': '${ouvrirLe.year}-${ouvrirLe.month.toString().padLeft(2, '0')}-${ouvrirLe.day.toString().padLeft(2, '0')}',
+          if (mot != null && mot.trim().isNotEmpty) 'mot': mot.trim(),
+        });
+      });
+
+  Future<void> ouvrirCadeau(Cadeau c) => _proteger<void>(() async {
+        await _client.from('cadeaux').update({'ouvert': true}).eq('id', c.id);
+      });
+
+  Future<void> noterCadeau(Cadeau c, int note) => _proteger<void>(() async {
+        await _client.from('cadeaux').update({'note': note, 'ouvert': true}).eq('id', c.id);
       });
 
   /// Vrai si le joueur a gagné la figurine dorée en invitant ou en étant invité.

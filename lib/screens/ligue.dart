@@ -7,6 +7,7 @@ import '../services/etat.dart';
 import '../services/ligues.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
+import 'cadeaux.dart';
 
 /// La ligue entre amis : inscription par pseudo, création ou rejointe par
 /// code, classement du mois. Sans serveur, le duel solo contre Pop.
@@ -87,6 +88,8 @@ class _LigueEcranState extends State<LigueEcran> {
       _Classement(key: ValueKey(ligue.id), service: service, ligue: ligue, positionLocale: etat.position),
       const SizedBox(height: 16),
       _FilDeLaLigue(key: ValueKey('fil${ligue.id}${etat.billets.length}'), service: service, ligue: ligue),
+      const SizedBox(height: 16),
+      CadeauxVue(key: ValueKey('cadeaux${ligue.id}'), service: service, ligue: ligue),
       const SizedBox(height: 16),
       _FigurineDoree(service: service),
       Panneau(

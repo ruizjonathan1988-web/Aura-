@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
+import 'package:aura/services/cadeaux.dart';
 import 'package:aura/services/campagnes.dart';
 import 'package:aura/services/carte_genres.dart';
 import 'package:aura/services/collection.dart';
@@ -1093,6 +1094,49 @@ void main() {
       expect(await e.ajouterExploit('campagne'), isTrue);
       expect(await e.ajouterExploit('campagne'), isFalse);
       expect(e.collection, contains('campagne'));
+    });
+  });
+
+  group('R29 Cadeau cacheté et Flair', () {
+    Cadeau cadeau(String de, int? note, {DateTime? ouvrirLe}) => Cadeau(
+          id: '$de$note',
+          de: de,
+          pour: 'jon',
+          film: const Film(id: 'f', titre: 'Coco'),
+          ouvrirLe: ouvrirLe ?? DateTime(2026, 11, 6),
+          note: note,
+        );
+
+    test('R29 un cadeau reste scellé jusqu\'au jour prévu', () {
+      final c = cadeau('lea', null, ouvrirLe: DateTime(2026, 11, 13));
+      expect(c.ouvrable(DateTime(2026, 11, 12, 23, 59)), isFalse);
+      expect(c.ouvrable(DateTime(2026, 11, 13, 0, 1)), isTrue);
+      expect(Cadeaux.quand(DateTime(2026, 11, 13), DateTime(2026, 11, 11)), 'à ouvrir vendredi');
+      expect(Cadeaux.quand(DateTime(2026, 11, 12), DateTime(2026, 11, 11)), 'à ouvrir demain');
+    });
+
+    test('R29 les dates proposées : ce soir, demain, puis vendredi, samedi, dimanche', () {
+      final mercredi = DateTime(2026, 11, 11, 18);
+      final d = Cadeaux.dates(mercredi);
+      expect(d.map((x) => x.$1), ['Ce soir', 'Demain', 'Vendredi', 'Samedi', 'Dimanche']);
+      expect(d[2].$2, DateTime(2026, 11, 13));
+      final samedi = Cadeaux.dates(DateTime(2026, 11, 14, 18));
+      expect(samedi.map((x) => x.$1), ['Ce soir', 'Demain', 'Vendredi'], reason: 'pas de doublon avec ce soir et demain');
+    });
+
+    test('R29 le Flair : la part des cadeaux notés 4 ou 5, les cadeaux pas encore notés ne comptent pas', () {
+      final f = Cadeaux.flair([cadeau('lea', 5), cadeau('lea', 2), cadeau('lea', 4), cadeau('lea', null), cadeau('max', 3)]);
+      expect(f['lea'], (2, 3));
+      expect(Cadeaux.pourcentage(f['lea']!), '67 %');
+      expect(f['max'], (0, 1));
+      expect(f.containsKey('jon'), isFalse);
+    });
+
+    test('R29 jouer un cadeau ouvert rapporte 2 cases, comme une carte', () {
+      final carte = Cadeaux.carte(cadeau('lea', null), 'Léa');
+      expect(carte.type, TypeCarte.cadeau);
+      expect(carte.cases, 2);
+      expect(carte.defi, 'Cadeau de Léa');
     });
   });
 }

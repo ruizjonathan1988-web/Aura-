@@ -75,6 +75,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R26 Où voir le film | Plateformes en France seulement, abonnement d'abord ; recherche TMDB par titre et année, ou identifiant TMDB donné par Jellyfin ; si TMDB ne répond pas, rien ne s'affiche | `Plateformes`, `ServicePlateformes` |
 | R27 Jokers, finale, générique | Bouclier : Pop ne prend pas la région visée cette semaine-là ; un Joker de chaque par mois ; en fin de mois, résultat contre Pop gardé, champion si devant ; générique dans l'ordre d'apparition, sans les films hors saison | `CarteDesGenres` (boucliers), `EtatJeu`, `Generique` |
 | R28 Campagnes | Chaque campagne garde les 5 films les mieux notés de son thème (un par pays pour le Tour du monde) ; elle avance avec les billets et se boucle ; l'exploit n'est donné qu'une fois | `Campagnes` |
+| R29 Cadeau cacheté et Flair | Scellé jusqu'au jour prévu ; dates proposées ce soir, demain, vendredi, samedi, dimanche sans doublon ; Flair = part des cadeaux notés 4 ou 5 (les non notés ne comptent pas) ; jouer un cadeau = carte à 2 cases | `Cadeau`, `Cadeaux` |
 
 Tests d'écrans (`test/ecrans_test.dart`) : l'appli est ouverte comme par un joueur, sur un téléphone (390 × 844) et sur une télé (960 × 540) ; ouverture, premier soir complet, tous les onglets, une soirée complète (tirage, carte, billet, plateau), Plan du jour, Duel. Un débordement ou un plantage fait échouer la CI. Possible parce que les polices sont embarquées (`assets/polices`, licence OFL) au lieu d'être téléchargées.
 
@@ -147,6 +148,8 @@ Fait :
 - Où voir le film (`lib/services/plateformes.dart`, `lib/widgets/ou_le_voir.dart`) : sur la carte révélée, l'Affiche, la fin du Duel et de la Soirée jeu, « Où le voir » indique la bibliothèque VJOD puis les plateformes en France (abonnement, gratuit, location, achat), avec la mention JustWatch / TMDB obligatoire. Clé d'API TMDB de Jon dans `Config.tmdbCle` (remplaçable par `--dart-define=TMDB_CLE=…`) ; TMDB demande un accord pour un usage commercial.
 - Jokers du plateau (un de chaque par mois, sans ajouter de cases pour respecter R2) : Relance (nouvelle main, dans Choisis ta carte) et Bouclier (Pop ne prend pas la région visée cette semaine, sur le Plateau). Finale : au changement de mois, le résultat contre Pop est gardé ; finir devant donne l'exploit « Champion de saison ». Générique de fin (`lib/screens/generique.dart`) : il défile comme au cinéma (films dans l'ordre d'apparition, chiffres, meilleur Verdict, duel contre Pop), se copie pour être partagé, s'annonce dans Ce soir au début du mois suivant et reste accessible depuis le Plateau. Trois exploits en plus : Champion de saison, Campagne bouclée, Fin limier.
 - Campagnes (`lib/services/campagnes.dart`, `lib/screens/campagnes.dart`, accès depuis Ce soir) : sept listes jouables (polar, grands classiques, tour du monde, fous rires, films qui bouleversent, animation, frissons), tirées du catalogue (sélection Aura ou bibliothèque VJOD) parmi les mieux notés ; chaque film joué est une carte Campagne à 2 cases ; boucler une campagne donne l'exploit « Campagne bouclée ».
+- Cadeau cacheté et Flair (`lib/screens/cadeaux.dart`, `lib/services/cadeaux.dart`, migration `0006_cadeaux.sql`, onglet Ligue) : offrir un film à un ami de sa ligue (choix parmi 4 films très bien notés), avec un mot, à ouvrir ce soir, demain ou le week-end ; le cadeau reste scellé jusqu'au jour prévu, s'annonce dans « Pendant ce temps, à la ligue », s'ouvre, se joue (carte Cadeau à 2 cases) et se note ; le Flair de chacun est la part de ses cadeaux notés 4 ou 5 ; un cadeau qui plaît donne l'exploit « Fin limier ». **Jon doit lancer `0006_cadeaux.sql`.**
+- Échange de doubles : volontairement pas fait. Aura ne distribue rien au hasard (pas de pochettes surprises), donc il n'y a pas de doubles à échanger.
 - Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
@@ -157,7 +160,7 @@ Jon a demandé une appli « finie, présentable, jouable, rigolote, avec une for
 **À faire par Jon :**
 
 1. Installer le dernier APK : https://github.com/ruizjonathan1988-web/Aura-/releases/download/derniere/aura.apk
-2. Dans Supabase, éditeur SQL : lancer `supabase/migrations/0003_mesures.sql`, `0004_invitation.sql` puis `0005_semaine_et_soiree.sql` (et vérifier que `0001`, `0002` et les connexions anonymes sont bien en place). Lire les chiffres avec `select * from public.mesures;`.
+2. Dans Supabase, éditeur SQL : lancer `supabase/migrations/0003_mesures.sql`, `0004_invitation.sql`, `0005_semaine_et_soiree.sql` puis `0006_cadeaux.sql` (et vérifier que `0001`, `0002` et les connexions anonymes sont bien en place). Lire les chiffres avec `select * from public.mesures;`.
 3. Adresse du serveur VJOD : fait, `https://ava88.zen.usbx.me/jellyfin` est pré-remplie dans les Réglages (`Config.serveurVjod`).
 4. Tester sur la box : flèches et OK partout, ouverture, Duel, Révélation (le dimanche), connexion par code Quick Connect.
 
