@@ -82,6 +82,9 @@ class ServiceLigues extends ChangeNotifier {
   bool charge = false;
 
   String? get monId => _client.auth.currentUser?.id;
+
+  /// Le client du serveur, pour la Soirée jeu qui partage la même connexion.
+  SupabaseClient get client => _client;
   bool get inscrit => monId != null && pseudo != null;
 
   /// Retrouve le joueur et ses ligues si un compte existe déjà sur l'appareil.

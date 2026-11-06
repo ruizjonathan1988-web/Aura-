@@ -14,6 +14,7 @@ import '../widgets/aura_widgets.dart';
 import 'duel.dart';
 import 'plan_du_jour.dart';
 import 'reglages.dart';
+import 'soiree.dart';
 
 enum _Etape { envie, cartes, pronostic, billet }
 
@@ -231,6 +232,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     ];
     final bas = <Widget>[
       _PendantCeTemps(etat: etat),
+      if (etat.ligues != null) AccesSoiree(ligues: etat.ligues!),
       ChoixLarge(
         libelle: 'LE DUEL DU CANAPÉ · À deux sur la télé : chacun pose ses cartes, on élimine à tour de rôle, et le quiz désigne qui choisit le film.',
         couleur: AuraCouleurs.rose,
