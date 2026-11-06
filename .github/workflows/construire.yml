@@ -46,12 +46,23 @@ jobs:
         continue-on-error: true
         run: flutter test captures/captures_test.dart --update-goldens
 
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: captures
-          path: captures/sorties/
-          if-no-files-found: ignore
+      # Les captures vont sur la branche « captures » (lisible sans
+      # téléchargement d'artefact).
+      - name: Publier les captures
+        continue-on-error: true
+        run: |
+          if ls captures/sorties/*.png > /dev/null 2>&1; then
+            mkdir -p /tmp/cap && cp captures/sorties/*.png /tmp/cap/
+            cd /tmp/cap
+            git init -q
+            git config user.name "aura-captures"
+            git config user.email "aura-captures@users.noreply.github.com"
+            git checkout -q -b captures
+            echo "${GITHUB_SHA}" > SOURCE
+            git add -A
+            git commit -qm "Captures de ${GITHUB_SHA}"
+            git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" captures
+          fi
 
       - name: APK (télé et téléphone)
         run: |
