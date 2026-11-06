@@ -84,6 +84,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R35 Mise à jour automatique | Sur Android, à l'ouverture et au retour dans l'appli (au plus une fois par heure, ou à la demande dans les Réglages) : l'APK `aura.apk` de la release `derniere` publié plus de deux minutes après l'installation est proposé, avec « Ce qui change » (lignes « - » de la release) ; téléchargé dans l'appli puis donné à l'installeur d'Android ; sans autorisation « applis inconnues », Aura ouvre la bonne page des réglages ; GitHub muet : rien n'est proposé | `MiseAJour`, `proposerMiseAJour`, `tool/natif/` |
 | R36 Les époques par décennie | « Juste un film » : Peu importe, avant 1980, années 80 et 90, puis une époque par décennie (2000, 2010, 2020) ; TMDB (`primary_release_date`) et Jellyfin (`MinPremiereDate`, `MaxPremiereDate`) ne cherchent que dans la décennie ; la démonstration a trois idées pour chacune (8 films des années 2020 ajoutés, 73 au total) | `Epoque`, `SourceTmdb.parametres`, `SourceJellyfin` |
 | R37 Tu te mets combien ? | En solo (Ce soir), avant le tirage, le joueur annonce un niveau de 1 à 10, à la façon de TTMC ; la difficulté d'un film vient de sa notoriété (nombre d'avis), de son âge, de son pays et de sa durée ; seuls les films proches du niveau sont tirés ; chaque carte rapporte 1 case (niveaux 1 à 3), 2 (4 à 6) ou 3 (7 à 10), toujours sous le plafond de 3 par jour ; aller au bout d'un 10 donne le trophée « Coup d'audace » ; Aura propose le niveau (moyenne des 5 dernières réussites, un cran de plus après deux réussites, un de moins après un abandon, 3 au début) et le joueur décide ; Duel et soirée entre amis gardent les cases des cartes | `Niveau`, `Tirage.tirer(niveau:)`, `EtatJeu.niveauPropose` |
+| R38 Viser haut : plus fort, mais risqué | Niveau 10 : 4 cases, seul moyen de dépasser le plafond du jour (plafond 4 pour ce billet) ; abandonner un film coûte 1 case à 9, 2 cases à 10, rien en dessous, jamais sous la case 1 ; audace du mois = niveau de chaque billet, doublé à 9 et 10 (affichée sur Ce soir) | `Niveau.cases/plafond/recul/audace`, `EtatJeu.abandonnerSeance`, `EtatJeu.audaceDuMois` |
 
 Tests d'écrans (`test/ecrans_test.dart`) : l'appli est ouverte comme par un joueur, sur un téléphone (390 × 844) et sur une télé (960 × 540) ; ouverture, premier soir complet, tous les onglets, une soirée complète (tirage, carte, billet, plateau), Plan du jour, Duel. Un débordement ou un plantage fait échouer la CI. Possible parce que les polices sont embarquées (`assets/polices`, licence OFL) au lieu d'être téléchargées.
 
@@ -181,6 +182,22 @@ Jon a demandé une appli « finie, présentable, jouable, rigolote, avec une for
 - 6 novembre : capture de Jon, « Réfléchir » et « moins d'une heure et demie » donnaient « aucun film ». La démo n'avait que 3 films pour Réfléchir (dont La Grande Vadrouille, comptée à cause du genre guerre) et 1 ou 2 films courts par envie. Corrigé par R32 ; et « Juste un film » (R31) pour les soirs où il ne veut pas jouer.
 - 6 novembre : « la connexion VJOD ne marche pas ». Cause : le serveur de Jon est un Jellyfin récent, qui refuse les anciens en-têtes `X-Emby-Authorization` et `X-Emby-Token` seuls ; VJOD envoie `Authorization: MediaBrowser …`. Aura envoie désormais le même en-tête (connexion, bibliothèque, vérification « vu »), l'ancien à côté. À confirmer par Jon sur la box.
 - APK : la CI signait avec une clé neuve à chaque construction, d'où « Application non installée » sur une mise à jour. Corrigé : signature fixe (`tool/signature.keystore`, copiée par la CI comme clé de débogage). Jon désinstalle une dernière fois, ensuite les mises à jour s'installent par-dessus. Pour le Play Store, il faudra une vraie clé de publication, gardée hors du dépôt.
+
+## En cours (6 novembre, après-midi) : à reprendre
+
+Choix validés par Jon le 6 novembre (questions posées, réponses données) :
+
+1. **R38 risque et audace** : écrit sur la branche `niveau-risque-audace` (pas encore de PR). Ouvrir la PR, CI verte, fusionner.
+2. **R39 pouvoirs des pions** (à faire) : chaque pouvoir s'utilise une fois par semaine, plus une utilisation par tranche de 20 points d'audace du mois. Le joueur « arme » son pouvoir (panneau sur Ce soir) ; il se déclenche au prochain tirage (Boussole, Madeleine) ou au prochain billet (les autres), et la charge est consommée même si la condition n'est pas remplie. Chaque pouvoir vaut environ +1 case par semaine :
+   - Explorateur, Boussole : une 4e carte au tirage ;
+   - Dégustateur, Slow : +1 case si la séance est notée ;
+   - Critique, Plume : +1 case si le pronostic tombe pile ;
+   - Dévoreur, Marathon : plafond du jour à 4 pour ce billet ;
+   - Fidèle, Madeleine : le tirage peut proposer des films déjà vus ;
+   - Pressé, Court-métrage : +1 case pour un film de moins de 90 minutes (ajouter la durée à `SeanceEnCours`) ;
+   - Hôte, Projectionniste : +1 case pour une séance commencée à plusieurs (Soirée, Duel) ;
+   - Supporter : devient « Remontada » (pas de sport dans Aura) : +1 case si le joueur est derrière Pop. Mettre à jour `Profil.pouvoir` et `Profil.effet` en conséquence.
+3. **R40 coups du sort et crasses** (à faire) : Jon veut « des retournements de situation, des choses drôles, des crasses ». Idées annoncées à Jon : cases pièges sur le plateau, Pop qui vole ou échange une place, crasses à envoyer à un ami de la ligue (lui imposer le niveau du soir, lui piquer un point d'audace…), toujours avec une parade pour que ça reste drôle et pas rageant.
 
 ## Retours de Jon à traiter
 

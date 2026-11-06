@@ -1531,8 +1531,8 @@ void main() {
   });
 
   group('R37 Tu te mets combien ?', () {
-    test('R37 le niveau annoncé donne les cases : 1 à 3 : 1, 4 à 6 : 2, 7 à 10 : 3', () {
-      expect([for (var n = 1; n <= 10; n++) Niveau.cases(n)], [1, 1, 1, 2, 2, 2, 3, 3, 3, 3]);
+    test('R37 le niveau annoncé donne les cases : 1 à 3 : 1, 4 à 6 : 2, 7 à 9 : 3, 10 : 4', () {
+      expect([for (var n = 1; n <= 10; n++) Niveau.cases(n)], [1, 1, 1, 2, 2, 2, 3, 3, 3, 4]);
       expect(Niveau.nom(2), 'Tranquille');
       expect(Niveau.nom(5), 'Curieux');
       expect(Niveau.nom(8), 'Audacieux');
@@ -1579,7 +1579,7 @@ void main() {
       await e.commencerSeance(carte, pronostic: 4);
       expect(e.enCours.single.niveau, 10);
       expect(SeanceEnCours.depuisJson(e.enCours.single.versJson()).niveau, 10);
-      expect(await e.validerEnCours(e.enCours.single, note: 4), 3);
+      expect(await e.validerEnCours(e.enCours.single, note: 4), 4);
       expect(e.billets.single.niveau, 10);
       expect(Billet.depuisJson(e.billets.single.versJson()).niveau, 10);
       expect(e.collection, contains('audace'));
@@ -1594,6 +1594,48 @@ void main() {
       await e.commencerSeance(carte('b', 5), pronostic: 4);
       await e.abandonnerSeance(e.enCours.single);
       expect(e.niveauPropose, 4);
+    });
+  });
+
+  group('R38 Viser haut : plus fort, mais risqué', () {
+    CarteDefi carte(String id, int n) =>
+        CarteDefi(type: TypeCarte.envie, defi: 'Défi', indice: '', cases: Niveau.cases(n), joker: '', film: _film(id), bulleDePop: '', niveau: n);
+
+    test('R38 le 10 est le seul à dépasser le plafond du jour', () async {
+      expect(Regles.casesAccordees(demandees: 4, dejaGagneesAujourdhui: 0), 3);
+      expect(Regles.casesAccordees(demandees: 4, dejaGagneesAujourdhui: 0, plafond: Niveau.plafond(10)), 4);
+      final e = await _etat();
+      expect(await e.validerSeance(carte('a', 10), pronostic: 4), 4);
+      expect(e.position, 5);
+      final f = await _etat();
+      expect(await f.validerSeance(carte('a', 7), pronostic: 4), 3);
+      expect(await f.validerSeance(carte('b', 10), pronostic: 4), 1, reason: 'déjà 3 cases ce jour : il en reste une sous le plafond du 10');
+      expect(await f.validerSeance(carte('c', 9), pronostic: 4), 0);
+    });
+
+    test('R38 abandonner un 9 coûte une case, un 10 deux cases, en dessous rien', () async {
+      final e = await _etat({'position': 10});
+      for (final (id, n, perte) in [('a', 8, 0), ('b', 9, 1), ('c', 10, 2), ('d', 3, 0)]) {
+        await e.commencerSeance(carte(id, n), pronostic: 4);
+        expect(await e.abandonnerSeance(e.enCours.first), perte, reason: 'niveau $n');
+      }
+      expect(e.position, 7);
+      // Jamais sous la case de départ.
+      final f = await _etat();
+      await f.commencerSeance(carte('z', 10), pronostic: 4);
+      expect(await f.abandonnerSeance(f.enCours.single), 0);
+      expect(f.position, 1);
+    });
+
+    test('R38 l\'audace du mois : le niveau de chaque billet, doublé à 9 et 10', () async {
+      expect([for (var n = 1; n <= 10; n++) Niveau.audace(n)], [1, 2, 3, 4, 5, 6, 7, 8, 18, 20]);
+      final e = await _etat();
+      await e.validerSeance(carte('a', 5), pronostic: 4);
+      await e.validerSeance(carte('b', 10), pronostic: 4);
+      await e.validerSeance(_carte('c'), pronostic: 4);
+      expect(e.audaceDuMois, 25);
+      expect(Niveau.risque(5), 'Aucun risque.');
+      expect(Niveau.risque(10), contains('deux cases'));
     });
   });
 }

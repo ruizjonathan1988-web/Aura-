@@ -315,9 +315,11 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         const SizedBox(height: 12),
         Text('$n · ${Niveau.nom(n).toUpperCase()} : ${gain == 1 ? '1 case' : '$gain cases'} si tu vas au bout.', style: AuraTexte.corps(14, poids: FontWeight.w900)),
         Text(Niveau.promesse(n), style: AuraTexte.corps(13)),
+        Text(Niveau.risque(n), style: AuraTexte.corps(13, poids: n >= 9 ? FontWeight.w900 : FontWeight.w400)),
         const SizedBox(height: 4),
         Text(
-          n == propose ? 'C\'est le niveau que je te propose, d\'après tes dernières séances.' : 'Je t\'aurais mis $propose, d\'après tes dernières séances. À toi de voir !',
+          '${n == propose ? 'C\'est le niveau que je te propose, d\'après tes dernières séances.' : 'Je t\'aurais mis $propose, d\'après tes dernières séances. À toi de voir !'}'
+          ' Audace du mois : ${etat.audaceDuMois}.',
           style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux),
         ),
       ]),
@@ -629,7 +631,11 @@ class _AlorsCeFilm extends StatelessWidget {
         const SizedBox(height: 10),
         Wrap(spacing: 8, runSpacing: 8, children: [
           Pastille(libelle: 'Pas encore', choisie: false, onTap: () => etat.reporterSeance(seance)),
-          Pastille(libelle: 'Je ne le regarderai pas', choisie: false, onTap: () => etat.abandonnerSeance(seance)),
+          Pastille(
+            libelle: Niveau.recul(seance.niveau) > 0 ? 'Je ne le regarderai pas (−${Niveau.recul(seance.niveau)})' : 'Je ne le regarderai pas',
+            choisie: false,
+            onTap: () => etat.abandonnerSeance(seance),
+          ),
         ]),
       ]),
     );

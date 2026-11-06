@@ -3,13 +3,33 @@ import '../models/modeles.dart';
 /// « Tu te mets combien ? », à la façon de TTMC : avant le tirage, le joueur
 /// annonce un niveau de 1 à 10. Plus il vise haut, plus les films sont
 /// difficiles (peu connus, anciens, lointains, longs), et plus le billet
-/// rapporte de cases.
+/// rapporte de cases. Comme à TTMC, viser haut a un prix : à partir de 9,
+/// abandonner le film fait reculer.
 abstract final class Niveau {
   static const min = 1;
   static const max = 10;
 
-  /// Les cases gagnées une fois le film vu : 1 à 3 : 1, 4 à 6 : 2, 7 à 10 : 3.
-  static int cases(int n) => n <= 3 ? 1 : (n <= 6 ? 2 : 3);
+  /// Les cases gagnées une fois le film vu : 1 à 3 : 1, 4 à 6 : 2, 7 à 9 : 3,
+  /// 10 : 4 (le seul moyen de dépasser le plafond du jour).
+  static int cases(int n) => n <= 3 ? 1 : (n <= 6 ? 2 : (n <= 9 ? 3 : 4));
+
+  /// Le plafond de cases du jour pour un billet de ce niveau.
+  static int plafond(int? n) => n == 10 ? 4 : 3;
+
+  /// Ce que coûte un film abandonné : 1 case à 9, 2 cases à 10.
+  static int recul(int? n) => n == 10 ? 2 : (n == 9 ? 1 : 0);
+
+  /// Les points d'audace d'un billet : son niveau, doublé à 9 et 10 (l'étoile
+  /// d'audace). Ils départagent les égalités et rechargent les pouvoirs.
+  static int audace(int n) => n >= 9 ? 2 * n : n;
+
+  /// Le risque du niveau, en une ligne pour l'écran.
+  static String risque(int n) => switch (n) {
+        <= 6 => 'Aucun risque.',
+        <= 8 => 'Si tu abandonnes le film : rien.',
+        9 => 'Si tu abandonnes le film : tu recules d\'une case.',
+        _ => 'Si tu abandonnes le film : tu recules de deux cases.',
+      };
 
   static String nom(int n) => switch (n) {
         <= 3 => 'Tranquille',

@@ -486,7 +486,9 @@ class EtatJeu extends ChangeNotifier {
     final joker = jokerBluff && ceMois;
     final rattrapage = carteRattrapage && ceMois;
     final bonus = (joker ? 1 : 0) + (rattrapage ? Fidelite.rattrapage : 0);
-    final cases = ceMois ? Regles.casesAccordees(demandees: demandees + bonus, dejaGagneesAujourdhui: casesLe(date)) : 0;
+    final cases = ceMois
+        ? Regles.casesAccordees(demandees: demandees + bonus, dejaGagneesAujourdhui: casesLe(date), plafond: Niveau.plafond(niveau))
+        : 0;
     if (joker) await _prefs.setBool('joker_bluff', false);
     if (rattrapage) await _prefs.setBool('carte_rattrapage', false);
     final pariAvant = Pop.parisPerdus(maintenant, billets);
@@ -590,13 +592,29 @@ class EtatJeu extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> abandonnerSeance(SeanceEnCours s) async {
+  /// Abandonner un film. À 9 et 10, le pari est perdu : le pion recule.
+  /// Renvoie le nombre de cases perdues.
+  Future<int> abandonnerSeance(SeanceEnCours s) async {
     enCours = enCours.where((x) => x.filmId != s.filmId).toList();
     await _sauverEnCours();
+    var perdues = 0;
     if (s.niveau != null) {
       await _prefs.setStringList('niveaux_abandonnes', ['${s.niveau}', ..._abandons.map((n) => '$n')].take(5).toList());
+      perdues = min(Niveau.recul(s.niveau), position - 1);
+      if (perdues > 0) {
+        position -= perdues;
+        await _prefs.setInt('position', position);
+        _direPop(['Tu t\'étais mis ${s.niveau}, et tu lâches ? Pari perdu : tu recules de ${perdues == 1 ? 'une case' : '$perdues cases'}. Je n\'en attendais pas moins.']);
+      }
     }
     notifyListeners();
+    return perdues;
+  }
+
+  /// L'audace du mois : la somme des points d'audace des billets du mois.
+  int get audaceDuMois {
+    final m = moisDe(DateTime.now());
+    return billets.where((b) => b.niveau != null && moisDe(b.date) == m).fold(0, (s, b) => s + Niveau.audace(b.niveau!));
   }
 
   /// Demande à Jellyfin si les films en attente ont été vus. Ceux qui l'ont
