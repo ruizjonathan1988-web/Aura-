@@ -1357,6 +1357,5 @@ class _SourceEnPanne implements SourceFilms {
   Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true}) async => throw Exception('TMDB ne répond pas');
 }
 
-/// Rouvre l'état
- sur les mêmes préférences, comme après une fermeture.
+/// Rouvre l'état sur les mêmes préférences, comme après une fermeture.
 Future<EtatJeu> _etatDepuis(EtatJeu _) async => EtatJeu(await SharedPreferences.getInstance());
