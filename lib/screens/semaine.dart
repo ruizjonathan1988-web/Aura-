@@ -11,6 +11,7 @@ import '../services/vjod_lien.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
 import 'revelation.dart';
+import 'semaine_ligue.dart';
 
 /// La semaine : l'Affiche choisie par le Programmateur, la séance, le Curseur,
 /// et la Révélation du dimanche. En solo, Pop programme ; le Bluff et le
@@ -72,7 +73,16 @@ class _SemaineEcranState extends State<SemaineEcran> {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
-          child: FutureBuilder<Affiche?>(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (etat.ligues != null && etat.ligues!.inscrit && etat.ligues!.ligues.isNotEmpty) ...[
+              TitreCartoon('Ta ligue : ${etat.ligues!.ligues.first.nom}', taille: 30),
+              const SizedBox(height: 12),
+              SemaineDeLigueVue(service: etat.ligues!, ligue: etat.ligues!.ligues.first),
+              const SizedBox(height: 26),
+              const TitreCartoon('En solo contre Pop', taille: 26, inclinaison: 0),
+              const SizedBox(height: 12),
+            ],
+            FutureBuilder<Affiche?>(
             future: _affiche,
             builder: (context, snap) {
               if (snap.connectionState != ConnectionState.done) {
@@ -91,6 +101,7 @@ class _SemaineEcranState extends State<SemaineEcran> {
               return _contenu(etat, a);
             },
           ),
+          ]),
         ),
       ),
     );

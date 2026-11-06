@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/modeles.dart';
 import 'etat.dart';
+import 'semaine_ligue.dart';
 
 /// Une ligue dont le joueur fait partie.
 class Ligue {
@@ -165,6 +166,25 @@ class ServiceLigues extends ChangeNotifier {
             .order('vu_le', ascending: false)
             .limit(20);
         return rep.map((j) => Nouvelle.depuisJson(j, monId)).toList();
+      });
+
+  /// La semaine de la ligue : membres (avec pseudo et profil) et gestes.
+  Future<(List<Classe>, SemaineDeLigue)> semaine(Ligue l, String lundi) => _proteger<(List<Classe>, SemaineDeLigue)>(() async {
+        final membres = await classement(l);
+        final rep = await _client.from('semaine_ligue').select().eq('ligue_id', l.id).eq('semaine', lundi);
+        final gestes = rep.map(Geste.depuisJson).toList();
+        return (membres, SemaineDeLigue(membres: membres.map((c) => c.joueurId).toList(), semaine: lundi, gestes: gestes));
+      });
+
+  /// Joue un geste de la semaine (on peut changer d'avis : la ligne est remplacée).
+  Future<void> jouer(Ligue l, String lundi, String type, Map<String, dynamic> valeur) => _proteger<void>(() async {
+        await _client.from('semaine_ligue').upsert({
+          'ligue_id': l.id,
+          'semaine': lundi,
+          'joueur_id': monId,
+          'type': type,
+          'valeur': valeur,
+        });
       });
 
   /// Vrai si le joueur a gagné la figurine dorée en invitant ou en étant invité.
