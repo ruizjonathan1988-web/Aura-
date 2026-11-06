@@ -166,7 +166,7 @@ Jon a demandé une appli « finie, présentable, jouable, rigolote, avec une for
 4. Tester sur la box : flèches et OK partout, ouverture, Duel, Révélation (le dimanche), connexion par code Quick Connect.
 
 - 6 novembre : Jon trouvait que toutes les envies proposaient la même chose. Les films changeaient, mais les trois défis affichés (avant 1980, pays jamais vu, pépite) étaient toujours identiques et le pays « jamais vu » ignorait ses billets. Les défis reprennent maintenant l'envie (R30). Titre « Envie de quoi ce soir ? » réduit pour ne plus être coupé.
-- APK : la CI signait avec une clé neuve à chaque construction, d'où « Application non installée » sur une mise à jour. PR « Signature fixe de l'APK » (`tool/signature.keystore`) en attente de l'accord de Jon.
+- APK : la CI signait avec une clé neuve à chaque construction, d'où « Application non installée » sur une mise à jour. Corrigé : signature fixe (`tool/signature.keystore`, copiée par la CI comme clé de débogage). Jon désinstalle une dernière fois, ensuite les mises à jour s'installent par-dessus. Pour le Play Store, il faudra une vraie clé de publication, gardée hors du dépôt.
 
 ## Retours de Jon à traiter
 
