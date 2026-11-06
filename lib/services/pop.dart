@@ -52,12 +52,12 @@ abstract final class Pop {
 
   /// La case de Pop : un pas par jour, plus ses triches et ses régions de la
   /// carte des genres, moins ses paris perdus.
-  static int position(DateTime maintenant, List<Billet> billets) {
+  static int position(DateTime maintenant, List<Billet> billets, {Set<int> boucliers = const {}}) {
     var p = maintenant.day;
     for (var j = 1; j <= maintenant.day; j++) {
       if (triche(DateTime(maintenant.year, maintenant.month, j))) p++;
     }
-    p += CarteDesGenres.de(maintenant, billets).regionsDePop;
+    p += CarteDesGenres.de(maintenant, billets, boucliers: boucliers).regionsDePop;
     p -= recul * parisPerdus(maintenant, billets);
     return p.clamp(1, Regles.taillePlateau);
   }
@@ -107,7 +107,10 @@ abstract final class Pop {
   }
 
   /// Ce que Pop dit de la carte des genres.
-  static String surLaCarte(CarteDesGenres carte) {
+  static String surLaCarte(CarteDesGenres carte, {bool bouclier = false}) {
+    if (bouclier && carte.cible != null) {
+      return 'Un Bouclier sur la région ${carte.cible!.libelle} ? Tricheur ! Bon, je la laisse… pour cette semaine.';
+    }
     if (carte.prisesCetteSemaine.isNotEmpty) {
       final r = carte.prisesCetteSemaine.first.libelle;
       return 'Personne ne gardait la région $r : je l\'ai prise. Une case de plus pour moi. Viens la reprendre !';

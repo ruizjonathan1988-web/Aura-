@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/modeles.dart';
 import 'affiche.dart';
+import 'carte_genres.dart';
 import 'collection.dart';
 import 'fidelite.dart';
 import 'historique.dart';
@@ -201,7 +202,56 @@ class EtatJeu extends ChangeNotifier {
   String? motDePop;
 
   /// La case de Pop, l'adversaire du solo.
-  int get positionDePop => Pop.position(DateTime.now(), billets);
+  int get positionDePop => Pop.position(DateTime.now(), billets, boucliers: boucliers);
+
+  /// La carte des genres du mois, Boucliers compris.
+  CarteDesGenres get carte => CarteDesGenres.de(DateTime.now(), billets, boucliers: boucliers);
+
+  // Les Jokers du plateau : un de chaque par mois.
+
+  /// Relance : retirer une nouvelle main de trois cartes.
+  bool get relanceDispo => !(_prefs.getBool('relance_${moisDe(DateTime.now())}') ?? false);
+
+  Future<void> utiliserRelance() async {
+    await _prefs.setBool('relance_${moisDe(DateTime.now())}', true);
+    notifyListeners();
+  }
+
+  /// Bouclier : Pop ne peut pas prendre la région qu'il vise cette semaine.
+  bool get bouclierDispo => _prefs.getInt('bouclier_${moisDe(DateTime.now())}') == null;
+
+  bool get bouclierCetteSemaine => boucliers.contains(CarteDesGenres.semaineDe(DateTime.now()));
+
+  Set<int> get boucliers => _prefs.getKeys().where((k) => k.startsWith('bouclier_')).map(_prefs.getInt).whereType<int>().toSet();
+
+  Future<void> poserBouclier() async {
+    if (!bouclierDispo) return;
+    await _prefs.setInt('bouclier_${moisDe(DateTime.now())}', CarteDesGenres.semaineDe(DateTime.now()));
+    notifyListeners();
+  }
+
+  // La saison : le résultat contre Pop, gardé au changement de mois.
+
+  /// Le résultat d'une saison passée : (ta case, celle de Pop, séances).
+  (int, int, int)? resultatDeSaison(DateTime mois) {
+    final brut = _prefs.getStringList('saison_${moisDe(mois)}');
+    if (brut == null || brut.length < 3) return null;
+    return (int.parse(brut[0]), int.parse(brut[1]), int.parse(brut[2]));
+  }
+
+  /// Le mois dont le générique attend d'être vu (le mois précédent, une fois).
+  DateTime? get generiqueAVoir {
+    final maintenant = DateTime.now();
+    final precedent = DateTime(maintenant.year, maintenant.month - 1, 1);
+    if (resultatDeSaison(precedent) == null) return null;
+    if (_prefs.getBool('generique_vu_${moisDe(precedent)}') ?? false) return null;
+    return precedent;
+  }
+
+  Future<void> generiqueVu(DateTime mois) async {
+    await _prefs.setBool('generique_vu_${moisDe(mois)}', true);
+    notifyListeners();
+  }
 
   static Future<EtatJeu> ouvrir({ServiceLigues? ligues}) async {
     final etat = EtatJeu(await SharedPreferences.getInstance(), ligues: ligues);
@@ -238,7 +288,10 @@ class EtatJeu extends ChangeNotifier {
     final ce = moisDe(DateTime.now());
     final enregistre = _prefs.getString('mois');
     if (enregistre == ce) return;
-    if (enregistre != null) position = 1;
+    if (enregistre != null) {
+      _finDeSaison(enregistre);
+      position = 1;
+    }
     _prefs.setString('mois', ce);
     _prefs.setInt('position', position);
   }
@@ -251,6 +304,22 @@ class EtatJeu extends ChangeNotifier {
     final id = 'aura-${List.generate(16, (_) => r.nextInt(16).toRadixString(16)).join()}';
     _prefs.setString('appareil', id);
     return id;
+  }
+
+  /// Le mois [mois] (« 2026-10 ») se termine : on garde le résultat contre
+  /// Pop pour le générique, et le titre de champion si on finit devant.
+  void _finDeSaison(String mois) {
+    final p = mois.split('-');
+    final annee = int.tryParse(p.first);
+    final m = int.tryParse(p.last);
+    if (annee == null || m == null) return;
+    final dernierJour = DateTime(annee, m + 1, 0, 23, 59);
+    final duMois = billets.where((b) => b.date.year == annee && b.date.month == m).toList();
+    final pop = Pop.position(dernierJour, duMois, boucliers: boucliers);
+    _prefs.setStringList('saison_$mois', ['$position', '$pop', '${duMois.length}']);
+    if (position > pop && duMois.isNotEmpty) {
+      _prefs.setStringList('collection', {...collection, 'champion'}.toList());
+    }
   }
 
   SourceFilms get source {
@@ -616,6 +685,7 @@ class EtatJeu extends ChangeNotifier {
       positionDePop: positionDePop,
       bluffsGagnes: bluffsGagnes,
       maintenant: DateTime.now(),
+      boucliers: boucliers,
     ));
     final nouveaux = merites.difference(deja).toList();
     if (nouveaux.isNotEmpty) await _prefs.setStringList('collection', [...deja, ...nouveaux]);

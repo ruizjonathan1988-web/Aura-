@@ -12,7 +12,9 @@ import '../theme/aura_theme.dart';
 import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
 import '../widgets/ou_le_voir.dart';
+import '../services/collection.dart';
 import 'duel.dart';
+import 'generique.dart';
 import 'plan_du_jour.dart';
 import 'reglages.dart';
 import 'soiree.dart';
@@ -145,7 +147,15 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
       else if (etat.enCoursAVoir.isNotEmpty)
         _AlorsCeFilm(seance: etat.enCoursAVoir.first),
     ];
+    final generique = etat.generiqueAVoir;
     final haut = <Widget>[
+      if (generique != null)
+        ChoixLarge(
+          libelle: 'LE GÉNÉRIQUE DE ${Collection.mois[generique.month - 1].toUpperCase()} EST PRÊT · Revois ta saison et le résultat contre Pop.',
+          couleur: AuraCouleurs.ambre,
+          autofocus: true,
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GeneriqueEcran(mois: generique))),
+        ),
       _CourseEtSerie(etat: etat),
       _CartePlanDuJour(resultat: etat.planDuJour),
     ];
@@ -276,6 +286,19 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           onJouer: () => setState(() => _etape = _Etape.pronostic),
         ),
         Panneau(child: Text('${_carte.joker} Tous les films proposés sont notés 3 étoiles ou plus.', style: AuraTexte.corps(14))),
+        if (PorteeEtat.of(context).relanceDispo) ...[
+          const SizedBox(height: 12),
+          AuraBouton(
+            libelle: 'Joker Relance : une nouvelle main (1 par mois)',
+            icone: Icons.autorenew_rounded,
+            principal: false,
+            onPressed: () async {
+              final etat = PorteeEtat.lire(context);
+              await etat.utiliserRelance();
+              await _tirer(etat);
+            },
+          ),
+        ],
         const SizedBox(height: 18),
         Row(
           children: [

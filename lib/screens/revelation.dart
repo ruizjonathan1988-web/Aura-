@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../app.dart';
 import '../services/affiche.dart';
-import '../services/carte_genres.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
@@ -46,7 +45,7 @@ class _RevelationEcranState extends State<RevelationEcran> {
     final curseur = etat.curseurDe(a.semaine);
     final pari = Affiche.pariDuMedium(a.semaine);
     final bluff = etat.bluffDe(a.semaine);
-    final carte = CarteDesGenres.de(DateTime.now(), etat.billets);
+    final carte = etat.carte;
     final tele = estTele(context);
     final tableaux = <Widget>[
       // 1. Le lever de rideau.
