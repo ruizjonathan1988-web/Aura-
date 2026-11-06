@@ -191,6 +191,27 @@ class Film {
   static String _duree(int m) => m < 60 ? '$m min' : '${m ~/ 60} h ${(m % 60).toString().padLeft(2, '0')}';
 }
 
+/// L'époque voulue (« Juste un film »), par décennie à partir de 2000.
+enum Epoque {
+  toutes('Peu importe', null, null),
+  classique('Avant 1980', null, 1979),
+  annees80('Années 80 et 90', 1980, 1999),
+  annees2000('Années 2000', 2000, 2009),
+  annees2010('Années 2010', 2010, 2019),
+  annees2020('Années 2020', 2020, null);
+
+  const Epoque(this.libelle, this.depuis, this.jusqua);
+  final String libelle;
+  final int? depuis;
+  final int? jusqua;
+
+  bool contient(int? annee) {
+    if (this == Epoque.toutes) return true;
+    if (annee == null) return false;
+    return (depuis == null || annee >= depuis!) && (jusqua == null || annee <= jusqua!);
+  }
+}
+
 /// D'où vient un film : la démo, le serveur Jellyfin, ou le reste du cinéma
 /// que VJOD sait lancer en VOD IPTV ou faire demander (Seerr).
 enum SourceFilm { demo, jellyfin, catalogueVjod }

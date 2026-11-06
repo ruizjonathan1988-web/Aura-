@@ -162,6 +162,6 @@ class SourceAvecMaTv implements SourceFilms {
   String get nom => base.nom;
 
   @override
-  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true}) async =>
-      maTv.marquer(await base.catalogue(emotion: emotion, duree: duree, auHasard: auHasard));
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async =>
+      maTv.marquer(await base.catalogue(emotion: emotion, duree: duree, epoque: epoque, auHasard: auHasard));
 }

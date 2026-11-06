@@ -54,7 +54,7 @@ class SourceTmdb implements SourceFilms {
   String get nom => 'tout le cinéma de VJOD';
 
   /// Les paramètres de la recherche TMDB pour cette envie et cette durée.
-  static Map<String, String> parametres({Emotion? emotion, Duree? duree, required int page, bool classiques = false}) => {
+  static Map<String, String> parametres({Emotion? emotion, Duree? duree, Epoque? epoque, required int page, bool classiques = false}) => {
         'language': 'fr-FR',
         'region': 'FR',
         'include_adult': 'false',
@@ -65,17 +65,21 @@ class SourceTmdb implements SourceFilms {
         if (duree != null && duree != Duree.soiree) 'with_runtime.lte': '${duree.minutesMax}',
         if (emotion != null) 'with_genres': _ids(emotion.genres).join('|'),
         if (emotion != null && emotion.exclus.isNotEmpty) 'without_genres': _ids(emotion.exclus).join(','),
+        if (epoque?.depuis != null) 'primary_release_date.gte': '${epoque!.depuis}-01-01',
+        if (epoque?.jusqua != null) 'primary_release_date.lte': '${epoque!.jusqua}-12-31',
         'page': '$page',
       };
 
   @override
-  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true}) async {
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async {
     if (cle.isEmpty) return const [];
     // Deux pages : des films populaires et des grands classiques. Sans hasard
     // (Plan du jour, Affiche), toujours les mêmes pages.
+    // Une seule décennie : moins de films, donc des pages moins lointaines.
+    final etroit = epoque != null && epoque != Epoque.toutes;
     final pages = [
-      parametres(emotion: emotion, duree: duree, page: auHasard ? 1 + _hasard.nextInt(5) : 1),
-      parametres(emotion: emotion, duree: duree, page: auHasard ? 1 + _hasard.nextInt(3) : 1, classiques: true),
+      parametres(emotion: emotion, duree: duree, epoque: epoque, page: auHasard ? 1 + _hasard.nextInt(etroit ? 2 : 5) : 1),
+      parametres(emotion: emotion, duree: duree, epoque: epoque, page: auHasard ? 1 + _hasard.nextInt(etroit ? 2 : 3) : 1, classiques: true),
     ];
     final films = <String, Film>{};
     for (final p in pages) {
@@ -126,10 +130,10 @@ class SourceToutVjod implements SourceFilms {
   String get nom => 'ta bibliothèque et tout le cinéma de VJOD';
 
   @override
-  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, bool auHasard = true}) async {
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async {
     final (chez, ailleurs) = await (
-      serveur.catalogue(emotion: emotion, duree: duree, auHasard: auHasard),
-      reste.catalogue(emotion: emotion, duree: duree, auHasard: auHasard).catchError((_) => <Film>[]),
+      serveur.catalogue(emotion: emotion, duree: duree, epoque: epoque, auHasard: auHasard),
+      reste.catalogue(emotion: emotion, duree: duree, epoque: epoque, auHasard: auHasard).catchError((_) => <Film>[]),
     ).wait;
     final surLeServeur = {for (final f in chez) if (f.tmdbId != null) f.tmdbId!};
     return [...chez, ...ailleurs.where((f) => !surLeServeur.contains(f.tmdbId))];

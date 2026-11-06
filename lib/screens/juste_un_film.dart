@@ -45,7 +45,7 @@ class _JusteUnFilmEcranState extends State<JusteUnFilmEcran> {
   }
 
   Future<List<Film>> _catalogue(EtatJeu etat) async =>
-      _catalogues['${_emotion?.name}|${_duree.name}'] ??= await etat.source.catalogue(emotion: _emotion, duree: _duree);
+      _catalogues['${_emotion?.name}|${_duree.name}|${_epoque.name}'] ??= await etat.source.catalogue(emotion: _emotion, duree: _duree, epoque: _epoque);
 
   Future<void> _renouveler() async {
     final etat = PorteeEtat.of(context);

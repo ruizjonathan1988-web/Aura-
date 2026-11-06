@@ -3,25 +3,6 @@ import 'dart:math';
 import '../models/modeles.dart';
 import 'tirage.dart';
 
-/// L'époque voulue, pour « Juste un film ».
-enum Epoque {
-  toutes('Peu importe', null, null),
-  classique('Avant 1980', null, 1979),
-  annees80('1980 à 1999', 1980, 1999),
-  recent('Depuis 2000', 2000, null);
-
-  const Epoque(this.libelle, this.depuis, this.jusqua);
-  final String libelle;
-  final int? depuis;
-  final int? jusqua;
-
-  bool contient(int? annee) {
-    if (this == Epoque.toutes) return true;
-    if (annee == null) return false;
-    return (depuis == null || annee >= depuis!) && (jusqua == null || annee <= jusqua!);
-  }
-}
-
 /// « Juste un film » : des propositions sans jeu, pour les soirs où l'on n'a
 /// pas envie de jouer. On change autant qu'on veut, rien ne compte pour le
 /// plateau.
