@@ -105,20 +105,24 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
   Future<void> _distribuer() async {
     final etat = PorteeEtat.lire(context);
     final hasard = math.Random();
-    final deux = _inscrits.take(2).toList();
+    final presents = _inscrits.take(PartieSoiree.maxJoueurs).toList();
     final catalogue = await etat.source.catalogue();
     final tirage = Tirage(hasard: hasard);
     Emotion envie(Map j) => Emotion.values.firstWhere((x) => x.name == j['envie'], orElse: () => Emotion.frissonner);
     Profil profil(Map j) => Profil.depuisNom(j['profil'] as String?);
-    final a = tirage.tirer(catalogue: catalogue, emotion: envie(deux[0]), duree: Duree.soiree, profil: profil(deux[0]));
-    final pris = a.map((c) => c.film.id).toSet();
-    final b = tirage.tirer(catalogue: catalogue.where((f) => !pris.contains(f.id)).toList(), emotion: envie(deux[1]), duree: Duree.soiree, profil: profil(deux[1]));
-    if (a.length < 3 || b.length < 3) {
-      setState(() => _erreur = 'Pas assez de films pour ces deux envies. Changez d\'envie sur vos téléphones.');
-      return;
+    final pris = <String>{};
+    final mains = <List<CarteDefi>>[];
+    for (final j in presents) {
+      final main = tirage.tirer(catalogue: catalogue.where((f) => !pris.contains(f.id)).toList(), emotion: envie(j), duree: Duree.soiree, profil: profil(j));
+      if (main.length < 3) {
+        setState(() => _erreur = 'Pas assez de films pour l\'envie de ${j['pseudo']}. Changez d\'envie sur vos téléphones.');
+        return;
+      }
+      pris.addAll(main.map((c) => c.film.id));
+      mains.add(main);
     }
-    final joueurs = [for (final j in deux) {'id': j['joueur_id'], 'pseudo': j['pseudo'], 'profil': j['profil']}];
-    await _publier(PartieSoiree.distribuer(joueurs, a, b, Quiz.tirer(PartieSoiree.nbQuestions, hasard), hasard));
+    final joueurs = [for (final j in presents) {'id': j['joueur_id'], 'pseudo': j['pseudo'], 'profil': j['profil']}];
+    await _publier(PartieSoiree.distribuer(joueurs, mains, Quiz.tirer(PartieSoiree.nbQuestions, hasard), hasard));
   }
 
   Future<void> _lancer() async {
@@ -190,10 +194,13 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
             ),
         ]),
         const SizedBox(height: 18),
-        if (_inscrits.length < 2)
-          PopQuiParle(texte: _inscrits.isEmpty ? 'J\'attends deux joueurs. Sortez vos téléphones !' : 'Encore un joueur, et on commence.')
-        else
-          AuraBouton(libelle: 'Distribuer les cartes', autofocus: true, onPressed: _distribuer),
+        if (_inscrits.length < PartieSoiree.minJoueurs)
+          PopQuiParle(texte: _inscrits.isEmpty ? 'J\'attends de 2 à 4 joueurs. Sortez vos téléphones !' : 'Encore un joueur au moins, et on commence.')
+        else ...[
+          if (_inscrits.length > PartieSoiree.maxJoueurs)
+            Text('Quatre joueurs au plus : les premiers arrivés jouent.', style: AuraTexte.corps(15, poids: FontWeight.w900, couleur: AuraCouleurs.creme)),
+          AuraBouton(libelle: 'Distribuer les cartes (${_inscrits.length.clamp(2, PartieSoiree.maxJoueurs)} joueurs)', autofocus: true, onPressed: _distribuer),
+        ],
       ];
 
   List<Widget> _table() {
@@ -202,9 +209,9 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
     return [
       PopQuiParle(texte: _etat['message'] as String? ?? '', taille: 90),
       const SizedBox(height: 14),
-      for (final j in [0, 1]) ...[
+      for (var j = 0; j < joueurs.length; j++) ...[
         Row(children: [
-          Figurine.profil(Profil.depuisNom(joueurs[j]['profil'] as String?), hauteur: 56),
+          Figurine.profil(Profil.depuisNom(joueurs[j]['profil'] as String?), hauteur: joueurs.length > 2 ? 44 : 56),
           const SizedBox(width: 10),
           Text('${joueurs[j]['pseudo']}${_etat['tour'] == j ? ' · à toi de jouer !' : ''}', style: AuraTexte.titre(22, couleur: AuraCouleurs.creme)),
         ]),
@@ -248,7 +255,7 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
     final pts = (_etat['points'] as List).cast<int>();
     return [
       Row(children: [
-        for (final j in [0, 1])
+        for (var j = 0; j < joueurs.length; j++)
           Expanded(
             child: Panneau(
               couleur: reponses.containsKey(joueurs[j]['id']) ? AuraCouleurs.vert : AuraCouleurs.creme,
@@ -441,10 +448,11 @@ class _SoireeManetteEcranState extends State<SoireeManetteEcran> {
     final j = PartieSoiree.indexDe(e, moi ?? '');
     final joueurs = _joueursDe(e);
     if (j < 0) return [const PopQuiParle(texte: 'La partie a commencé sans toi… Tu joueras la prochaine !')];
-    final autre = joueurs[1 - j]['pseudo'];
+    String nomDe(int k) => joueurs[k]['pseudo'] as String;
+    final autre = joueurs.length == 2 ? nomDe(1 - j) : 'tes adversaires';
     switch (e['phase']) {
       case 'table':
-        if (e['tour'] != j) return [PopQuiParle(texte: 'Au tour de $autre. Regarde la télé et prépare ton coup.')];
+        if (e['tour'] != j) return [PopQuiParle(texte: 'Au tour de ${nomDe(e['tour'] as int)}. Regarde la télé et prépare ton coup.')];
         final cartes = PartieSoiree.cartes(e);
         final possibles = [
           for (var i = 0; i < cartes.length; i++)
@@ -452,13 +460,13 @@ class _SoireeManetteEcranState extends State<SoireeManetteEcran> {
         ];
         final vetoPossible = [for (var i = 0; i < cartes.length; i++) i].any((i) => PartieSoiree.peutProteger(e, i));
         return [
-          TitreCartoon(_veto ? 'Protège une de tes cartes' : (PartieSoiree.cible(e) == j ? 'Écarte une de tes cartes' : 'Écarte une carte de $autre'), taille: 30),
+          TitreCartoon(_veto ? 'Protège une de tes cartes' : (PartieSoiree.doitEcarterLaSienne(e) ? 'Écarte une de tes cartes' : 'Écarte une carte de $autre'), taille: 30),
           const SizedBox(height: 12),
           for (final (k, i) in possibles.indexed)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: ChoixLarge(
-                libelle: 'Carte ${i + 1} · ${cartes[i]['defi']}\n${cartes[i]['indice'] ?? ''}',
+                libelle: '${cartes[i]['j'] == j ? 'Ta carte' : 'Carte de ${nomDe(cartes[i]['j'] as int)}'} · ${cartes[i]['defi']}\n${cartes[i]['indice'] ?? ''}',
                 couleur: _carteDepuis(cartes[i]).type.couleur,
                 autofocus: k == 0,
                 onTap: _envoi ? null : () => _geste({'type': _veto ? 'veto' : 'ecarter', 'carte': i}),
@@ -489,7 +497,7 @@ class _SoireeManetteEcranState extends State<SoireeManetteEcran> {
       default:
         final g = e['gagnant'] as int?;
         return [
-          PopQuiParle(texte: g == j ? 'Tu as gagné ! Tu prends la télécommande : le film démarre sur la télé.' : '$autre a gagné et prend la télécommande. Revanche à la prochaine soirée !'),
+          PopQuiParle(texte: g == j ? 'Tu as gagné ! Tu prends la télécommande : le film démarre sur la télé.' : '${g == null ? 'Quelqu\'un' : nomDe(g)} a gagné et prend la télécommande. Revanche à la prochaine soirée !'),
         ];
     }
   }
@@ -507,7 +515,7 @@ class AccesSoiree extends StatelessWidget {
     final etat = PorteeEtat.of(context);
     return ChoixLarge(
       libelle: tele
-          ? 'SOIRÉE JEU · La télé devient le plateau, vos téléphones les manettes : chacun joue ses cartes en secret.'
+          ? 'SOIRÉE JEU · De 2 à 4 joueurs : la télé devient le plateau, vos téléphones les manettes, chacun joue ses cartes en secret.'
           : 'SOIRÉE JEU · Rejoindre la partie affichée sur la télé, avec son code.',
       couleur: AuraCouleurs.violet,
       onTap: () => Navigator.of(context).push(MaterialPageRoute(

@@ -7,8 +7,10 @@ import 'duel.dart';
 import 'ligues.dart';
 
 /// La Soirée jeu : la télé est le plateau, les téléphones sont les manettes.
-/// C'est le Duel du canapé, mais chacun joue depuis son téléphone : on
-/// écarte les cartes de l'autre en secret, et au quiz on répond en même temps.
+/// C'est le Duel du canapé, de 2 à 4 joueurs, chacun depuis son téléphone :
+/// à son tour, on écarte en secret une carte d'un adversaire (ou une des
+/// siennes quand les autres n'en ont plus qu'une), et au quiz on répond en
+/// même temps.
 ///
 /// L'état est un simple objet JSON tenu par la télé ([PartieSoiree]) ; les
 /// téléphones le lisent et envoient leurs gestes, que la télé applique.
@@ -47,11 +49,13 @@ abstract final class PartieSoiree {
         source: j['source'] == 'jellyfin' ? SourceFilm.jellyfin : SourceFilm.demo,
       );
 
-  /// La télé distribue : 3 cartes par joueur, et les questions du quiz.
+  static const minJoueurs = 2;
+  static const maxJoueurs = 4;
+
+  /// La télé distribue : 3 cartes par joueur (de 2 à 4), et le quiz.
   static Map<String, dynamic> distribuer(
     List<Map<String, dynamic>> joueurs,
-    List<CarteDefi> a,
-    List<CarteDefi> b,
+    List<List<CarteDefi>> mains,
     List<Question> questions,
     Random hasard,
   ) =>
@@ -59,7 +63,7 @@ abstract final class PartieSoiree {
         'phase': 'table',
         'joueurs': joueurs,
         'cartes': [
-          for (final (j, main) in [(0, a), (1, b)])
+          for (final (j, main) in mains.indexed)
             for (final c in main)
               {
                 'j': j,
@@ -73,38 +77,43 @@ abstract final class PartieSoiree {
               },
         ],
         'tour': 0,
-        'veto': [true, true],
+        'veto': [for (final _ in joueurs) true],
         'questions': [
           for (final q in questions) {'texte': q.texte, 'reponses': [...q.reponses]..shuffle(hasard), 'bonne': q.bonne},
         ],
         'question': 0,
         'reponses': <String, String>{},
         'revele': false,
-        'points': [0, 0],
-        'message': '${joueurs[0]['pseudo']} commence : sur ton téléphone, écarte une carte de ${joueurs[1]['pseudo']}.',
+        'points': [for (final _ in joueurs) 0],
+        'message': '${joueurs[0]['pseudo']} commence : sur ton téléphone, écarte une carte d\'un adversaire.',
       };
 
   static List<Map<String, dynamic>> cartes(Map<String, dynamic> e) => [...((e['cartes'] as List?) ?? const []).cast<Map<String, dynamic>>()];
+
+  static int nbJoueurs(Map<String, dynamic> e) => ((e['joueurs'] as List?) ?? const []).length;
 
   static int indexDe(Map<String, dynamic> e, String joueurId) =>
       ((e['joueurs'] as List?) ?? const []).cast<Map<String, dynamic>>().indexWhere((j) => j['id'] == joueurId);
 
   static int restantes(Map<String, dynamic> e, int j) => cartes(e).where((c) => c['j'] == j && c['ecartee'] != true).length;
 
-  static bool tableFinie(Map<String, dynamic> e) => restantes(e, 0) <= 1 && restantes(e, 1) <= 1;
+  static bool tableFinie(Map<String, dynamic> e) => [for (var j = 0; j < nbJoueurs(e); j++) restantes(e, j)].every((n) => n <= 1);
 
-  /// À qui le joueur du tour doit prendre une carte (règles du Duel).
-  static int cible(Map<String, dynamic> e) {
+  /// Vrai quand tous les adversaires n'ont plus qu'une carte : le joueur du
+  /// tour doit alors écarter une des siennes.
+  static bool doitEcarterLaSienne(Map<String, dynamic> e) {
     final tour = e['tour'] as int;
-    return restantes(e, 1 - tour) > 1 ? 1 - tour : tour;
+    return [for (var j = 0; j < nbJoueurs(e); j++) if (j != tour) restantes(e, j)].every((n) => n <= 1);
   }
 
   static bool peutEcarter(Map<String, dynamic> e, int i) {
     if (e['phase'] != 'table' || tableFinie(e)) return false;
     final c = cartes(e)[i];
     final tour = e['tour'] as int;
-    if (c['ecartee'] == true || c['j'] != cible(e)) return false;
-    return !(c['j'] != tour && c['protegee'] == true);
+    final proprietaire = c['j'] as int;
+    if (c['ecartee'] == true) return false;
+    if (proprietaire == tour) return doitEcarterLaSienne(e) && restantes(e, tour) > 1;
+    return !doitEcarterLaSienne(e) && restantes(e, proprietaire) > 1 && c['protegee'] != true;
   }
 
   static bool peutProteger(Map<String, dynamic> e, int i) {
@@ -120,22 +129,29 @@ abstract final class PartieSoiree {
     final e = Map<String, dynamic>.from(etat);
     final j = indexDe(e, joueurId);
     if (j < 0) return null;
+    final n = nbJoueurs(e);
     final noms = ((e['joueurs'] as List).cast<Map<String, dynamic>>()).map((x) => x['pseudo'] as String).toList();
     switch (action['type']) {
       case 'ecarter' || 'veto' when e['phase'] == 'table':
         if (e['tour'] != j) return null;
         final i = action['carte'] as int;
+        if (i < 0 || i >= cartes(e).length) return null;
         final veto = action['type'] == 'veto';
         if (veto ? !peutProteger(e, i) : !peutEcarter(e, i)) return null;
         final cs = cartes(e);
+        final victime = cs[i]['j'] as int;
         cs[i] = {...cs[i], (veto ? 'protegee' : 'ecartee'): true};
         e['cartes'] = cs;
-        if (veto) e['veto'] = [for (var k = 0; k < 2; k++) k == j ? false : (e['veto'] as List)[k]];
-        e['tour'] = 1 - j;
-        e['message'] = veto ? '${noms[j]} pose son Veto sur une de ses cartes. Malin…' : '${noms[j]} écarte une carte. À ${noms[1 - j]} !';
+        if (veto) e['veto'] = [for (var k = 0; k < n; k++) k == j ? false : (e['veto'] as List)[k]];
+        e['tour'] = (j + 1) % n;
+        e['message'] = veto
+            ? '${noms[j]} pose son Veto sur une de ses cartes. Malin…'
+            : (victime == j ? '${noms[j]} se sépare d\'une de ses cartes.' : '${noms[j]} écarte une carte de ${noms[victime]} !');
         if (tableFinie(e)) {
           e['phase'] = 'quiz';
           e['message'] = 'Il reste une carte chacun. Place au quiz : répondez sur vos téléphones !';
+        } else {
+          e['message'] = '${e['message']} À ${noms[e['tour'] as int]} de jouer.';
         }
         return e;
       case 'reponse' when e['phase'] == 'quiz' && e['revele'] != true:
@@ -144,7 +160,7 @@ abstract final class PartieSoiree {
         if (reponses.containsKey(joueurId)) return null;
         reponses[joueurId] = action['choix'] as String;
         e['reponses'] = reponses;
-        if (reponses.length >= 2) _reveler(e);
+        if (reponses.length >= n) _reveler(e);
         return e;
       default:
         return null;
@@ -172,23 +188,22 @@ abstract final class PartieSoiree {
       _reveler(e);
       return e;
     }
-    final n = (e['question'] as int) + 1;
-    if (n >= (e['questions'] as List).length) {
+    final suivanteQuestion = (e['question'] as int) + 1;
+    if (suivanteQuestion >= (e['questions'] as List).length) {
       final pts = (e['points'] as List).cast<int>();
-      final restes = [for (var j = 0; j < 2; j++) cartes(e).firstWhere((c) => c['j'] == j && c['ecartee'] != true)];
-      int gagnant;
-      if (pts[0] != pts[1]) {
-        gagnant = pts[0] > pts[1] ? 0 : 1;
-      } else {
-        double note(Map c) => ((c['film'] as Map)['note'] as num?)?.toDouble() ?? 0;
-        gagnant = note(restes[0]) >= note(restes[1]) ? 0 : 1;
-      }
+      final n = nbJoueurs(e);
+      final restes = [for (var j = 0; j < n; j++) cartes(e).firstWhere((c) => c['j'] == j && c['ecartee'] != true)];
+      double note(Map c) => ((c['film'] as Map)['note'] as num?)?.toDouble() ?? 0;
+      final meilleur = pts.reduce(max);
+      // À égalité de points, le film le mieux noté l'emporte.
+      final exAequo = [for (var j = 0; j < n; j++) if (pts[j] == meilleur) j];
+      final gagnant = exAequo.reduce((a, b) => note(restes[b]) > note(restes[a]) ? b : a);
       e['phase'] = 'fin';
       e['gagnant'] = gagnant;
       e['film'] = restes[gagnant]['film'];
       return e;
     }
-    e['question'] = n;
+    e['question'] = suivanteQuestion;
     e['reponses'] = <String, String>{};
     e['revele'] = false;
     return e;

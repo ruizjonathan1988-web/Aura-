@@ -810,8 +810,10 @@ void main() {
     ];
     Map<String, dynamic> partie() => PartieSoiree.distribuer(
           joueurs,
-          [for (var i = 0; i < 3; i++) _carte('a$i')],
-          [for (var i = 0; i < 3; i++) _carte('b$i')],
+          [
+            [for (var i = 0; i < 3; i++) _carte('a$i')],
+            [for (var i = 0; i < 3; i++) _carte('b$i')],
+          ],
           Quiz.tirer(PartieSoiree.nbQuestions, Random(2)),
           Random(2),
         );
@@ -859,6 +861,41 @@ void main() {
       expect(e['gagnant'], 0);
       final film = PartieSoiree.filmDepuisJson((e['film'] as Map).cast<String, dynamic>());
       expect(film.id, startsWith('a'));
+    });
+
+    test('R24 de 2 à 4 joueurs : une partie à quatre se termine avec une carte chacun', () {
+      final quatre = [for (final n in ['jon', 'lea', 'ines', 'max']) {'id': n, 'pseudo': n, 'profil': 'fidele'}];
+      for (var graine = 0; graine < 20; graine++) {
+        final hasard = Random(graine);
+        var e = PartieSoiree.distribuer(
+          quatre,
+          [for (var j = 0; j < 4; j++) [for (var i = 0; i < 3; i++) _carte('j$j-$i')]],
+          Quiz.tirer(PartieSoiree.nbQuestions, hasard),
+          hasard,
+        );
+        var coups = 0;
+        while (e['phase'] == 'table' && coups < 40) {
+          final qui = quatre[e['tour'] as int]['id'] as String;
+          final veto = [for (var i = 0; i < 12; i++) if (PartieSoiree.peutProteger(e, i)) i];
+          final possibles = [for (var i = 0; i < 12; i++) if (PartieSoiree.peutEcarter(e, i)) i];
+          expect(possibles, isNotEmpty, reason: 'il y a toujours un coup possible');
+          e = veto.isNotEmpty && hasard.nextInt(5) == 0
+              ? PartieSoiree.appliquer(e, qui, {'type': 'veto', 'carte': veto.first})!
+              : PartieSoiree.appliquer(e, qui, {'type': 'ecarter', 'carte': possibles[hasard.nextInt(possibles.length)]})!;
+          coups++;
+        }
+        expect(e['phase'], 'quiz');
+        for (var j = 0; j < 4; j++) {
+          expect(PartieSoiree.restantes(e, j), 1);
+        }
+        // Tout le monde répond : la question se révèle dès la quatrième réponse.
+        for (final (k, j) in quatre.indexed) {
+          expect(e['revele'], isFalse);
+          e = PartieSoiree.appliquer(e, j['id'] as String, {'type': 'reponse', 'question': 0, 'choix': k == 2 ? ((e['questions'] as List)[0] as Map)['bonne'] : 'x'})!;
+        }
+        expect(e['revele'], isTrue);
+        expect((e['points'] as List)[2], 1);
+      }
     });
 
     test('R24 si quelqu\'un ne répond pas, la télé révèle quand même', () {
