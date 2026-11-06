@@ -11,6 +11,7 @@ import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
 import 'cadeaux.dart';
 import 'aura.dart';
+import 'relais.dart';
 
 /// La ligue entre amis : inscription par pseudo, création ou rejointe par
 /// code, classement du mois. Sans serveur, le duel solo contre Pop.
@@ -99,6 +100,12 @@ class _LigueEcranState extends State<LigueEcran> {
       ],
       const SizedBox(height: 16),
       _EntreeAura(service: service),
+      const SizedBox(height: 12),
+      ChoixLarge(
+        libelle: 'LE RELAIS · Un film, puis un autre qui a quelqu\'un en commun. 48 heures chacun. Battez le record de la ligue.',
+        couleur: AuraCouleurs.violet,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RelaisEcran(ligues: service, ligue: ligue))),
+      ),
       const SizedBox(height: 16),
       CadeauxVue(key: ValueKey('cadeaux${ligue.id}'), service: service, ligue: ligue),
       const SizedBox(height: 16),

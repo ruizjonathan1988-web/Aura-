@@ -31,6 +31,7 @@ import 'sources.dart';
 import 'deck.dart';
 import 'festival.dart';
 import 'casse.dart';
+import 'relais.dart' show Relais;
 import 'partage.dart';
 import 'sons.dart';
 import 'veille.dart';
@@ -1573,6 +1574,15 @@ class EtatJeu extends ChangeNotifier {
     await _prefs.setBool(cle, true);
     final n = points.clamp(0, 5);
     if (n > 0) await _ajouterAudace(n);
+    notifyListeners();
+  }
+
+  /// Le Relais (R57) : 2 d'audace par relais passé, une seule fois par maillon.
+  Future<void> gagnerAudaceRelais(String chaine, int maillon) async {
+    final cle = 'relais_${chaine}_$maillon';
+    if (_prefs.getBool(cle) ?? false) return;
+    await _prefs.setBool(cle, true);
+    await _ajouterAudace(Relais.audaceParMaillon);
     notifyListeners();
   }
 

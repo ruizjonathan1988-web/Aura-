@@ -14,6 +14,7 @@ import 'package:aura/services/casse.dart';
 import 'package:aura/services/deck.dart';
 import 'package:aura/services/festival.dart';
 import 'package:aura/services/partage.dart';
+import 'package:aura/services/relais.dart';
 import 'package:aura/services/veille.dart';
 import 'package:aura/services/sons.dart';
 import 'package:aura/services/aura.dart';
@@ -2796,6 +2797,39 @@ void main() {
       expect(e.audaceDuMois, Casse.audaceReussite);
       expect(e.positionDePop, lessThanOrEqualTo(pop));
       expect(e.collection, contains('casse'));
+    });
+  });
+
+  group('R57 Le Relais', () {
+    test('R57 le meilleur lien : acteur +1, réalisateur +2, compositeur +3 ; jamais deux fois de suite la même personne', () {
+      const alien = ['Actor:Sigourney Weaver', 'Actor:John Hurt', 'Director:Ridley Scott', 'Composer:Jerry Goldsmith'];
+      const avatar = ['Actor:Sigourney Weaver', 'Actor:Sam Worthington', 'Director:James Cameron', 'Composer:James Horner'];
+      const gladiator = ['Actor:Russell Crowe', 'Director:Ridley Scott', 'Composer:Hans Zimmer'];
+      expect(Relais.lien(alien, avatar)!.nom, 'Sigourney Weaver');
+      expect(Relais.lien(alien, avatar)!.points, 1);
+      expect(Relais.lien(alien, gladiator)!.points, 2);
+      expect(Relais.lien(alien, gladiator, interdit: 'Ridley Scott'), isNull, reason: 'Pop coupe');
+      expect(Relais.lien(['Composer:Jerry Goldsmith', 'Actor:A'], ['Actor:A', 'Composer:Jerry Goldsmith'])!.points, 3, reason: 'le lien le plus fort');
+      expect(Relais.lien(alien, const ['Actor:Personne']), isNull);
+    });
+
+    test('R57 chacun son tour, dans le même ordre pour tous ; record = plus long relais ; 48 heures', () {
+      expect(Relais.suivant(['c', 'a', 'b'], 'a'), 'b');
+      expect(Relais.suivant(['c', 'a', 'b'], 'c'), 'a');
+      final m = Maillon(joueur: 'a', pseudo: 'Jon', titre: 'Alien', annee: 1979, personnes: const ['Actor:X'], lien: const Lien('X', 'Actor'), quand: DateTime.utc(2026, 11, 6));
+      final relu = Maillon.depuisJson(m.versJson())!;
+      expect((relu.titre, relu.annee, relu.lien!.nom, relu.personnes), ('Alien', 1979, 'X', ['Actor:X']));
+      final c = Chaine(id: '1', maillons: [m, m, m], echeance: DateTime(2026, 11, 8, 20));
+      expect(Relais.record([c, Chaine(id: '2', maillons: [m])]), 3);
+      expect(c.expiree(DateTime(2026, 11, 8, 19)), isFalse);
+      expect(c.expiree(DateTime(2026, 11, 8, 21)), isTrue);
+    });
+
+    test('R57 2 d\'audace par relais passé, une seule fois', () async {
+      final e = await _etat(_devantPop);
+      await e.gagnerAudaceRelais('c1', 2);
+      await e.gagnerAudaceRelais('c1', 2);
+      expect(e.audaceDuMois, 2);
     });
   });
 }
