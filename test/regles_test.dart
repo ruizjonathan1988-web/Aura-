@@ -2818,7 +2818,8 @@ void main() {
       expect(Relais.suivant(['c', 'a', 'b'], 'c'), 'a');
       final m = Maillon(joueur: 'a', pseudo: 'Jon', titre: 'Alien', annee: 1979, personnes: const ['Actor:X'], lien: const Lien('X', 'Actor'), quand: DateTime.utc(2026, 11, 6));
       final relu = Maillon.depuisJson(m.versJson())!;
-      expect((relu.titre, relu.annee, relu.lien!.nom, relu.personnes), ('Alien', 1979, 'X', ['Actor:X']));
+      expect((relu.titre, relu.annee, relu.lien!.nom), ('Alien', 1979, 'X'));
+      expect(relu.personnes, ['Actor:X']);
       final c = Chaine(id: '1', maillons: [m, m, m], echeance: DateTime(2026, 11, 8, 20));
       expect(Relais.record([c, Chaine(id: '2', maillons: [m])]), 3);
       expect(c.expiree(DateTime(2026, 11, 8, 19)), isFalse);
