@@ -65,6 +65,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R16 Bluff de la semaine | Le vrai synopsis de l'Affiche est parmi trois (deux faux de Pop) ; pas de Bluff sans synopsis ; un essai par semaine ; trouvé = Joker +1 case | `BluffDePop.pourFilm`, `EtatJeu.bluffDe` |
 | R17 Mesures | Une ouverture comptée par jour ; file hors ligne plafonnée à 200 ; seulement six types d'événements, sans titre de film | `ServiceMesures` |
 | R18 Amis | Le fil raconte la séance d'un ami en une phrase (« Léa a vu « … » et lui donne 4 sur 5. ») ; ses propres séances à la deuxième personne | `Nouvelle` |
+| R19 Animations | Coupées si l'appareil demande moins d'animations ; sinon les entrées se font en fondu | `animationsReduites`, `Entree` |
 
 Règles sans test automatique : « pas de pochettes surprises payantes » (rien à vendre pour l'instant), le plafond de 3 cases côté serveur (trigger SQL `plafonner_cases`, pas exécuté en CI), et la navigation aux flèches (à vérifier à la main sur la box). Exception connue à R10 : sur la télé, l'adresse du serveur VJOD se tape encore dans les Réglages (sauf si `VJOD_SERVEUR` est fourni à la compilation) ; la connexion elle-même passe par un code Quick Connect.
 
@@ -123,6 +124,8 @@ Fait :
 - Pop bluffe : chaque semaine, avant la séance de l'Affiche, Bluff en solo contre Pop (trouver le vrai résumé parmi trois). Gagné = Joker +1 case. Pop se dandine quand il parle (animation légère).
 - Mesures anonymes (`lib/services/mesures.dart`, `supabase/migrations/0003_mesures.sql`) : compte anonyme par appareil, événements ouverture (1 par jour), carte jouée, billet, Plan du jour, Duel, Bluff ; file d'attente hors ligne. Les quatre chiffres se lisent dans l'éditeur SQL de Supabase : `select * from public.mesures;` (retour J+1, J+7, J+30, cartes devenues billets). **Jon doit lancer `0003_mesures.sql`** ; sans la table, les événements attendent sur l'appareil.
 - Amis (`supabase/migrations/0004_invitation.sql`, onglet Ligue) : fil de la ligue (les 8 dernières séances des membres, avec note et Verdict) ; inviter un ami qui rejoint par code donne une figurine dorée aux deux. **Jon doit lancer `0004_invitation.sql`.**
+- Animations (`lib/widgets/animations.dart`, d'après le prototype du canevas mis à jour le 6 nov.) : ouverture en salle de cinéma à chaque lancement (rideau de velours qui s'écarte, projecteur, Pop qui tournoie, « AURA » qui claque, les 8 figurines en file, « Entrer dans la salle ») ; cartes distribuées une à une avec rebond ; carte jouée qui se retourne en affiche illustrée (rayons, cercles, titre, pastille de note) ; tampon « Vu ! » et confettis à la validation ; pion qui fait trois sauts sur sa nouvelle case ; pastilles qui rebondissent ; Pop qui arrive et se dandine. Tout est coupé si l'appareil demande moins d'animations.
+- Ce soir enrichi : encarts « Ta course contre Pop » (jauge et figurines) et « Ta série » ; fil « Pendant ce temps, à la ligue » sous le tirage (ou invitation à créer sa ligue).
 - Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
