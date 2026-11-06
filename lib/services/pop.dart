@@ -146,4 +146,45 @@ abstract final class Pop {
       'Devant moi ? Le mois n\'est pas fini, champion.',
     ], g);
   }
+
+  // Pop insolent (réglage par défaut) : un peu de mordant, jamais méchant.
+
+  /// Ce que Pop te lance en ouvrant Ce soir.
+  static String accueil({required int joueur, required int pop, required DateTime maintenant, bool insolent = true}) {
+    final g = graineDu(maintenant);
+    final h = maintenant.hour;
+    if (!insolent) {
+      return _une(['Bonsoir ! Envie de quoi ce soir ?', 'Content de te voir. On tire les cartes ?'], g);
+    }
+    if (h >= 23 || h < 5) {
+      return _une([
+        'Il est $h h. Tu cherches un film ou tu fuis ton lit ?',
+        'À cette heure-ci ? Prends un film court, je ne veux pas te ramasser à la petite cuillère.',
+      ], g);
+    }
+    if (pop > joueur) {
+      final d = pop - joueur;
+      return _une([
+        'J\'ai $d case${d > 1 ? 's' : ''} d\'avance. Je t\'attendais. Pas trop, mais je t\'attendais.',
+        'Encore derrière moi ? Je commence à me sentir seul, devant.',
+        'Tu as regardé des séries sans moi, avoue.',
+      ], g);
+    }
+    if (joueur > pop) {
+      return _une([
+        'Tu es devant moi. J\'ai prévenu mon avocat.',
+        'Profite de la vue, devant. Ça ne va pas durer.',
+        'Tu m\'as doublé. Je fais semblant que ça ne me touche pas.',
+      ], g);
+    }
+    return _une([
+      'Même case que moi. Pousse-toi un peu, je déborde.',
+      'Ce soir, pas de film de trois heures : je te connais, tu t\'endors à la moitié.',
+    ], g);
+  }
+
+  /// Le rappel du lendemain, « Alors, ce film ? ».
+  static (String, String) rappel(String titre, {bool insolent = true}) => insolent
+      ? ('Alors, $titre ?', 'Tu l\'as vu, ou tu t\'es endormi au générique ? Une note, et ton pion avance.')
+      : ('Alors, $titre ?', 'Donne ta note en un geste, et ton pion avance.');
 }

@@ -4,6 +4,7 @@ import 'package:timezone/data/latest.dart' as tz_donnees;
 import 'package:timezone/timezone.dart' as tz;
 
 import 'avis_du_jeu.dart';
+import 'pop.dart';
 
 /// Le rappel du lendemain : une seule notification, « Alors, Le Samouraï ? »,
 /// avec trois notes directement dedans. Un geste, et le pion avance.
@@ -62,7 +63,7 @@ abstract final class Rappels {
   /// Le moment du rappel : le lendemain à 12 h 30.
   static DateTime moment(DateTime carteJouee) => DateTime(carteJouee.year, carteJouee.month, carteJouee.day + 1, 12, 30);
 
-  static Future<void> alorsCeFilm({required String filmId, required String titre, required DateTime carteJouee}) async {
+  static Future<void> alorsCeFilm({required String filmId, required String titre, required DateTime carteJouee, bool insolent = true}) async {
     if (!_pret) return;
     try {
       await _plugin
@@ -70,8 +71,8 @@ abstract final class Rappels {
           ?.requestNotificationsPermission();
       await _plugin.zonedSchedule(
         _id,
-        'Alors, $titre ?',
-        'Donne ta note en un geste, et ton pion avance.',
+        Pop.rappel(titre, insolent: insolent).$1,
+        Pop.rappel(titre, insolent: insolent).$2,
         tz.TZDateTime.from(moment(carteJouee), tz.local),
         const NotificationDetails(
           android: AndroidNotificationDetails(

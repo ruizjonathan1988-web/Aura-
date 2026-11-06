@@ -15,6 +15,7 @@ import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
 import 'generique.dart';
 import 'deck.dart';
+import '../services/sons.dart';
 
 enum TypeCase {
   depart('Départ', AuraCouleurs.caseBleu),
@@ -77,6 +78,7 @@ class PlateauEcran extends StatelessWidget {
   static bool _consommerSaut(EtatJeu etat) {
     final saute = etat.pionVientDAvancer;
     etat.pionVientDAvancer = false;
+    if (saute) Sons.jouer(Son.boing);
     return saute;
   }
 

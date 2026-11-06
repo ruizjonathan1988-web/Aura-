@@ -11,6 +11,7 @@ import 'package:aura/services/affiche.dart';
 import 'package:aura/services/apres_seance.dart';
 import 'package:aura/services/deck.dart';
 import 'package:aura/services/festival.dart';
+import 'package:aura/services/sons.dart';
 import 'package:aura/services/aura.dart';
 import 'package:aura/services/avis_du_jeu.dart';
 import 'package:aura/services/cadeaux.dart';
@@ -2478,6 +2479,24 @@ void main() {
       expect(b.boostersDispo(), 0);
       await b.validerSeance(carte('x'), pronostic: 3);
       expect(b.boostersDispo(), 1);
+    });
+  });
+
+  group('R51 Pop insolent, et les sons', () {
+    test('R51 insolent par défaut : il taquine selon la course et l\'heure ; gentil sur demande', () async {
+      final soir = DateTime(2026, 11, 6, 21);
+      expect(Pop.accueil(joueur: 3, pop: 8, maintenant: soir), anyOf(contains('avance'), contains('derrière'), contains('séries')));
+      expect(Pop.accueil(joueur: 9, pop: 2, maintenant: soir), anyOf(contains('avocat'), contains('devant'), contains('doublé')));
+      expect(Pop.accueil(joueur: 3, pop: 3, maintenant: DateTime(2026, 11, 6, 1)), anyOf(contains('lit'), contains('heure')));
+      expect(Pop.accueil(joueur: 3, pop: 8, maintenant: soir, insolent: false), anyOf(contains('Bonsoir'), contains('Content')));
+      expect(Pop.rappel('Alien').$2, contains('endormi'));
+      expect(Pop.rappel('Alien', insolent: false).$2, isNot(contains('endormi')));
+      final e = await _etat();
+      expect((e.popInsolent, e.sonsActifs), (true, true));
+      await e.changerTonDePop(false);
+      await e.changerSons(false);
+      final f = await _etatDepuis(e);
+      expect((f.popInsolent, f.sonsActifs, Sons.actifs), (false, false, false));
     });
   });
 }
