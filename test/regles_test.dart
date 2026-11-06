@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
 import 'package:aura/services/apres_seance.dart';
+import 'package:aura/services/aura.dart';
 import 'package:aura/services/avis_du_jeu.dart';
 import 'package:aura/services/cadeaux.dart';
 import 'package:aura/services/campagnes.dart';
@@ -2258,6 +2259,47 @@ void main() {
       final f = await _etat();
       await f.synchroniserVjod(service: ServicePontVjod(f.connexion, client: client), catalogue: fourni);
       expect(ecrits, hasLength(1), reason: 'hors édition VJOD, rien n\'est envoyé');
+    });
+  });
+
+  group('R47 L\'aura : se proposer des films', () {
+    Proposition p(String id, {String de = 'jf:jon', String pour = 'jf:lea', String film = 'tmdb:1', bool vu = false, bool aime = false, int? note}) => Proposition(
+          id: id,
+          de: 'joueur-$de',
+          dePersonne: de,
+          deNom: de == 'jf:jon' ? 'Jon' : 'Léa',
+          pourPersonne: pour,
+          pourNom: 'x',
+          filmCle: film,
+          titre: 'Film',
+          vuLe: vu ? DateTime(2026, 11, 6) : null,
+          aime: aime,
+          note: note,
+          creeLe: DateTime(2026, 11, 5),
+        );
+
+    test('R47 regardé +1, aimé +2 (un cœur ou 4 et 5), aimé par plusieurs +3 de plus', () {
+      expect(Aura.scores([p('a')]), {'jf:jon': 0});
+      expect(Aura.scores([p('a', vu: true)]), {'jf:jon': 1});
+      expect(Aura.scores([p('a', vu: true, aime: true)]), {'jf:jon': 3});
+      expect(Aura.scores([p('a', vu: true, note: 4)]), {'jf:jon': 3});
+      expect(Aura.scores([p('a', vu: true, note: 3)]), {'jf:jon': 1});
+      expect(Aura.scores([p('a', vu: true, aime: true), p('b', pour: 'jf:max', vu: true, note: 5)]), {'jf:jon': 3 + 3 + Aura.bonusPlusieurs});
+      expect(Aura.scores([p('a', vu: true, aime: true), p('b', pour: 'jf:max', film: 'tmdb:2', vu: true, aime: true)]), {'jf:jon': 6}, reason: 'deux films différents : pas de bonus');
+      final c = Aura.classement([p('a', vu: true), p('b', de: 'jf:lea', pour: 'jf:jon', vu: true, aime: true)]);
+      expect(c.map((x) => x.nom), ['Léa', 'Jon']);
+      expect(c.first.aura, 3);
+    });
+
+    test('R47 une proposition se lit et s\'écrit, la clé du film est la même partout', () {
+      expect(Aura.cleFilm(tmdb: 603), 'tmdb:603');
+      expect(Aura.cleFilm(jellyfin: 'abc'), 'jf:abc');
+      final corps = Proposition.nouvelle(dePersonne: 'srv:jon', deNom: 'Jon', pourPersonne: 'srv:lea', pourNom: 'Léa', maison: 'srv', titre: 'Matrix', annee: 1999, tmdb: 603, jellyfin: 'abc', mot: '  Tu vas adorer  ');
+      expect(corps['film_cle'], 'tmdb:603');
+      expect(corps['mot'], 'Tu vas adorer');
+      final lue = Proposition.depuisJson({...corps, 'id': 'p1', 'de': 'u1', 'aime': false, 'note': 5, 'vu_le': '2026-11-06T21:00:00Z', 'cree_le': '2026-11-06T18:00:00Z'})!;
+      expect((lue.titre, lue.tmdb, lue.jellyfin, lue.auteur, lue.destinataire, lue.vu, lue.aimee), ('Matrix', 603, 'abc', 'srv:jon', 'srv:lea', true, true));
+      expect(Proposition.depuisJson({'id': 'x'}), isNull);
     });
   });
 }
