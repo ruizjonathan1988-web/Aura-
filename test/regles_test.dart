@@ -10,6 +10,7 @@ import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
 import 'package:aura/services/apres_seance.dart';
 import 'package:aura/services/deck.dart';
+import 'package:aura/services/festival.dart';
 import 'package:aura/services/aura.dart';
 import 'package:aura/services/avis_du_jeu.dart';
 import 'package:aura/services/cadeaux.dart';
@@ -78,7 +79,7 @@ final Map<String, Object> _devantPop = {'pop_decalage_${EtatJeu.moisDe(DateTime.
 /// Par défaut, toutes les règles sont ouvertes (R42) : chaque test vérifie
 /// sa règle, pas le déblocage, qui a ses propres tests.
 Future<EtatJeu> _etat([Map<String, Object> valeurs = const {}]) async {
-  SharedPreferences.setMockInitialValues({'tout_ouvert': true, ...valeurs});
+  SharedPreferences.setMockInitialValues({'tout_ouvert': true, 'festival': 'aucun', ...valeurs});
   return EtatJeu(await SharedPreferences.getInstance());
 }
 
@@ -2431,6 +2432,52 @@ void main() {
       expect(await e.basculerAtout('critique'), isTrue);
       expect(e.deck, isEmpty);
       expect(await e.basculerAtout('inconnu'), isFalse);
+    });
+  });
+
+  group('R50 Le Festival de la semaine', () {
+    CarteDefi carte(String id, {int annee = 2010, List<String> genres = const ['Drama'], int cases = 1}) => CarteDefi(
+          type: TypeCarte.envie,
+          defi: 'Défi',
+          indice: '',
+          cases: cases,
+          joker: '',
+          film: Film(id: id, titre: 'Film $id', note: 7.5, annee: annee, dureeMinutes: 100, genres: genres, pays: const ['France']),
+          bulleDePop: '',
+        );
+
+    test('R50 le même festival toute la semaine pour tout le monde, un autre la semaine suivante, dix en tout', () {
+      final lundi = DateTime(2026, 11, 2, 9);
+      final dimanche = DateTime(2026, 11, 8, 23);
+      expect(Festivals.de(lundi).id, Festivals.de(dimanche).id);
+      expect(Festivals.de(lundi.add(const Duration(days: 7))).id, isNot(Festivals.de(lundi).id));
+      expect(Festivals.tous.map((f) => f.id).toSet(), hasLength(10));
+      final suite = [for (var i = 0; i < 10; i++) Festivals.de(lundi.add(Duration(days: 7 * i))).id].toSet();
+      expect(suite, hasLength(10), reason: 'en dix semaines, on les voit tous');
+    });
+
+    test('R50 une case de plus quand la règle est remplie, plafond du jour inchangé', () async {
+      final e = await _etat({'festival': 'noir_blanc', ..._devantPop});
+      expect(await e.validerSeance(carte('vieux', annee: 1950), pronostic: 3), 2);
+      expect(await e.validerSeance(carte('recent', cases: 3), pronostic: 3), 1);
+    });
+
+    test('R50 Pop interdit les comédies : en regarder une le fait reculer', () async {
+      final e = await _etat({'festival': 'sans_comedie'});
+      final avant = e.positionDePop;
+      await e.validerSeance(carte('drole', genres: const ['Comedy']), pronostic: 3);
+      expect(e.positionDePop, avant - 1);
+    });
+
+    test('R50 la semaine des atouts double leur audace ; celle des boosters en offre un par film', () async {
+      final a = await _etat({'festival': 'atouts', 'atouts': jsonEncode({'noir_blanc': 1}), 'deck': ['noir_blanc'], ..._devantPop});
+      await a.validerSeance(carte('vieux', annee: 1950), pronostic: 3);
+      expect(a.audaceDuMois, 4);
+      final b = await _etat({'festival': 'boosters'});
+      await b.ouvrirBooster();
+      expect(b.boostersDispo(), 0);
+      await b.validerSeance(carte('x'), pronostic: 3);
+      expect(b.boostersDispo(), 1);
     });
   });
 }
