@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 /// Les petits bruits d'Aura : Pop qui parle, une carte qu'on retourne, le
 /// tampon « Vu ! », le pion qui saute, la fanfare. Sons maison (générés,
 /// libres de droits). Coupables dans les Réglages.
-enum Son { pop, carte, tampon, boing, fanfare }
+enum Son { tap, pop, carte, tampon, boing, fanfare, booster }
 
 abstract final class Sons {
   /// Réglé par EtatJeu au démarrage et dans les Réglages.
@@ -28,7 +28,7 @@ abstract final class Sons {
     try {
       final l = _lecteurs[s] ??= AudioPlayer()..setReleaseMode(ReleaseMode.stop);
       await l.stop();
-      await l.play(AssetSource('sons/${s.name}.wav'), volume: .7);
+      await l.play(AssetSource('sons/${s.name}.wav'), volume: s == Son.tap ? .45 : .75);
     } catch (_) {
       // Pas de son sur cet appareil : le jeu continue en silence.
     }

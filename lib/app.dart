@@ -180,7 +180,19 @@ class _CoquilleState extends State<Coquille> with WidgetsBindingObserver {
                     onMiseAJour: _nouvelle == null ? null : () => proposerMiseAJour(context, _nouvelle!),
                     onglets: tele ? _Onglets(actif: _onglet, onChoisir: _aller, compact: true) : null,
                   ),
-                  Expanded(child: KeyedSubtree(key: ValueKey(_onglet), child: ecran)),
+                  Expanded(
+                    // Changer d'onglet : un fondu qui glisse à peine.
+                    child: AnimatedSwitcher(
+                      duration: animationsReduites(context) ? Duration.zero : const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (enfant, a) => FadeTransition(
+                        opacity: a,
+                        child: SlideTransition(position: Tween(begin: const Offset(0, .02), end: Offset.zero).animate(a), child: enfant),
+                      ),
+                      child: KeyedSubtree(key: ValueKey(_onglet), child: ecran),
+                    ),
+                  ),
                   if (!tele) _Onglets(actif: _onglet, onChoisir: _aller),
                 ],
               ),

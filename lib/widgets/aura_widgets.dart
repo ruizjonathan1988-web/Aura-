@@ -47,8 +47,19 @@ class _TouchableState extends State<Touchable> {
 
   void _activer() {
     if (widget.onTap == null) return;
-    HapticFeedback.selectionClick();
+    HapticFeedback.lightImpact();
+    Sons.jouer(Son.tap);
     widget.onTap!();
+  }
+
+  /// À la télécommande, OK enfonce aussi le bouton, le temps d'un battement.
+  void _appuiTelecommande() {
+    if (widget.onTap == null) return;
+    setState(() => _appui = true);
+    Future<void>.delayed(const Duration(milliseconds: 110), () {
+      if (mounted) setState(() => _appui = false);
+    });
+    _activer();
   }
 
   @override
@@ -59,7 +70,7 @@ class _TouchableState extends State<Touchable> {
       shortcuts: toucheOk,
       actions: {
         ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-          _activer();
+          _appuiTelecommande();
           return null;
         }),
       },
@@ -79,7 +90,13 @@ class _TouchableState extends State<Touchable> {
             setState(() => _appui = false);
             _activer();
           },
-          child: widget.builder(context, _focus, _appui),
+          // Le focus grossit à peine, l'appui tasse : on sent le bouton.
+          child: AnimatedScale(
+            scale: animationsReduites(context) ? 1 : (_appui ? .97 : (_focus ? 1.025 : 1)),
+            duration: Duration(milliseconds: _appui ? 70 : 160),
+            curve: _appui ? Curves.easeOut : Curves.easeOutBack,
+            child: widget.builder(context, _focus, _appui),
+          ),
         ),
       ),
     );

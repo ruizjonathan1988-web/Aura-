@@ -8,6 +8,7 @@ import '../services/etat.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
+import '../services/sons.dart';
 
 Color couleurDeRarete(Rarete r) => switch (r) {
       Rarete.commune => AuraCouleurs.creme,
@@ -32,6 +33,7 @@ class _DeckEcranState extends State<DeckEcran> {
 
   Future<void> _ouvrir(EtatJeu etat) async {
     setState(() => _ouverture = true);
+    Sons.jouer(Son.booster);
     final r = await etat.ouvrirBooster();
     if (!mounted) return;
     setState(() {
