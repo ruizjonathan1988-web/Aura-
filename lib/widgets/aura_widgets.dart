@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../models/modeles.dart';
 import '../theme/aura_theme.dart';
@@ -213,7 +212,8 @@ class TitreCartoon extends StatelessWidget {
   final double inclinaison;
   final Color couleur;
 
-  TextStyle _style({Color? couleur, Paint? trait}) => GoogleFonts.anton(
+  TextStyle _style({Color? couleur, Paint? trait}) => TextStyle(
+        fontFamily: 'Anton',
         fontSize: taille,
         height: 1.02,
         letterSpacing: .4,
@@ -429,7 +429,9 @@ class CarteDefiVue extends StatelessWidget {
                 children: [
                   Text(carte.defi, maxLines: 2, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(15, poids: FontWeight.w900).copyWith(height: 1.15)),
                   const SizedBox(height: 3),
-                  Text(carte.indice, maxLines: 3, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(11.5, poids: FontWeight.w700, couleur: AuraCouleurs.texteDoux)),
+                  Expanded(
+                    child: Text(carte.indice, maxLines: 3, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(11.5, poids: FontWeight.w700, couleur: AuraCouleurs.texteDoux)),
+                  ),
                 ],
               ),
             ),

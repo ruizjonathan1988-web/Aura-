@@ -1,0 +1,119 @@
+// Tests d'écrans : on ouvre l'appli comme un joueur, sur un téléphone et
+// sur une télé, et on vérifie qu'aucun écran ne plante ni ne déborde.
+// (Un débordement de mise en page fait échouer le test.)
+
+import 'package:aura/app.dart';
+import 'package:aura/services/etat.dart';
+import 'package:aura/services/premier_soir.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+Future<EtatJeu> _etat([Map<String, Object> valeurs = const {}]) async {
+  SharedPreferences.setMockInitialValues(valeurs);
+  return EtatJeu(await SharedPreferences.getInstance());
+}
+
+/// Laisse passer le temps des animations (sans attendre la fin des
+/// animations qui tournent en boucle, comme Pop qui se dandine).
+Future<void> _patienter(WidgetTester t, [int secondes = 3]) async {
+  for (var i = 0; i < secondes * 10; i++) {
+    await t.pump(const Duration(milliseconds: 100));
+  }
+}
+
+Future<void> _toucher(WidgetTester t, Finder f) async {
+  await t.ensureVisible(f.first);
+  await t.pump(const Duration(milliseconds: 100));
+  await t.tap(f.first);
+  await _patienter(t, 1);
+}
+
+void _taille(WidgetTester t, Size logique, double densite) {
+  t.view.physicalSize = logique * densite;
+  t.view.devicePixelRatio = densite;
+  addTearDown(t.view.reset);
+}
+
+void main() {
+  for (final (nom, taille, densite) in [('téléphone', const Size(390, 844), 3.0), ('télé', const Size(960, 540), 2.0)]) {
+    group('Sur $nom', () {
+      testWidgets('ouverture, premier soir passé, puis tous les onglets', (t) async {
+        _taille(t, taille, densite);
+        final etat = await _etat();
+        await t.pumpWidget(AuraApp(etat: etat));
+        await _patienter(t);
+        await _toucher(t, find.text('ENTRER DANS LA SALLE'));
+        expect(find.text('BIENVENUE DANS AURA !'), findsWidgets);
+        await _toucher(t, find.text('PASSER, JE CONNAIS LE JEU'));
+        expect(etat.accueilFait, isTrue);
+        for (final onglet in ['PLATEAU', 'SEMAINE', 'LIGUE', 'CE SOIR']) {
+          await _toucher(t, find.text(onglet));
+          expect(t.takeException(), isNull, reason: onglet);
+        }
+        await _patienter(t);
+      });
+
+      testWidgets('une soirée complète : tirage, carte, billet, plateau', (t) async {
+        _taille(t, taille, densite);
+        final etat = await _etat({'accueil_fait': true});
+        await t.pumpWidget(AuraApp(etat: etat));
+        await _patienter(t);
+        await _toucher(t, find.text('ENTRER DANS LA SALLE'));
+        await _toucher(t, find.text('TIRER MES 3 CARTES'));
+        expect(find.text('CHOISIS TA CARTE !'), findsWidgets);
+        await _toucher(t, find.text('JOUER CETTE CARTE !'));
+        expect(find.text('CARTE RÉVÉLÉE !'), findsOneWidget);
+        await _toucher(t, find.text('C\'EST PARTI, JE LE REGARDE'));
+        expect(etat.enCours, hasLength(1));
+        await _toucher(t, find.text('VALIDER ET AVANCER MON PION'));
+        await _patienter(t);
+        expect(etat.billets, hasLength(1));
+        expect(etat.position, greaterThan(1));
+        expect(etat.enCours, isEmpty);
+      });
+
+      testWidgets('le premier soir en entier : test, figurine, Bluff', (t) async {
+        _taille(t, taille, densite);
+        final etat = await _etat();
+        await t.pumpWidget(AuraApp(etat: etat));
+        await _patienter(t);
+        await _toucher(t, find.text('ENTRER DANS LA SALLE'));
+        await _toucher(t, find.text('C\'EST PARTI !'));
+        for (final q in TestSpectateur.questions) {
+          await _toucher(t, find.text(q.reponses.first.$1));
+        }
+        await _patienter(t, 2);
+        expect(etat.accueilFait, isFalse);
+        await _toucher(t, find.text('GARDER ET JOUER CONTRE POP'));
+        await _patienter(t, 2);
+        // Le Bluff : on choisit le premier synopsis, puis on entre dans le jeu.
+        final faux = BluffDePop.fauxDePop.firstWhere((f) => find.text(f).evaluate().isNotEmpty);
+        await _toucher(t, find.text(faux));
+        await _toucher(t, find.text('ENTRER DANS LE JEU'));
+        expect(etat.accueilFait, isTrue);
+        expect(t.takeException(), isNull);
+        await _patienter(t);
+      });
+
+      testWidgets('Plan du jour, Duel et Réglages s\'ouvrent sans souci', (t) async {
+        _taille(t, taille, densite);
+        final etat = await _etat({'accueil_fait': true});
+        await t.pumpWidget(AuraApp(etat: etat));
+        await _patienter(t);
+        await _toucher(t, find.text('ENTRER DANS LA SALLE'));
+        await _toucher(t, find.text('LE PLAN DU JOUR'));
+        await _patienter(t, 2);
+        expect(find.text('LE PLAN DU JOUR'), findsWidgets);
+        t.state<NavigatorState>(find.byType(Navigator).first).pop();
+        await _patienter(t, 1);
+        await _toucher(t, find.textContaining('LE DUEL DU CANAPÉ'));
+        await _toucher(t, find.text('C\'EST PARTI'));
+        await _patienter(t, 1);
+        expect(t.takeException(), isNull);
+        t.state<NavigatorState>(find.byType(Navigator).first).pop();
+        await _patienter(t, 2);
+      });
+    });
+  }
+}

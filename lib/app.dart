@@ -263,7 +263,7 @@ class _Onglets extends StatelessWidget {
                 onTap: () => onChoisir(o),
                 onFocus: compact ? () => onChoisir(o) : null,
                 builder: (context, focus, appui) => Container(
-                  height: 52,
+                  height: 58,
                   decoration: BoxDecoration(
                     color: o == actif ? AuraCouleurs.jaune : Colors.transparent,
                     borderRadius: BorderRadius.circular(14),
