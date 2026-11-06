@@ -2,7 +2,7 @@
 
 Document de passation : tout ce qu'il faut savoir pour continuer Aura dans une nouvelle conversation. À coller ou à faire lire en début de session.
 
-Dernière mise à jour : 6 novembre 2026 (matin) : connexion aux Jellyfin récents.
+Dernière mise à jour : 6 novembre 2026 (après-midi) : Juste un film, propositions revues, tout le cinéma de VJOD, statut VOD de Ma TV.
 
 ## Qui et quoi
 
@@ -80,6 +80,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R31 Juste un film | Hors du jeu : trois idées, sans envie obligatoire (« Peu importe »), filtres durée et époque ; jamais de navet ni de film déjà vu ; on change autant qu'on veut, rien ne revient avant que tout soit passé, puis la boucle recommence ; « Une autre idée » ne change que la carte touchée ; aucune carte, case, séance en cours ni rappel | `JusteUnFilm` |
 | R32 Jamais d'impasse | Chaque envie a des genres exclus (une comédie de guerre ne fait pas réfléchir, un dessin animé familial ne fait pas frissonner) ; la sélection de démonstration donne 3 cartes pour chaque envie et chaque durée ; trop peu de films : Pop allonge la durée et le dit, puis prend une autre envie, jamais un navet | `Emotion.exclus`, `Tirage.tirerSansImpasse` |
 | R33 Tout le cinéma de VJOD | En édition VJOD, la bibliothèque puis les films TMDB (note 6/10 et 300 avis au moins, envie et durée demandées à TMDB) ; un film du serveur n'apparaît qu'une fois, en version serveur ; TMDB en panne ne bloque rien ; « Lancer dans VJOD » ouvre `moonfin://tmdb?id=…` (fiche VJOD : VOD IPTV ou demande Seerr) | `SourceTmdb`, `SourceToutVjod`, `VjodLien` |
+| R34 En VOD ou à demander | Hors serveur, Aura demande à Ma TV (adresse lue dans la collection Jellyfin « VJOD – TV », clé du profil via `/tv/api/enroll`, clé commune si Ma TV est ancien, rien si l'accès est coupé) si chaque film est en VOD : `/tv/api/vod/tmdb?kind=movie&ids=…`, 150 à la fois, réponses gardées pour la session ; « Où le voir » dit « en VOD, prêt à lancer » ou « pas en VOD, à demander » ; Ma TV absent ou en panne : on ne sait rien, rien ne casse | `MaTv`, `SourceAvecMaTv`, `OuLeVoir.ligneVjod` |
 
 Tests d'écrans (`test/ecrans_test.dart`) : l'appli est ouverte comme par un joueur, sur un téléphone (390 × 844) et sur une télé (960 × 540) ; ouverture, premier soir complet, tous les onglets, une soirée complète (tirage, carte, billet, plateau), Plan du jour, Duel. Un débordement ou un plantage fait échouer la CI. Possible parce que les polices sont embarquées (`assets/polices`, licence OFL) au lieu d'être téléchargées.
 
@@ -157,7 +158,7 @@ Fait :
 - Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
 - Juste un film (`lib/screens/juste_un_film.dart`, `lib/services/juste_un_film.dart`, accès « Pas envie de jouer ? » sous le tirage de Ce soir) : pour les soirs sans jeu, trois idées à changer une par une ou toutes d'un coup, filtres envie (dont « Peu importe »), durée et époque, « Où le voir » et « Lancer dans VJOD ». Rien ne compte pour le plateau.
 - Propositions revues : envies avec genres exclus, 23 films reconnus de plus dans la sélection de démonstration (65 au total, au moins 5 de moins d'une heure et demie par envie), et plus jamais « aucun film » : Pop allonge la durée ou change d'envie en le disant.
-- Tout le cinéma de VJOD (`lib/services/source_tmdb.dart`) : en édition VJOD, les cartes, l'Affiche, le Plan du jour et « Juste un film » piochent dans la bibliothèque Jellyfin et dans les films reconnus de TMDB. Hors serveur, « Où le voir » dit « Dans VJOD : en VOD tout de suite, ou à demander », et « Lancer dans VJOD » ouvre la fiche du titre dans VJOD, qui choisit la VOD IPTV ou la demande Seerr. Il faut VJOD 4.36 (PR VJOD #50, lien `moonfin://tmdb`). Pas encore fait : lire le catalogue Ma TV de la seedbox pour savoir à l'avance si un film est en VOD.
+- Tout le cinéma de VJOD (`lib/services/source_tmdb.dart`) : en édition VJOD, les cartes, l'Affiche, le Plan du jour et « Juste un film » piochent dans la bibliothèque Jellyfin et dans les films reconnus de TMDB. Hors serveur, « Où le voir » dit « Dans VJOD : en VOD tout de suite, ou à demander », et « Lancer dans VJOD » ouvre la fiche du titre dans VJOD, qui choisit la VOD IPTV ou la demande Seerr. Il faut VJOD 4.36 (PR VJOD #50, lien `moonfin://tmdb`). Ma TV dit à l'avance si un film est en VOD (R34, `lib/services/ma_tv.dart`) : « Où le voir » l'affiche, et dans « Juste un film » le bouton devient « Demander dans VJOD » quand il faut le demander. Pas testé sur le vrai serveur (la seedbox n'est pas joignable d'ici) : à confirmer par Jon.
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
 ## Nuit du 6 novembre (travail autonome)

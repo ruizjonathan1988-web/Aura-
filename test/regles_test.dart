@@ -21,6 +21,7 @@ import 'package:aura/services/generique.dart';
 import 'package:aura/services/historique.dart';
 import 'package:aura/services/juste_un_film.dart';
 import 'package:aura/services/ligues.dart';
+import 'package:aura/services/ma_tv.dart';
 import 'package:aura/services/mesures.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/plateformes.dart';
@@ -35,6 +36,7 @@ import 'package:aura/services/tirage.dart';
 import 'package:aura/services/vjod_lien.dart';
 import 'package:aura/widgets/animations.dart';
 import 'package:aura/widgets/aura_widgets.dart';
+import 'package:aura/widgets/ou_le_voir.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -1337,6 +1339,114 @@ void main() {
       expect(lien.queryParameters, {'id': '680', 'type': 'movie', 'title': 'Pulp Fiction'});
       const jf = Film(id: 'abc', titre: 'X', serveurId: 's', source: SourceFilm.jellyfin);
       expect(VjodLien.pour(jf).host, 'play');
+    });
+  });
+
+  group('R34 Ma TV dit à l\'avance : en VOD ou à demander', () {
+    const connexion = ConnexionJellyfin(adresse: 'http://jf', utilisateurId: 'u1', jeton: 'jeton-jf');
+    String description(Map<String, String> j) => 'Sources TV de VJOD.\nVJOD-TV:${base64Url.encode(utf8.encode(jsonEncode(j))).replaceAll('=', '')}';
+    final collection = jsonEncode({
+      'Items': [
+        {'Name': 'VJOD – réglages', 'Overview': 'VJOD-CONFIG:abc'},
+        {'Name': 'VJOD – TV', 'Overview': description({'v': '1', 'url': 'https://seedbox.example/iptv-checker/', 'key': 'commune'})},
+      ],
+    });
+    http.Response jf() => http.Response(collection, 200, headers: {'content-type': 'application/json; charset=utf-8'});
+    Film horsServeur(int id) => Film(id: 'tmdb:$id', titre: 'Film $id', tmdbId: id, note: 8, source: SourceFilm.catalogueVjod);
+
+    test('R34 l\'adresse de Ma TV se lit dans la collection « VJOD – TV »', () {
+      final s = ServeurMaTv.depuisDescription(description({'url': 'https://seedbox.example/iptv-checker/', 'key': 'abc_DEF-123'}))!;
+      expect(s.adresse, 'https://seedbox.example/iptv-checker');
+      expect(s.cle, 'abc_DEF-123');
+      expect(s.point('/tv/api/vod/tmdb', {'kind': 'movie'}).toString(), 'https://seedbox.example/iptv-checker/tv/api/vod/tmdb?kind=movie&k=abc_DEF-123');
+      expect(ServeurMaTv.depuisDescription('Pas de marqueur ici'), isNull);
+      expect(ServeurMaTv.depuisDescription('VJOD-TV:@@@'), isNull);
+      expect(ServeurMaTv.depuisDescription(description({'url': 'pas une adresse', 'key': 'k'})), isNull);
+    });
+
+    test('R34 avec sa clé de profil, Ma TV marque chaque film hors serveur', () async {
+      final demandes = <http.Request>[];
+      final client = MockClient((r) async {
+        demandes.add(r);
+        if (r.url.host == 'jf') {
+          expect(r.headers['Authorization'], contains('Token="jeton-jf"'));
+          expect(r.url.queryParameters['IncludeItemTypes'], 'BoxSet');
+          expect(r.url.queryParameters['Fields'], 'Overview');
+          return jf();
+        }
+        if (r.url.path.endsWith('/tv/api/enroll')) {
+          expect(r.method, 'POST');
+          expect(r.url.queryParameters['k'], 'commune');
+          expect(jsonDecode(r.body), {'token': 'jeton-jf'});
+          return http.Response(jsonEncode({'key': 'perso'}), 200);
+        }
+        expect(r.url.path, '/iptv-checker/tv/api/vod/tmdb');
+        expect(r.url.queryParameters, {'kind': 'movie', 'ids': '550,680', 'k': 'perso'});
+        return http.Response(jsonEncode({'550': [{'id': '9', 'name': 'Fight Club'}], '680': []}), 200);
+      });
+      const serveur = Film(id: 'jf1', titre: 'Sur le serveur', tmdbId: 13, source: SourceFilm.jellyfin);
+      final films = await SourceAvecMaTv(_SourceFixe([horsServeur(550), horsServeur(680), serveur]), MaTv(connexion, client: client)).catalogue();
+      expect(films.map((f) => f.enVod), [true, false, null]);
+      expect(films[0].titre, 'Film 550');
+      expect(demandes.length, 3);
+    });
+
+    test('R34 un Ma TV ancien garde la clé commune, 150 films par demande, réponses gardées', () async {
+      final lots = <int>[];
+      final client = MockClient((r) async {
+        if (r.url.host == 'jf') return jf();
+        if (r.url.path.endsWith('/tv/api/enroll')) return http.Response('', 404);
+        expect(r.url.queryParameters['k'], 'commune');
+        final ids = r.url.queryParameters['ids']!.split(',');
+        lots.add(ids.length);
+        return http.Response(jsonEncode({for (final id in ids) id: int.parse(id).isEven ? [{'id': id}] : []}), 200);
+      });
+      final maTv = MaTv(connexion, client: client);
+      final films = [for (var i = 1; i <= 200; i++) horsServeur(i)];
+      final marques = await maTv.marquer(films);
+      expect(lots, [150, 50]);
+      expect(marques.where((f) => f.enVod == true).length, 100);
+      expect(marques.every((f) => f.enVod != null), isTrue);
+      await maTv.marquer(films);
+      expect(lots, [150, 50], reason: 'Ma TV n\'est pas redemandé pour des films déjà connus');
+    });
+
+    test('R34 Ma TV absent, coupé ou en panne : rien ne casse, on ne sait rien', () async {
+      Future<List<Film>> avec(Future<http.Response> Function(http.Request) repondre) =>
+          MaTv(connexion, client: MockClient(repondre)).marquer([horsServeur(550)]);
+      // Pas de collection « VJOD – TV ».
+      var films = await avec((r) async => http.Response(jsonEncode({'Items': []}), 200));
+      expect(films.single.enVod, isNull);
+      // Jellyfin injoignable.
+      films = await avec((r) async => throw Exception('hors ligne'));
+      expect(films.single.enVod, isNull);
+      // L'administrateur a coupé ce profil : Ma TV n'est pas interrogé.
+      var vod = 0;
+      films = await avec((r) async {
+        if (r.url.host == 'jf') return jf();
+        if (r.url.path.endsWith('/tv/api/enroll')) return http.Response('', 403);
+        vod++;
+        return http.Response('{}', 200);
+      });
+      expect(films.single.enVod, isNull);
+      expect(vod, 0);
+      // Ma TV en panne.
+      films = await avec((r) async {
+        if (r.url.host == 'jf') return jf();
+        if (r.url.path.endsWith('/tv/api/enroll')) return http.Response('', 404);
+        return http.Response('erreur', 500);
+      });
+      expect(films.single.enVod, isNull);
+    });
+
+    test('R34 « Où le voir » dit ce que Ma TV a répondu, et la soirée s\'en souvient', () {
+      expect(OuLeVoir.ligneVjod(horsServeur(1).avecVod(true)), 'Dans VJOD : en VOD, prêt à lancer');
+      expect(OuLeVoir.ligneVjod(horsServeur(1).avecVod(false)), 'Dans VJOD : pas en VOD, à demander');
+      expect(OuLeVoir.ligneVjod(horsServeur(1)), 'Dans VJOD : en VOD tout de suite, ou à demander');
+      final relu = PartieSoiree.filmDepuisJson(jsonDecode(jsonEncode(PartieSoiree.filmVersJson(horsServeur(7).avecVod(false)))) as Map<String, dynamic>);
+      expect(relu.enVod, isFalse);
+      expect(relu.tmdbId, 7);
+      expect(horsServeur(7).avecVod(true).vu().enVod, isTrue);
     });
   });
 }

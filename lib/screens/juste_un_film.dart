@@ -204,7 +204,12 @@ class _JusteUnFilmEcranState extends State<JusteUnFilmEcran> {
             OuLeVoir(key: ValueKey('ou${f.id}'), film: f),
             const SizedBox(height: 12),
             if (VjodLien.disponible(f)) ...[
-              AuraBouton(libelle: 'Lancer dans VJOD', icone: Icons.play_arrow_rounded, onPressed: () => _lancer(f)),
+              AuraBouton(
+                // Ma TV a dit qu'il n'est pas en VOD : la fiche VJOD proposera de le demander.
+                libelle: f.enVod == false ? 'Demander dans VJOD' : 'Lancer dans VJOD',
+                icone: f.enVod == false ? Icons.add_rounded : Icons.play_arrow_rounded,
+                onPressed: () => _lancer(f),
+              ),
               const SizedBox(height: 10),
             ],
             AuraBouton(libelle: 'Une autre idée', principal: false, onPressed: () => _autre(i)),

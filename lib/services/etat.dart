@@ -12,6 +12,7 @@ import 'config.dart';
 import 'fidelite.dart';
 import 'historique.dart';
 import 'ligues.dart';
+import 'ma_tv.dart';
 import 'mesures.dart';
 import 'plan_du_jour.dart';
 import 'pop.dart';
@@ -327,10 +328,21 @@ class EtatJeu extends ChangeNotifier {
   SourceFilms get source {
     final SourceFilms base = mode == ModeJeu.vjod && connexion.complete
         // L'édition VJOD : ta bibliothèque, puis tout ce que VJOD peut lancer en VOD ou demander.
-        ? (Config.tmdbCle.isEmpty ? SourceJellyfin(connexion) : SourceToutVjod(SourceJellyfin(connexion), SourceTmdb(Config.tmdbCle)))
+        ? (Config.tmdbCle.isEmpty
+            ? SourceJellyfin(connexion)
+            : SourceToutVjod(SourceJellyfin(connexion), SourceAvecMaTv(SourceTmdb(Config.tmdbCle), _maTvPour(connexion))))
         : SourceDemo();
     final vus = historique;
     return vus.isEmpty ? base : SourceAvecHistorique(base, vus);
+  }
+
+  // Ma TV garde ses réponses le temps de la session, tant que la connexion
+  // ne change pas.
+  MaTv? _maTv;
+  MaTv _maTvPour(ConnexionJellyfin c) {
+    final m = _maTv;
+    if (m != null && m.connexion.adresse == c.adresse && m.connexion.jeton == c.jeton) return m;
+    return _maTv = MaTv(c);
   }
 
   /// L'historique importé (Letterboxd) : des clés « titre|année ».
