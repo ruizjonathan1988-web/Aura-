@@ -2,7 +2,7 @@
 
 Document de passation : tout ce qu'il faut savoir pour continuer Aura dans une nouvelle conversation. À coller ou à faire lire en début de session.
 
-Dernière mise à jour : 6 novembre 2026, nuit de travail autonome (voir « Nuit du 6 novembre »).
+Dernière mise à jour : 6 novembre 2026 (matin) : connexion aux Jellyfin récents.
 
 ## Qui et quoi
 
@@ -59,7 +59,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R10 Tout à la télécommande | À partir de 900 de large, mode télé : les champs de texte deviennent « ça s'écrit depuis ton téléphone » | `ChampAura`, `estLargeurTele` |
 | R11 Premier soir | Test équilibré (chaque profil 3 fois sur 6 questions), égalité au plus récent ; Bluff : un vrai synopsis et deux faux de Pop, jamais de navet ni de documentaire ; Joker +1 case une seule fois, plafond de 3 respecté | `TestSpectateur`, `BluffDePop`, `EtatJeu.jokerBluff` |
 | R12 Carte des genres | Une séance rend la région tienne (un film peut en couvrir plusieurs) ; Pop vise une région libre chaque lundi et la prend si rien n'y est vu avant dimanche ; elle se reprend ; rien de visé avant le premier lundi ; chaque région de Pop = 1 case | `CarteDesGenres`, `Pop.position` |
-| R13 Connexion VJOD | Identifiant et mot de passe, ou code Quick Connect accepté sur le téléphone, donnent une connexion complète ; mauvais mot de passe = message clair | `ConnexionVjod` |
+| R13 Connexion VJOD | Identifiant et mot de passe, ou code Quick Connect accepté sur le téléphone, donnent une connexion complète ; mauvais mot de passe = message clair ; chaque appel envoie l'en-tête `Authorization: MediaBrowser …` des Jellyfin récents (comme VJOD), l'ancien à côté | `ConnexionVjod` |
 | R14 Duel du canapé | On écarte à tour de rôle une carte de l'autre ; un Veto par joueur protège une carte ; la partie finit toujours avec une carte chacun ; quiz : 4 réponses distinctes, pas de question en double | `Duel`, `Quiz` |
 | R15 Revenir après une pause | Après 3 jours d'absence, carte de rattrapage (+2 cases, plafond respecté) ; rien au premier lancement ; série en semaines, une semaine vide est une pause gratuite, deux la remettent à zéro ; un lundi matin ne fait pas perdre la série | `Fidelite`, `EtatJeu.bonRetour` |
 | R16 Bluff de la semaine | Le vrai synopsis de l'Affiche est parmi trois (deux faux de Pop) ; pas de Bluff sans synopsis ; un essai par semaine ; trouvé = Joker +1 case | `BluffDePop.pourFilm`, `EtatJeu.bluffDe` |
@@ -166,6 +166,7 @@ Jon a demandé une appli « finie, présentable, jouable, rigolote, avec une for
 4. Tester sur la box : flèches et OK partout, ouverture, Duel, Révélation (le dimanche), connexion par code Quick Connect.
 
 - 6 novembre : Jon trouvait que toutes les envies proposaient la même chose. Les films changeaient, mais les trois défis affichés (avant 1980, pays jamais vu, pépite) étaient toujours identiques et le pays « jamais vu » ignorait ses billets. Les défis reprennent maintenant l'envie (R30). Titre « Envie de quoi ce soir ? » réduit pour ne plus être coupé.
+- 6 novembre : « la connexion VJOD ne marche pas ». Cause : le serveur de Jon est un Jellyfin récent, qui refuse les anciens en-têtes `X-Emby-Authorization` et `X-Emby-Token` seuls ; VJOD envoie `Authorization: MediaBrowser …`. Aura envoie désormais le même en-tête (connexion, bibliothèque, vérification « vu »), l'ancien à côté. À confirmer par Jon sur la box.
 - APK : la CI signait avec une clé neuve à chaque construction, d'où « Application non installée » sur une mise à jour. Corrigé : signature fixe (`tool/signature.keystore`, copiée par la CI comme clé de débogage). Jon désinstalle une dernière fois, ensuite les mises à jour s'installent par-dessus. Pour le Play Store, il faudra une vraie clé de publication, gardée hors du dépôt.
 
 ## Retours de Jon à traiter

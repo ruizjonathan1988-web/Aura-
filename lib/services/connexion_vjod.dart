@@ -31,8 +31,9 @@ class ConnexionVjod {
   Map<String, String> get _entetes => {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-Emby-Authorization':
-            'MediaBrowser Client="Aura", Device="Aura", DeviceId="$appareil", Version="$version"',
+        // L'en-tête moderne d'abord (Jellyfin récent, comme VJOD), l'ancien pour les vieux serveurs.
+        'Authorization': ConnexionJellyfin.enteteAuthorization(appareil: appareil, version: version),
+        'X-Emby-Authorization': ConnexionJellyfin.enteteAuthorization(appareil: appareil, version: version),
       };
 
   /// Identifiant et mot de passe, comme dans VJOD.

@@ -23,6 +23,21 @@ class ConnexionJellyfin {
 
   bool get complete => adresse.isNotEmpty && utilisateurId.isNotEmpty && jeton.isNotEmpty;
 
+  /// Les en-têtes d'un appel authentifié. Les Jellyfin récents refusent un
+  /// « X-Emby-Token » seul : ils veulent l'en-tête « Authorization » des
+  /// clients officiels, comme celui qu'envoie VJOD. L'ancien reste à côté
+  /// pour les serveurs plus vieux.
+  Map<String, String> get entetes => {
+        'Authorization': enteteAuthorization(jeton: jeton),
+        'X-Emby-Token': jeton,
+        'Accept': 'application/json',
+      };
+
+  /// L'en-tête « Authorization: MediaBrowser … » de Jellyfin.
+  static String enteteAuthorization({String? jeton, String appareil = 'aura', String version = '0.3.0'}) =>
+      'MediaBrowser Client="Aura", Device="Aura", DeviceId="$appareil", Version="$version"'
+      '${jeton == null || jeton.isEmpty ? '' : ', Token="$jeton"'}';
+
   Uri url(String chemin, Map<String, String> params) {
     final base = adresse.endsWith('/') ? adresse.substring(0, adresse.length - 1) : adresse;
     return Uri.parse('$base$chemin').replace(queryParameters: params);
@@ -51,10 +66,7 @@ class SourceJellyfin implements SourceFilms {
       'Fields': 'Genres,ProductionLocations,People,ProductionYear,RunTimeTicks,CommunityRating,UserData,Overview,OriginalTitle,ProviderIds',
       if (emotion != null) 'Genres': emotion.genres.join('|'),
     });
-    final rep = await _client.get(uri, headers: {
-      'X-Emby-Token': connexion.jeton,
-      'Accept': 'application/json',
-    });
+    final rep = await _client.get(uri, headers: connexion.entetes);
     if (rep.statusCode == 401) {
       throw const ErreurSource('Jellyfin refuse la connexion : vérifie la clé d\'API dans les réglages.');
     }
@@ -69,10 +81,7 @@ class SourceJellyfin implements SourceFilms {
   /// Si le film a été vu depuis [debut], renvoie le moment où il l'a été
   /// (ou maintenant si Jellyfin ne le précise pas) ; sinon null.
   Future<DateTime?> vuDepuis(String itemId, DateTime debut) async {
-    final rep = await _client.get(connexion.url('/Users/${connexion.utilisateurId}/Items/$itemId', const {}), headers: {
-      'X-Emby-Token': connexion.jeton,
-      'Accept': 'application/json',
-    });
+    final rep = await _client.get(connexion.url('/Users/${connexion.utilisateurId}/Items/$itemId', const {}), headers: connexion.entetes);
     if (rep.statusCode != 200) return null;
     final j = jsonDecode(utf8.decode(rep.bodyBytes)) as Map<String, dynamic>;
     return dateDeVisionnage(j['UserData'] as Map<String, dynamic>?, debut);
