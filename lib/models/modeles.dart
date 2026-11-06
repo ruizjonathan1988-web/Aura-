@@ -242,6 +242,7 @@ class CarteDefi {
     required this.joker,
     required this.film,
     required this.bulleDePop,
+    this.niveau,
   });
 
   final TypeCarte type;
@@ -251,4 +252,8 @@ class CarteDefi {
   final String joker;
   final Film film;
   final String bulleDePop;
+
+  /// Le niveau annoncé (« Tu te mets combien ? »), de 1 à 10 ; nul hors du
+  /// solo (Duel, soirée entre amis).
+  final int? niveau;
 }

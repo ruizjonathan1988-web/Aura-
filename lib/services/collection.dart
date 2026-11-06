@@ -51,6 +51,7 @@ abstract final class Collection {
     Exploit('champion', 'Champion de saison', 'Finir un mois devant Pop.', Icons.workspace_premium_rounded),
     Exploit('campagne', 'Campagne bouclée', 'Terminer une campagne de films.', Icons.military_tech_rounded),
     Exploit('flair', 'Fin limier', 'Offrir un Cadeau cacheté qui plaît.', Icons.redeem_rounded),
+    Exploit('audace', 'Coup d\'audace', 'Aller au bout d\'un film en t\'étant mis 10.', Icons.whatshot_rounded),
   ];
 
   /// La figurine de saison du mois : elle ne revient jamais. On la gagne en
@@ -76,6 +77,7 @@ abstract final class Collection {
     if (n >= 1 && b.position > b.positionDePop) m.add('devant');
     if (b.billets.where((x) => x.note != null && x.note == x.pronostic).length >= 3) m.add('devin');
     if (b.bluffsGagnes >= 3) m.add('detecteur');
+    if (b.billets.any((x) => x.niveau == 10)) m.add('audace');
     if (b.position >= 30) m.add('finale');
     if (b.position >= caseDeSaison) m.add(saison(b.maintenant));
     return m;

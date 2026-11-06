@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../models/modeles.dart';
+import 'niveau.dart';
 import 'traduction.dart';
 
 /// Le tirage des trois cartes du soir.
@@ -41,16 +42,19 @@ class Tirage {
   }
 
   /// Tire jusqu'à trois cartes de types différents. [paysVus] sert au défi
-  /// Voyage (un pays jamais vu par le joueur).
+  /// Voyage (un pays jamais vu par le joueur). Avec un [niveau] (« Tu te
+  /// mets combien ? »), seuls les films proches de ce niveau sont tirés, et
+  /// chaque carte rapporte les cases du niveau, quel que soit son type.
   List<CarteDefi> tirer({
     required List<Film> catalogue,
     required Emotion emotion,
     required Duree duree,
     required Profil profil,
     Set<String> paysVus = const {},
+    int? niveau,
   }) {
-    final tous = catalogue.where((f) => !f.dejaVu && assezBon(f) && correspond(f, emotion, duree)).toList()
-      ..shuffle(_hasard);
+    final possibles = catalogue.where((f) => !f.dejaVu && assezBon(f) && correspond(f, emotion, duree)).toList();
+    final tous = (niveau == null ? possibles : Niveau.proches(possibles, niveau))..shuffle(_hasard);
     // Le haut du panier d'abord : on garde les mieux notés (40 % du lot, au
     // moins 9 films), puis on mélange. Les autres ne servent qu'en secours.
     final parNote = [...tous]..sort((a, b) => (b.note ?? 0).compareTo(a.note ?? 0));
@@ -121,7 +125,22 @@ class Tirage {
         bulleDePop: 'Pas de défi ce soir ? Je ne juge pas. Enfin, si, un peu.',
       ));
     }
-    return cartes.take(3).toList();
+    final main = cartes.take(3).toList();
+    if (niveau == null) return main;
+    final gain = Niveau.cases(niveau);
+    return [
+      for (final c in main)
+        CarteDefi(
+          type: c.type,
+          defi: c.defi,
+          indice: c.indice,
+          cases: gain,
+          joker: 'Tu t\'es mis $niveau : ${gain == 1 ? '1 case' : '$gain cases'} si tu vas au bout.',
+          film: c.film,
+          bulleDePop: c.bulleDePop,
+          niveau: niveau,
+        ),
+    ];
   }
 
   /// Jamais d'impasse : si l'envie et la durée ne donnent pas trois cartes,
@@ -135,11 +154,12 @@ class Tirage {
     required Duree duree,
     required Profil profil,
     Set<String> paysVus = const {},
+    int? niveau,
   }) {
-    final cartes = tirer(catalogue: catalogue, emotion: emotion, duree: duree, profil: profil, paysVus: paysVus);
+    final cartes = tirer(catalogue: catalogue, emotion: emotion, duree: duree, profil: profil, paysVus: paysVus, niveau: niveau);
     if (cartes.length >= 3) return (cartes: cartes, message: null);
     for (final plusLong in Duree.values.where((d) => d.minutesMax > duree.minutesMax)) {
-      final autres = tirer(catalogue: catalogue, emotion: emotion, duree: plusLong, profil: profil, paysVus: paysVus);
+      final autres = tirer(catalogue: catalogue, emotion: emotion, duree: plusLong, profil: profil, paysVus: paysVus, niveau: niveau);
       if (autres.length > cartes.length) {
         return (
           cartes: autres,
@@ -151,7 +171,7 @@ class Tirage {
     // Rien pour cette envie : les meilleurs films qui tiennent dans la durée.
     final secours = Emotion.values
         .where((e) => e != emotion)
-        .map((e) => tirer(catalogue: catalogue, emotion: e, duree: duree, profil: profil, paysVus: paysVus))
+        .map((e) => tirer(catalogue: catalogue, emotion: e, duree: duree, profil: profil, paysVus: paysVus, niveau: niveau))
         .fold<List<CarteDefi>>([], (a, b) => b.length > a.length ? b : a);
     if (secours.isNotEmpty) {
       return (cartes: secours, message: 'Je n\'ai aucun film ${_suite(emotion)} pour l\'instant : voici mes meilleures cartes pour une autre envie.');

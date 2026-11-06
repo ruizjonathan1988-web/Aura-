@@ -24,6 +24,7 @@ import 'package:aura/services/ligues.dart';
 import 'package:aura/services/ma_tv.dart';
 import 'package:aura/services/mesures.dart';
 import 'package:aura/services/mise_a_jour.dart';
+import 'package:aura/services/niveau.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/plateformes.dart';
 import 'package:aura/services/pop.dart';
@@ -1526,6 +1527,73 @@ void main() {
         expect(idees, hasLength(3), reason: e.libelle);
         expect(idees.every((f) => e.contient(f.annee)), isTrue, reason: e.libelle);
       }
+    });
+  });
+
+  group('R37 Tu te mets combien ?', () {
+    test('R37 le niveau annoncé donne les cases : 1 à 3 : 1, 4 à 6 : 2, 7 à 10 : 3', () {
+      expect([for (var n = 1; n <= 10; n++) Niveau.cases(n)], [1, 1, 1, 2, 2, 2, 3, 3, 3, 3]);
+      expect(Niveau.nom(2), 'Tranquille');
+      expect(Niveau.nom(5), 'Curieux');
+      expect(Niveau.nom(8), 'Audacieux');
+      expect(Niveau.nom(10), 'Coup d\'audace');
+    });
+
+    test('R37 un film connu et récent est facile, un film rare, ancien et lointain est difficile', () {
+      final facile = _film('f', annee: 2015, votes: 30000, pays: const ['États-Unis'], duree: 110);
+      final rare = _film('r', annee: 1953, votes: 800, pays: const ['Japon'], duree: 160);
+      expect(Niveau.de(facile), 1);
+      expect(Niveau.de(rare), 10);
+      expect(Niveau.de(_film('m', annee: 1975, votes: 3000, pays: const ['Italie'])), inInclusiveRange(4, 8));
+    });
+
+    test('R37 le tirage suit le niveau, et chaque carte rapporte les cases du niveau', () {
+      final faciles = [for (var i = 0; i < 12; i++) _film('f$i', annee: 2015, votes: 30000, pays: const ['États-Unis'])];
+      final rares = [for (var i = 0; i < 12; i++) _film('r$i', annee: 1955 + i, votes: 800, pays: const ['Japon'], duree: 160)];
+      final catalogue = [...faciles, ...rares];
+      final haut = Tirage(hasard: Random(3)).tirer(catalogue: catalogue, emotion: Emotion.frissonner, duree: Duree.soiree, profil: Profil.fidele, niveau: 9);
+      expect(haut, hasLength(3));
+      expect(haut.every((c) => c.film.id.startsWith('r')), isTrue);
+      expect(haut.every((c) => c.cases == 3 && c.niveau == 9), isTrue);
+      expect(haut.first.joker, contains('Tu t\'es mis 9'));
+      final bas = Tirage(hasard: Random(3)).tirer(catalogue: catalogue, emotion: Emotion.frissonner, duree: Duree.soiree, profil: Profil.fidele, niveau: 2);
+      expect(bas.every((c) => c.film.id.startsWith('f') && c.cases == 1), isTrue);
+      // Sans niveau (Duel, soirée entre amis), les cartes gardent leurs cases.
+      final libre = Tirage(hasard: Random(3)).tirer(catalogue: catalogue, emotion: Emotion.frissonner, duree: Duree.soiree, profil: Profil.fidele);
+      expect(libre.every((c) => c.niveau == null), isTrue);
+      expect(libre.firstWhere((c) => c.type == TypeCarte.retro).cases, 3);
+    });
+
+    test('R37 en solo, Aura propose un niveau d\'après les séances, sans l\'imposer', () {
+      expect(Niveau.propose(reussis: const []), 3);
+      expect(Niveau.propose(reussis: const [5, 5, 5]), 6, reason: 'deux réussites à ce niveau : un cran de plus');
+      expect(Niveau.propose(reussis: const [6, 4]), 5);
+      expect(Niveau.propose(reussis: const [5, 5], abandonnes: const [7]), 5, reason: 'abandon au-dessus : un cran de moins');
+      expect(Niveau.propose(reussis: const [10, 10, 10]), 10);
+      expect(Niveau.propose(reussis: const [], abandonnes: const [2]), 1);
+    });
+
+    test('R37 le niveau suit la séance jusqu\'au billet, et le 10 donne le trophée Coup d\'audace', () async {
+      final e = await _etat();
+      final carte = CarteDefi(type: TypeCarte.envie, defi: 'Défi', indice: '', cases: 3, joker: '', film: _film('a'), bulleDePop: '', niveau: 10);
+      await e.commencerSeance(carte, pronostic: 4);
+      expect(e.enCours.single.niveau, 10);
+      expect(SeanceEnCours.depuisJson(e.enCours.single.versJson()).niveau, 10);
+      expect(await e.validerEnCours(e.enCours.single, note: 4), 3);
+      expect(e.billets.single.niveau, 10);
+      expect(Billet.depuisJson(e.billets.single.versJson()).niveau, 10);
+      expect(e.collection, contains('audace'));
+      expect(e.niveauPropose, 10);
+    });
+
+    test('R37 un abandon fait redescendre la proposition', () async {
+      final e = await _etat();
+      CarteDefi carte(String id, int n) => CarteDefi(type: TypeCarte.envie, defi: 'Défi', indice: '', cases: Niveau.cases(n), joker: '', film: _film(id), bulleDePop: '', niveau: n);
+      await e.validerSeance(carte('a', 5), pronostic: 4);
+      expect(e.niveauPropose, 5);
+      await e.commencerSeance(carte('b', 5), pronostic: 4);
+      await e.abandonnerSeance(e.enCours.single);
+      expect(e.niveauPropose, 4);
     });
   });
 }

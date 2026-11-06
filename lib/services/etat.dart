@@ -14,6 +14,7 @@ import 'historique.dart';
 import 'ligues.dart';
 import 'ma_tv.dart';
 import 'mesures.dart';
+import 'niveau.dart';
 import 'plan_du_jour.dart';
 import 'pop.dart';
 import 'rappels.dart';
@@ -38,6 +39,7 @@ class Billet {
     this.genres = const [],
     this.annee,
     this.pays = const [],
+    this.niveau,
   });
 
   final String titre;
@@ -45,6 +47,9 @@ class Billet {
   final int pronostic;
   final int cases;
   final DateTime date;
+
+  /// Le niveau annoncé pour cette séance (« Tu te mets combien ? »), s'il y en avait un.
+  final int? niveau;
   final String verdict;
 
   /// La vraie note donnée après la séance, à comparer au pronostic.
@@ -77,6 +82,7 @@ class Billet {
         genres: genres,
         annee: annee,
         pays: pays,
+        niveau: niveau,
       );
 
   Billet marqueEnvoye() => copie(envoye: true);
@@ -94,6 +100,7 @@ class Billet {
         if (genres.isNotEmpty) 'genres': genres,
         if (annee != null) 'annee': annee,
         if (pays.isNotEmpty) 'pays': pays,
+        if (niveau != null) 'niveau': niveau,
       };
 
   static Billet depuisJson(Map<String, dynamic> j) => Billet(
@@ -109,6 +116,7 @@ class Billet {
         genres: (j['genres'] as List? ?? const []).cast<String>(),
         annee: j['annee'] as int?,
         pays: (j['pays'] as List? ?? const []).cast<String>(),
+        niveau: j['niveau'] as int?,
       );
 }
 
@@ -126,7 +134,10 @@ class SeanceEnCours {
     this.genres = const [],
     this.annee,
     this.pays = const [],
+    this.niveau,
   });
+
+  final int? niveau;
 
   final String titre;
   final String filmId;
@@ -153,6 +164,7 @@ class SeanceEnCours {
         if (genres.isNotEmpty) 'genres': genres,
         if (annee != null) 'annee': annee,
         if (pays.isNotEmpty) 'pays': pays,
+        if (niveau != null) 'niveau': niveau,
       };
 
   static SeanceEnCours depuisJson(Map<String, dynamic> j) => SeanceEnCours(
@@ -166,6 +178,7 @@ class SeanceEnCours {
         genres: (j['genres'] as List? ?? const []).cast<String>(),
         annee: j['annee'] as int?,
         pays: (j['pays'] as List? ?? const []).cast<String>(),
+        niveau: j['niveau'] as int?,
       );
 }
 
@@ -364,6 +377,15 @@ class EtatJeu extends ChangeNotifier {
 
   int get casesAujourdhui => casesLe(DateTime.now());
 
+  List<int> get _abandons => [for (final n in _prefs.getStringList('niveaux_abandonnes') ?? const <String>[]) if (int.tryParse(n) != null) int.parse(n)];
+
+  /// « Tu te mets combien ? » : le niveau qu'Aura propose ce soir, d'après
+  /// les séances réussies et abandonnées (le joueur décide).
+  int get niveauPropose => Niveau.propose(
+        reussis: [for (final b in billets) if (b.niveau != null) b.niveau!],
+        abandonnes: _abandons,
+      );
+
   int casesLe(DateTime d) => billets
       .where((b) => b.date.year == d.year && b.date.month == d.month && b.date.day == d.day)
       .fold(0, (s, b) => s + b.cases);
@@ -437,6 +459,7 @@ class EtatJeu extends ChangeNotifier {
       verdict: verdict,
       date: DateTime.now(),
       film: carte.film,
+      niveau: carte.niveau,
     );
   }
 
@@ -453,8 +476,11 @@ class EtatJeu extends ChangeNotifier {
     List<String> genres = const [],
     int? annee,
     List<String> pays = const [],
+    int? niveau,
   }) async {
     _nouveauMois();
+    // Une réussite efface les abandons : Aura repart de ce qui marche.
+    if (niveau != null) await _prefs.remove('niveaux_abandonnes');
     final maintenant = DateTime.now();
     final ceMois = moisDe(date) == moisDe(maintenant);
     final joker = jokerBluff && ceMois;
@@ -477,6 +503,7 @@ class EtatJeu extends ChangeNotifier {
         genres: film?.genres ?? genres,
         annee: film?.annee ?? annee,
         pays: film?.pays ?? pays,
+        niveau: niveau,
       ),
       ...billets,
     ]..sort((a, b) => b.date.compareTo(a.date));
@@ -521,6 +548,7 @@ class EtatJeu extends ChangeNotifier {
         genres: carte.film.genres,
         annee: carte.film.annee,
         pays: carte.film.pays,
+        niveau: carte.niveau,
       ),
       ...enCours,
     ].take(5).toList();
@@ -546,6 +574,7 @@ class EtatJeu extends ChangeNotifier {
       genres: s.genres,
       annee: s.annee,
       pays: s.pays,
+      niveau: s.niveau,
     );
   }
 
@@ -564,6 +593,9 @@ class EtatJeu extends ChangeNotifier {
   Future<void> abandonnerSeance(SeanceEnCours s) async {
     enCours = enCours.where((x) => x.filmId != s.filmId).toList();
     await _sauverEnCours();
+    if (s.niveau != null) {
+      await _prefs.setStringList('niveaux_abandonnes', ['${s.niveau}', ..._abandons.map((n) => '$n')].take(5).toList());
+    }
     notifyListeners();
   }
 
