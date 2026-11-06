@@ -51,7 +51,7 @@ enum Profil {
       'Boussole', 'Une fois armé, ton prochain tirage te donne une quatrième carte.', '4 pays ou décennies jamais explorés', 4,
       'partager un film avec un ami'),
   critique('Le Critique', AuraCouleurs.jaune, 'Tu notes, tu analyses, tu as toujours un avis.', 'Plume',
-      'Une fois armé, un pronostic qui tombe pile rapporte une case de plus.', '5 conseils qui plaisent', 5, 'regarder un film sans le noter'),
+      'Une fois armé, un pronostic juste à un cran près rapporte une case de plus.', '5 conseils qui plaisent', 5, 'regarder un film sans le noter'),
   fidele('Le Fidèle', AuraCouleurs.creme, 'Tu revois tes films fétiches et tes séries refuges.', 'Madeleine',
       'Une fois armé, ton prochain tirage peut proposer des films que tu as déjà vus.', 'Faire aimer 2 de tes films préférés', 2,
       'découvrir un film sorti cette année'),

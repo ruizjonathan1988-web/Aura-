@@ -16,6 +16,10 @@ abstract final class Pouvoirs {
   /// Les points d'audace qui donnent une charge de plus.
   static const audaceParCharge = 20;
 
+  /// La Plume : un pronostic à un cran près (équilibrage R45 : « pile » ne
+  /// tombait qu'une fois sur trois).
+  static const ecartPlume = 1;
+
   static MomentPouvoir moment(Profil p) =>
       p == Profil.explorateur || p == Profil.fidele ? MomentPouvoir.tirage : MomentPouvoir.billet;
 
@@ -51,7 +55,7 @@ abstract final class Pouvoirs {
   }) =>
       switch (p) {
         Profil.degustateur => note != null ? 1 : 0,
-        Profil.critique => note != null && note == pronostic ? 1 : 0,
+        Profil.critique => note != null && (note - pronostic).abs() <= Pouvoirs.ecartPlume ? 1 : 0,
         Profil.presse => dureeMinutes != null && dureeMinutes < 90 ? 1 : 0,
         Profil.hote => aPlusieurs ? 1 : 0,
         Profil.supporter => derrierePop ? 1 : 0,
@@ -73,7 +77,7 @@ abstract final class Pouvoirs {
           Profil.explorateur => 'Boussole ! Une quatrième carte pour toi. Je n\'étais pas d\'accord, mais bon.',
           Profil.fidele => 'Madeleine ! Tes vieux amis peuvent revenir dans la main ce soir.',
           Profil.degustateur => 'Slow : une séance notée, une case de plus. Tu prends ton temps, et ça paie.',
-          Profil.critique => 'Plume : pronostic pile poil, une case de plus. Je déteste quand tu as raison.',
+          Profil.critique => 'Plume : pronostic juste, une case de plus. Je déteste quand tu as raison.',
           Profil.devoreur => 'Marathon : tu as dépassé le plafond du jour. Va dormir, maintenant.',
           Profil.presse => 'Court-métrage : moins d\'une heure et demie, une case de plus. Efficace.',
           Profil.hote => 'Projectionniste : une séance à plusieurs, une case de plus.',
@@ -81,7 +85,7 @@ abstract final class Pouvoirs {
         }
       : switch (p) {
           Profil.degustateur => 'Slow : pas de note, pas de bonus. La charge est partie quand même.',
-          Profil.critique => 'Plume : pronostic à côté. La charge est partie, désolé (pas tant que ça).',
+          Profil.critique => 'Plume : pronostic à côté de plus d\'un cran. La charge est partie, désolé (pas tant que ça).',
           Profil.devoreur => 'Marathon : tu n\'avais pas besoin de dépasser le plafond. Charge utilisée.',
           Profil.presse => 'Court-métrage : ce film dure plus d\'une heure et demie. Charge utilisée.',
           Profil.hote => 'Projectionniste : séance en solo, pas de bonus. Charge utilisée.',
