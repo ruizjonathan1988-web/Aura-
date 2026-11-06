@@ -67,6 +67,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R18 Amis | Le fil raconte la séance d'un ami en une phrase (« Léa a vu « … » et lui donne 4 sur 5. ») ; ses propres séances à la deuxième personne | `Nouvelle` |
 | R19 Animations | Coupées si l'appareil demande moins d'animations ; sinon les entrées se font en fondu | `animationsReduites`, `Entree` |
 | R20 Rappel du lendemain | Un seul rappel, le lendemain à 12 h 30 ; trois boutons (Bof 2, Bien 4, Génial 5) ; noter depuis la notification valide la séance ; un simple toucher ne valide rien | `Rappels`, `EtatJeu.repondreRappel` |
+| R21 Révélation du dimanche | Pari du Médium entre 0 et 10, fixe sur la semaine ; raté de 3 crans ou plus = Joker, une fois par semaine | `Affiche.pariDuMedium`, `EtatJeu.terminerRevelation` |
 
 Tests d'écrans (`test/ecrans_test.dart`) : l'appli est ouverte comme par un joueur, sur un téléphone (390 × 844) et sur une télé (960 × 540) ; ouverture, premier soir complet, tous les onglets, une soirée complète (tirage, carte, billet, plateau), Plan du jour, Duel. Un débordement ou un plantage fait échouer la CI. Possible parce que les polices sont embarquées (`assets/polices`, licence OFL) au lieu d'être téléchargées.
 
@@ -131,6 +132,7 @@ Fait :
 - Ce soir enrichi : encarts « Ta course contre Pop » (jauge et figurines) et « Ta série » ; fil « Pendant ce temps, à la ligue » sous le tirage (ou invitation à créer sa ligue).
 - Polices embarquées (Anton, Nunito 700/800/900, sous-ensemble latin, converties depuis Google Fonts) : plus de téléchargement au premier lancement, l'appli marche hors ligne sur la box. Le paquet `google_fonts` est retiré.
 - Rappel du lendemain (`lib/services/rappels.dart`, Android) : quand une carte est jouée, une notification est prévue le lendemain à 12 h 30, « Alors, Le Samouraï ? », avec trois boutons de note ; un geste valide le billet. Annulée dès que plus rien n'attend. Le script `tool/configurer_android.py` ajoute la permission, les récepteurs et le désucrage Java.
+- Révélation du dimanche (`lib/screens/revelation.dart`, bouton dans Semaine le dimanche) : quatre tableaux à faire défiler avec OK, en direction D, lisibles sur la télé ; Pop « le Médium » devine le Curseur (Joker s'il se trompe de 3 crans ou plus), rappel du Bluff, plateau en bandeau, carte des genres.
 - Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 

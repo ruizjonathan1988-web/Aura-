@@ -654,6 +654,26 @@ void main() {
       expect(e.billets.single.note, 5);
     });
   });
+
+  group('R21 La Révélation du dimanche', () {
+    test('R21 le pari de Pop le Médium est entre 0 et 10, fixé pour la semaine', () {
+      for (final semaine in ['2026-11-02', '2026-11-09', '2027-01-04']) {
+        final p = Affiche.pariDuMedium(semaine);
+        expect(p, inInclusiveRange(0, 10));
+        expect(Affiche.pariDuMedium(semaine), p);
+      }
+    });
+
+    test('R21 un Médium raté de 3 crans ou plus donne un Joker, une seule fois par semaine', () async {
+      final e = await _etat();
+      expect(Affiche.mediumRate(2, 5), isTrue);
+      expect(Affiche.mediumRate(4, 5), isFalse);
+      expect(await e.terminerRevelation('2026-11-02', pari: 2, curseur: 8), isTrue);
+      expect(e.jokerBluff, isTrue);
+      expect(e.revelationFaite('2026-11-02'), isTrue);
+      expect(await e.terminerRevelation('2026-11-02', pari: 2, curseur: 8), isFalse);
+    });
+  });
 }
 
 /// Rouvre l'état sur les mêmes préférences, comme après une fermeture.
