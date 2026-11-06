@@ -101,6 +101,7 @@ class Film {
     this.dejaVu = false,
     this.serveurId,
     this.source = SourceFilm.demo,
+    this.enVod,
   });
 
   final String id;
@@ -143,11 +144,37 @@ class Film {
         dejaVu: true,
         serveurId: serveurId,
         source: source,
+        enVod: enVod,
+      );
+
+  /// Le même film, avec ce que Ma TV a répondu : en VOD ou non.
+  Film avecVod(bool vod) => Film(
+        id: id,
+        titre: titre,
+        annee: annee,
+        dureeMinutes: dureeMinutes,
+        note: note,
+        nombreVotes: nombreVotes,
+        genres: genres,
+        pays: pays,
+        realisateur: realisateur,
+        synopsis: synopsis,
+        autresTitres: autresTitres,
+        tmdbId: tmdbId,
+        dejaVu: dejaVu,
+        serveurId: serveurId,
+        source: source,
+        enVod: vod,
       );
 
   /// Identifiant du serveur Jellyfin, utile au lien profond VJOD.
   final String? serveurId;
   final SourceFilm source;
+
+  /// Hors serveur, en édition VJOD : vrai si Ma TV (la seedbox) a le film en
+  /// VOD chez le fournisseur IPTV, faux s'il faudra le demander (Seerr), nul
+  /// tant qu'on ne sait pas.
+  final bool? enVod;
 
   /// Note affichée sur 5 étoiles.
   double? get etoiles => note == null ? null : note! / 2;

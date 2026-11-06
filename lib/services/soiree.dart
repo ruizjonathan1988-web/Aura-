@@ -35,6 +35,7 @@ abstract final class PartieSoiree {
         if (f.synopsis != null) 'synopsis': f.synopsis,
         if (f.serveurId != null) 'serveur': f.serveurId,
         if (f.tmdbId != null) 'tmdb': f.tmdbId,
+        if (f.enVod != null) 'vod': f.enVod,
         'source': f.source.name,
       };
 
@@ -48,6 +49,7 @@ abstract final class PartieSoiree {
         synopsis: j['synopsis'] as String?,
         serveurId: j['serveur'] as String?,
         tmdbId: j['tmdb'] as int?,
+        enVod: j['vod'] as bool?,
         source: SourceFilm.values.firstWhere((s) => s.name == j['source'], orElse: () => SourceFilm.demo),
       );
 

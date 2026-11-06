@@ -14,6 +14,13 @@ class OuLeVoir extends StatefulWidget {
 
   static final service = ServicePlateformes(Config.tmdbCle);
 
+  /// Hors serveur : ce que Ma TV a répondu, ou les deux possibilités.
+  static String ligneVjod(Film f) => switch (f.enVod) {
+        true => 'Dans VJOD : en VOD, prêt à lancer',
+        false => 'Dans VJOD : pas en VOD, à demander',
+        null => 'Dans VJOD : en VOD tout de suite, ou à demander',
+      };
+
   @override
   State<OuLeVoir> createState() => _OuLeVoirState();
 }
@@ -30,7 +37,7 @@ class _OuLeVoirState extends State<OuLeVoir> {
         final p = snap.data;
         final lignes = [
           if (vjod) 'Dans ta bibliothèque VJOD',
-          if (widget.film.source == SourceFilm.catalogueVjod) 'Dans VJOD : en VOD tout de suite, ou à demander',
+          if (widget.film.source == SourceFilm.catalogueVjod) OuLeVoir.ligneVjod(widget.film),
           if (p != null && !p.vide) p.resume,
         ];
         if (lignes.isEmpty) return const SizedBox.shrink();
