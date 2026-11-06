@@ -31,6 +31,7 @@ import 'package:aura/services/mise_a_jour.dart';
 import 'package:aura/services/niveau.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/plateformes.dart';
+import 'package:aura/services/pont_vjod.dart';
 import 'package:aura/services/pop.dart';
 import 'package:aura/services/pouvoirs.dart';
 import 'package:aura/services/premier_soir.dart';
@@ -2188,6 +2189,75 @@ void main() {
       expect(mini, greaterThan(0.3), reason: '$gains');
       expect(maxi, lessThanOrEqualTo(1.0), reason: '$gains');
       expect(maxi / mini, lessThanOrEqualTo(2.5), reason: '$gains');
+    });
+  });
+
+  group('R46 Le pont avec VJOD', () {
+    final catalogue = [for (var i = 0; i < 12; i++) _film('j$i', genres: const ['Thriller', 'Comedy', 'Drama', 'Animation', 'Adventure'])];
+    Future<List<Film>> fourni(Emotion _) async => catalogue;
+    final vjod = <String, Object>{'mode': 'vjod', 'jf_adresse': 'https://serveur.test/jellyfin', 'jf_utilisateur': 'u1', 'jf_jeton': 'jeton'};
+
+    test('R46 Aura tire les cartes de 7 soirs, toujours les mêmes, et oublie les soirs passés', () async {
+      final e = await _etat();
+      final lundi = DateTime(2026, 11, 9, 10);
+      await e.preparerCartesVjod(fourni, maintenant: lundi);
+      final cartes = e.cartesPourVjod;
+      expect(cartes.keys, hasLength(PontVjod.jours));
+      expect(cartes.keys.first, '2026-11-09');
+      expect(cartes.values.every((l) => l.length == 3), isTrue);
+      final avant = jsonEncode(cartes);
+      await e.preparerCartesVjod(fourni, maintenant: lundi);
+      expect(jsonEncode(e.cartesPourVjod), avant, reason: 'pas de nouveau tirage pour un soir déjà prêt');
+      await e.preparerCartesVjod(fourni, maintenant: DateTime(2026, 11, 11, 10));
+      expect(e.cartesPourVjod.keys.first, '2026-11-11');
+      expect(e.cartesPourVjod.keys, hasLength(PontVjod.jours));
+      expect(PontVjod.envieDuJour(lundi), isNot(PontVjod.envieDuJour(lundi.add(const Duration(days: 1)))));
+    });
+
+    test('R46 une carte jouée dans VJOD devient une séance ; la note de fin de film la valide', () async {
+      final e = await _etat();
+      await e.preparerCartesVjod(fourni);
+      final jour = PontVjod.jourDe(DateTime.now());
+      final carte = PontVjod.carteDepuisJson(e.cartesPourVjod[jour]![1])!;
+      final quand = DateTime.now().subtract(const Duration(hours: 2));
+      final joue = jsonEncode({'jour': jour, 'index': 1, 'quand': quand.toUtc().toIso8601String()});
+      expect(await e.appliquerDepuisVjod(joue: joue), isTrue);
+      expect(e.enCours.single.filmId, carte.film.id);
+      expect(e.enCours.single.debut.difference(quand).inSeconds.abs(), lessThan(2));
+      expect(await e.appliquerDepuisVjod(joue: joue), isFalse, reason: 'déjà en cours');
+      final note = jsonEncode({'film': carte.film.id, 'note': 5, 'quand': DateTime.now().toUtc().toIso8601String()});
+      expect(await e.appliquerDepuisVjod(note: note), isTrue);
+      expect(e.enCours, isEmpty);
+      expect(e.billets.single.note, 5);
+      expect(e.billets.single.titre, carte.film.titre);
+      expect(PontVjod.lireNote('{"film":"x","note":9,"quand":"2026-11-06T20:00:00Z"}'), isNull);
+      expect(PontVjod.lireJoue('pas du json'), isNull);
+    });
+
+    test('R46 à l\'ouverture, Aura lit VJOD, publie son état et efface ce qu\'il a appliqué', () async {
+      final e = await _etat(vjod);
+      final ecrits = <Map<String, dynamic>>[];
+      final client = MockClient((r) async {
+        expect(r.url.path, '/jellyfin/DisplayPreferences/aura');
+        expect(r.url.queryParameters, {'userId': 'u1', 'client': 'aura'});
+        if (r.method == 'GET') {
+          return http.Response(jsonEncode({'Id': 'aura', 'SortBy': 'SortName', 'CustomPrefs': {'note': '{"film":"rien","note":4,"quand":"2026-11-06T20:00:00Z"}', 'autre': 'garde'}}), 200);
+        }
+        ecrits.add(jsonDecode(r.body) as Map<String, dynamic>);
+        return http.Response('', 204);
+      });
+      await e.synchroniserVjod(service: ServicePontVjod(e.connexion, client: client), catalogue: fourni);
+      final prefs = ecrits.single['CustomPrefs'] as Map<String, dynamic>;
+      expect(ecrits.single['SortBy'], 'SortName', reason: 'le reste des préférences est gardé');
+      expect(prefs['autre'], 'garde');
+      expect(prefs.containsKey('note'), isFalse);
+      final etat = jsonDecode(prefs['etat'] as String) as Map<String, dynamic>;
+      expect(etat['v'], 1);
+      expect(etat['position'], e.position);
+      expect((etat['cartes'] as Map).length, PontVjod.jours);
+      final f = await _etat();
+      await f.synchroniserVjod(service: ServicePontVjod(f.connexion, client: client), catalogue: fourni);
+      expect(ecrits, hasLength(1), reason: 'hors édition VJOD, rien n\'est envoyé');
     });
   });
 }
