@@ -32,7 +32,8 @@ class Affiche {
     final bons = catalogue.where((f) => Tirage.assezBon(f) && !f.dejaVu).toList()..sort((a, b) => a.id.compareTo(b.id));
     if (bons.isEmpty) return null;
     final lundi = lundiDe(jour);
-    final film = bons[Random(lundi.millisecondsSinceEpoch ~/ 86400000).nextInt(bons.length)];
+    final haut = Tirage.hautDuPanier(bons);
+    final film = haut[Random(lundi.millisecondsSinceEpoch ~/ 86400000).nextInt(haut.length)];
     return Affiche(film: film, semaine: cle(lundi), question: questionPour(film));
   }
 
