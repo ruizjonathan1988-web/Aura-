@@ -109,7 +109,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
+          constraints: BoxConstraints(maxWidth: _etape == _Etape.envie && estTele(context) ? 1180 : 560),
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
             child: KeyedSubtree(
@@ -127,123 +127,132 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     );
   }
 
+  /// Une colonne de blocs espacés de façon régulière.
+  Widget _colonne(List<Widget> blocs) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final (i, b) in blocs.indexed) ...[if (i > 0) const SizedBox(height: 18), b],
+        ],
+      );
+
   Widget _envie(EtatJeu etat) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (etat.billetANoter != null) ...[
-          _ANoter(billet: etat.billetANoter!),
-          const SizedBox(height: 18),
-        ] else if (etat.enCoursAVoir.isNotEmpty) ...[
-          _AlorsCeFilm(seance: etat.enCoursAVoir.first),
-          const SizedBox(height: 18),
-        ],
-        _CourseEtSerie(etat: etat),
-        const SizedBox(height: 18),
-        _CartePlanDuJour(resultat: etat.planDuJour),
-        const SizedBox(height: 18),
-        ChoixLarge(
-          libelle: 'LE DUEL DU CANAPÉ · À deux sur la télé : chacun pose ses cartes, on élimine à tour de rôle, et le quiz désigne qui choisit le film.',
-          couleur: AuraCouleurs.rose,
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DuelEcran())),
+    // Ce qui attend une réponse passe avant tout.
+    final alerte = <Widget>[
+      if (etat.billetANoter != null)
+        _ANoter(billet: etat.billetANoter!)
+      else if (etat.enCoursAVoir.isNotEmpty)
+        _AlorsCeFilm(seance: etat.enCoursAVoir.first),
+    ];
+    final haut = <Widget>[
+      _CourseEtSerie(etat: etat),
+      _CartePlanDuJour(resultat: etat.planDuJour),
+    ];
+    final principal = <Widget>[
+      if (etat.bonRetour != null)
+        PopQuiParle(
+          texte: 'Te revoilà ! Ça faisait ${etat.bonRetour} jours. Pas de souci : j\'ai gardé ta place au chaud. Et voilà une carte de rattrapage pour repartir.',
         ),
-        const SizedBox(height: 18),
-        if (etat.mode == ModeJeu.demo) ...[
-          ChoixLarge(
-            libelle: 'Tu utilises VJOD ? Branche ta bibliothèque : les cartes viendront de tes films, et ceux que tu termines seront validés automatiquement.',
-            couleur: AuraCouleurs.bleu,
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReglagesEcran())),
-          ),
-          const SizedBox(height: 18),
-        ],
-        if (etat.bonRetour != null) ...[
-          PopQuiParle(
-            texte: 'Te revoilà ! Ça faisait ${etat.bonRetour} jours. Pas de souci : j\'ai gardé ta place au chaud. Et voilà une carte de rattrapage pour repartir.',
-          ),
-          const SizedBox(height: 12),
-        ],
-        if (etat.carteRattrapage) ...[
-          Panneau(
-            couleur: AuraCouleurs.vert,
-            inclinaison: -0.012,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Text('Carte de rattrapage en main : +2 cases sur ta prochaine séance.', style: AuraTexte.corps(14, poids: FontWeight.w900)),
-          ),
-          const SizedBox(height: 18),
-        ],
-        if (etat.jokerBluff) ...[
-          Panneau(
-            couleur: AuraCouleurs.vert,
-            inclinaison: 0.012,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Text('Joker du Bluff en main : +1 case sur ta prochaine séance.', style: AuraTexte.corps(14, poids: FontWeight.w900)),
-          ),
-          const SizedBox(height: 18),
-        ],
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         SizedBox(
-          height: 150,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(right: 120, top: 8),
-                child: TitreCartoon('Envie de quoi ce soir ?', taille: 38),
-              ),
-              Positioned(
-                right: -4,
-                top: -6,
-                child: Transform.rotate(
-                  angle: 0.1,
-                  child: Image.asset('assets/marque/pop.png', height: 150, semanticLabel: 'Pop, la mascotte VJOD'),
+            height: 150,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(right: 120, top: 8),
+                  child: TitreCartoon('Envie de quoi ce soir ?', taille: 38),
                 ),
-              ),
-            ],
+                Positioned(
+                  right: -4,
+                  top: -6,
+                  child: Transform.rotate(
+                    angle: 0.1,
+                    child: Image.asset('assets/marque/pop.png', height: 150, semanticLabel: 'Pop, la mascotte VJOD'),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 14),
-        Wrap(
-          spacing: 8,
-          runSpacing: 10,
-          children: [
-            for (final e in Emotion.values)
-              Pastille(
-                libelle: e.libelle,
-                choisie: e == _emotion,
-                autofocus: e == _emotion && etat.billetANoter == null && etat.enCoursAVoir.isEmpty,
-                onTap: () => setState(() => _emotion = e),
-              ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        Panneau(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('COMBIEN DE TEMPS AS-TU ?', style: AuraTexte.titre(16)),
-              const SizedBox(height: 10),
-              Wrap(spacing: 8, runSpacing: 10, children: [
-                for (final d in Duree.values)
-                  Pastille(libelle: d.libelle, choisie: d == _duree, onTap: () => setState(() => _duree = d)),
-              ]),
-              const SizedBox(height: 12),
-              Text('Les cartes viennent de ${etat.source.nom}. Uniquement des films notés 3 étoiles ou plus.',
-                  style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
-            ],
-          ),
-        ),
-        if (_message != null) ...[
           const SizedBox(height: 14),
-          Panneau(couleur: AuraCouleurs.jaune, child: Text(_message!, style: AuraTexte.corps(14, poids: FontWeight.w900))),
-        ],
-        const SizedBox(height: 20),
-        AuraBouton(
-          libelle: _chargement ? 'Pop mélange les cartes…' : 'Tirer mes 3 cartes',
-          onPressed: _chargement ? null : () => _tirer(etat),
+          Wrap(
+            spacing: 8,
+            runSpacing: 10,
+            children: [
+              for (final e in Emotion.values)
+                Pastille(
+                  libelle: e.libelle,
+                  choisie: e == _emotion,
+                  autofocus: e == _emotion && etat.billetANoter == null && etat.enCoursAVoir.isEmpty,
+                  onTap: () => setState(() => _emotion = e),
+                ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Panneau(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('COMBIEN DE TEMPS AS-TU ?', style: AuraTexte.titre(16)),
+                const SizedBox(height: 10),
+                Wrap(spacing: 8, runSpacing: 10, children: [
+                  for (final d in Duree.values)
+                    Pastille(libelle: d.libelle, choisie: d == _duree, onTap: () => setState(() => _duree = d)),
+                ]),
+                const SizedBox(height: 12),
+                Text('Les cartes viennent de ${etat.source.nom}. Uniquement des films notés 3 étoiles ou plus.',
+                    style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
+              ],
+            ),
+          ),
+          if (_message != null) ...[
+            const SizedBox(height: 14),
+            Panneau(couleur: AuraCouleurs.jaune, child: Text(_message!, style: AuraTexte.corps(14, poids: FontWeight.w900))),
+          ],
+          const SizedBox(height: 20),
+          AuraBouton(
+            libelle: _chargement ? 'Pop mélange les cartes…' : 'Tirer mes 3 cartes',
+            onPressed: _chargement ? null : () => _tirer(etat),
+          ),
+      ]),
+      if (etat.carteRattrapage)
+        Panneau(
+          couleur: AuraCouleurs.vert,
+          inclinaison: -0.012,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Text('Carte de rattrapage en main : +2 cases sur ta prochaine séance.', style: AuraTexte.corps(14, poids: FontWeight.w900)),
         ),
-        const SizedBox(height: 22),
-        _PendantCeTemps(etat: etat),
-      ],
-    );
+      if (etat.jokerBluff)
+        Panneau(
+          couleur: AuraCouleurs.vert,
+          inclinaison: 0.012,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Text('Joker en main : +1 case sur ta prochaine séance.', style: AuraTexte.corps(14, poids: FontWeight.w900)),
+        ),
+    ];
+    final bas = <Widget>[
+      _PendantCeTemps(etat: etat),
+      ChoixLarge(
+        libelle: 'LE DUEL DU CANAPÉ · À deux sur la télé : chacun pose ses cartes, on élimine à tour de rôle, et le quiz désigne qui choisit le film.',
+        couleur: AuraCouleurs.rose,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DuelEcran())),
+      ),
+      if (etat.mode == ModeJeu.demo)
+        ChoixLarge(
+          libelle: 'Tu utilises VJOD ? Branche ta bibliothèque : les cartes viendront de tes films, et ceux que tu termines seront validés automatiquement.',
+          couleur: AuraCouleurs.bleu,
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReglagesEcran())),
+        ),
+    ];
+    if (!estTele(context)) return _colonne([...alerte, ...haut, ...principal, ...bas]);
+    // Sur la télé : le jeu à gauche, le reste à droite.
+    return _colonne([
+      ...alerte,
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(flex: 3, child: _colonne(principal)),
+        const SizedBox(width: 28),
+        Expanded(flex: 2, child: _colonne([...haut, ...bas])),
+      ]),
+    ]);
   }
 
   Widget _main() {
