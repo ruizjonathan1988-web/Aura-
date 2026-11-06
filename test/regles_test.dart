@@ -2302,22 +2302,6 @@ void main() {
       expect(Proposition.depuisJson({'id': 'x'}), isNull);
     });
   });
-}
-
-class _SourceFixe implements SourceFilms {
-  _SourceFixe(this.films);
-  final List<Film> films;
-  @override
-  String get nom => 'fixe';
-  @override
-  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async => films;
-}
-
-class _SourceEnPanne implements SourceFilms {
-  @override
-  String get nom => 'en panne';
-  @override
-  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async => throw Exception('TMDB ne répond pas');
 
   group('R48 L\'aura dans Aura', () {
     test('R48 à qui proposer : la maison d\'abord, un par personne, puis les amis de ligue, jamais soi', () {
@@ -2357,6 +2341,23 @@ class _SourceEnPanne implements SourceFilms {
       expect(majDepuisJellyfin({'Played': false, 'IsFavorite': false}, vue, t), isNull);
     });
   });
+}
+
+class _SourceFixe implements SourceFilms {
+  _SourceFixe(this.films);
+  final List<Film> films;
+  @override
+  String get nom => 'fixe';
+  @override
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async => films;
+}
+
+class _SourceEnPanne implements SourceFilms {
+  @override
+  String get nom => 'en panne';
+  @override
+  Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async => throw Exception('TMDB ne répond pas');
+
 }
 
 /// Rouvre l'état sur les mêmes préférences, comme après une fermeture.
