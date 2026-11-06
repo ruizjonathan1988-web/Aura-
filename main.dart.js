@@ -50099,7 +50099,7 @@ q.x=!0
 s=q.c.ey(t.u).f
 q.y=s.e===B.fZ
 r=s.f.a
-r=r.length!==0?r:""
+r=r.length!==0?r:"https://ava88.zen.usbx.me/jellyfin"
 q.d.scD(r)
 q.r.scD(s.f.b)
 q.w.scD(s.f.c)
