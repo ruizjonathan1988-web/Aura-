@@ -26,6 +26,7 @@ import 'plan_du_jour.dart';
 import 'reglages.dart';
 import 'soiree.dart';
 import 'deck.dart';
+import '../services/pop.dart';
 
 enum _Etape { envie, cartes, pronostic, billet }
 
@@ -206,6 +207,8 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
       _CartePlanDuJour(resultat: etat.planDuJour),
     ];
     final principal = <Widget>[
+      if (etat.bonRetour == null && etat.billets.isNotEmpty)
+        PopQuiParle(texte: Pop.accueil(joueur: etat.position, pop: etat.positionDePop, maintenant: DateTime.now(), insolent: etat.popInsolent), taille: 56),
       if (etat.bonRetour != null)
         PopQuiParle(
           texte: 'Te revoilà ! Ça faisait ${etat.bonRetour} jours. Pas de souci : j\'ai gardé ta place au chaud. Et voilà une carte de rattrapage pour repartir.',

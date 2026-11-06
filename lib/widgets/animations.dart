@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/modeles.dart';
 import '../theme/aura_theme.dart';
 import 'aura_widgets.dart';
+import '../services/sons.dart';
 
 /// Vrai si l'appareil demande moins d'animations (réglages d'accessibilité) :
 /// toutes les animations d'Aura sont alors coupées.
@@ -141,6 +142,12 @@ class Retournement extends StatefulWidget {
 
 class _RetournementState extends State<Retournement> with SingleTickerProviderStateMixin {
   late final _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 750))..forward();
+
+  @override
+  void initState() {
+    super.initState();
+    Sons.jouer(Son.carte);
+  }
 
   @override
   void dispose() {
@@ -291,6 +298,13 @@ class TamponVu extends StatefulWidget {
 class _TamponVuState extends State<TamponVu> with SingleTickerProviderStateMixin {
   late final _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..forward();
   final _confettis = List.generate(46, (i) => _Confetti(math.Random(i)));
+
+  @override
+  void initState() {
+    super.initState();
+    Sons.jouer(Son.tampon);
+    Future<void>.delayed(const Duration(milliseconds: 350), () => Sons.jouer(Son.fanfare));
+  }
 
   @override
   void dispose() {

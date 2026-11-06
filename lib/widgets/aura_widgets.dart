@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../models/modeles.dart';
 import '../theme/aura_theme.dart';
 import 'animations.dart';
+import '../services/sons.dart';
 
 /// Les touches qui valident : OK de la télécommande, Entrée, bouton A.
 const Map<ShortcutActivator, Intent> toucheOk = {
@@ -307,6 +308,18 @@ class PopQuiParle extends StatefulWidget {
 
 class _PopQuiParleState extends State<PopQuiParle> with SingleTickerProviderStateMixin {
   late final _danse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat(reverse: true);
+
+  @override
+  void initState() {
+    super.initState();
+    Sons.jouer(Son.pop);
+  }
+
+  @override
+  void didUpdateWidget(PopQuiParle ancien) {
+    super.didUpdateWidget(ancien);
+    if (ancien.texte != widget.texte) Sons.jouer(Son.pop);
+  }
 
   @override
   void dispose() {

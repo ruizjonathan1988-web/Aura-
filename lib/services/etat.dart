@@ -30,6 +30,7 @@ import 'source_tmdb.dart';
 import 'sources.dart';
 import 'deck.dart';
 import 'festival.dart';
+import 'sons.dart';
 import 'tirage.dart';
 
 enum ModeJeu { demo, vjod }
@@ -317,6 +318,7 @@ class EtatJeu extends ChangeNotifier {
       jeton: _prefs.getString('jf_jeton') ?? '',
     );
     position = _prefs.getInt('position') ?? 1;
+    Sons.actifs = _prefs.getBool('sons') ?? true;
     final brut = _prefs.getStringList('billets') ?? const [];
     billets = brut.map((s) => Billet.depuisJson(jsonDecode(s) as Map<String, dynamic>)).toList();
     _noterVisite();
@@ -673,7 +675,7 @@ class EtatJeu extends ChangeNotifier {
     ].take(5).toList();
     await _sauverEnCours();
     await _prefs.setInt('stat_cartes', (_prefs.getInt('stat_cartes') ?? 0) + 1);
-    Rappels.alorsCeFilm(filmId: carte.film.id, titre: carte.film.titre, carteJouee: DateTime.now());
+    Rappels.alorsCeFilm(filmId: carte.film.id, titre: carte.film.titre, carteJouee: DateTime.now(), insolent: popInsolent);
     planifierAvis();
     _mesurer('carte_jouee', {'type': carte.type.libelle, 'source': carte.film.source.name});
     notifyListeners();
@@ -836,6 +838,24 @@ class EtatJeu extends ChangeNotifier {
         niveauImpose: niveauImpose,
         sisyphe: sisypheActif,
       );
+
+  // Le ton de Pop et les sons.
+
+  /// Pop insolent (par défaut) ou gentil.
+  bool get popInsolent => _prefs.getString('pop_ton') != 'gentil';
+
+  Future<void> changerTonDePop(bool insolent) async {
+    await _prefs.setString('pop_ton', insolent ? 'insolent' : 'gentil');
+    notifyListeners();
+  }
+
+  bool get sonsActifs => _prefs.getBool('sons') ?? true;
+
+  Future<void> changerSons(bool v) async {
+    await _prefs.setBool('sons', v);
+    Sons.actifs = v;
+    notifyListeners();
+  }
 
   // Notifications de jeu (R45).
 
