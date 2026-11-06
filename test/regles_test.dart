@@ -20,6 +20,7 @@ import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/pop.dart';
 import 'package:aura/services/premier_soir.dart';
 import 'package:aura/services/rappels.dart';
+import 'package:aura/services/semaine_ligue.dart';
 import 'package:aura/services/sources.dart';
 import 'package:aura/services/tirage.dart';
 import 'package:aura/widgets/animations.dart';
@@ -718,6 +719,74 @@ void main() {
       final relu = await _etat({'mois': '2000-01', 'position': 29, 'collection': e.collection.toList()});
       expect(relu.position, 1);
       expect(relu.collection, contains('finale'));
+    });
+  });
+
+  group('R23 L\'Affiche de la semaine en ligue', () {
+    const membres = ['lea', 'jon', 'ines', 'max'];
+    Geste g(String j, String type, Map<String, dynamic> v, [int minute = 0]) =>
+        Geste(joueurId: j, type: type, valeur: v, quand: DateTime(2026, 11, 2, 20, minute));
+    SemaineDeLigue semaine(List<Geste> gestes) => SemaineDeLigue(membres: membres, semaine: '2026-11-02', gestes: gestes);
+
+    test('R23 chacun programme à son tour ; le Faussaire n\'est jamais le Programmateur', () {
+      final vus = <String>{};
+      for (var k = 0; k < 8; k++) {
+        final lundi = DateTime(2026, 11, 2).add(Duration(days: 7 * k));
+        final s = SemaineDeLigue(membres: membres, semaine: '${lundi.year}-${lundi.month.toString().padLeft(2, '0')}-${lundi.day.toString().padLeft(2, '0')}', gestes: const []);
+        vus.add(s.programmateur!);
+        expect(s.faussaire, isNot(s.programmateur));
+      }
+      expect(vus, membres.toSet(), reason: 'en quatre semaines, tout le monde a programmé');
+      expect(SemaineDeLigue(membres: const ['a', 'b'], semaine: '2026-11-02', gestes: const []).faussaire, isNull, reason: 'pas de Faussaire à deux');
+    });
+
+    test('R23 la première Affiche choisie compte', () {
+      final s = semaine([
+        g('max', 'affiche', {'titre': 'Coco', 'par_pop': true}, 5),
+        g('lea', 'affiche', {'titre': 'Le Samouraï', 'synopsis': 'Un tueur à gages.'}, 1),
+      ]);
+      expect(s.affiche!.titre, 'Le Samouraï');
+    });
+
+    test('R23 chacun départage le vrai synopsis et les faux des autres, jamais le sien', () {
+      final s = semaine([
+        g('lea', 'affiche', {'titre': 'Le Samouraï', 'synopsis': 'Le vrai.'}),
+        g('jon', 'bluff', {'texte': 'Faux de Jon.'}),
+        g('max', 'bluff', {'texte': 'Faux de Max.'}),
+      ]);
+      final pourJon = s.synopsisPour('jon');
+      expect(pourJon.map((e) => e.$1).toSet(), {'vrai', 'max'});
+      expect(s.synopsisPour('ines').map((e) => e.$2).toSet(), {'Le vrai.', 'Faux de Jon.', 'Faux de Max.'});
+      expect(s.synopsisPour('ines'), s.synopsisPour('ines'), reason: 'même ordre à chaque ouverture');
+    });
+
+    test('R23 les points de la Révélation', () {
+      final s = semaine([
+        g('lea', 'affiche', {'titre': 'Le Samouraï', 'synopsis': 'Le vrai.'}),
+        g('jon', 'bluff', {'texte': 'Faux de Jon.'}),
+        g('ines', 'vote_bluff', {'choix': 'vrai'}),
+        g('max', 'vote_bluff', {'choix': 'jon'}),
+        g('lea', 'curseur', {'valeur': 4}),
+        g('jon', 'curseur', {'valeur': 6}),
+        g('max', 'curseur', {'valeur': 9}),
+      ]);
+      final p = s.points;
+      expect(s.moyenneCurseur, closeTo(19 / 3, 1e-9));
+      expect(p['ines'], 2, reason: 'vrai synopsis trouvé');
+      expect(p['jon'], 1 + 1, reason: 'Max piégé par son Bluff, et Curseur le plus proche de la moyenne');
+      final f = s.faussaire!;
+      final autres = membres.where((m) => m != f).toList();
+      final avecFaussaire = semaine([
+        g(autres[0], 'vote_faussaire', {'choix': f}),
+        g(autres[1], 'vote_faussaire', {'choix': autres[2]}),
+      ]);
+      expect(avecFaussaire.points[autres[0]], 2);
+      expect(avecFaussaire.points[f], 1);
+    });
+
+    test('R23 on compte où en est la ligue', () {
+      final s = semaine([g('jon', 'curseur', {'valeur': 3}), g('lea', 'curseur', {'valeur': 5}), g('inconnu', 'curseur', {'valeur': 1})]);
+      expect(s.combien('curseur'), 2, reason: 'seuls les membres comptent');
     });
   });
 }
