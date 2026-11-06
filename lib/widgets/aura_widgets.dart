@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../models/modeles.dart';
 import '../theme/aura_theme.dart';
+import 'animations.dart';
 
 /// Les touches qui valident : OK de la télécommande, Entrée, bouton A.
 const Map<ShortcutActivator, Intent> toucheOk = {
@@ -159,7 +160,9 @@ class Pastille extends StatelessWidget {
       autofocus: autofocus,
       etiquette: libelle,
       selectionne: choisie,
-      builder: (context, focus, appui) => AnimatedContainer(
+      builder: (context, focus, appui) => Rebond(
+        declencheur: choisie,
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 80),
         transform: Matrix4.translationValues(appui ? 2 : 0, appui ? 2 : 0, 0),
         constraints: const BoxConstraints(minHeight: 46),
@@ -171,6 +174,7 @@ class Pastille extends StatelessWidget {
           boxShadow: _ombres(focus: focus, appui: appui, ombre: choisie ? 3 : 2),
         ),
         child: Text(libelle, style: AuraTexte.corps(15, poids: FontWeight.w900)),
+      ),
       ),
     );
   }
@@ -317,14 +321,20 @@ class _PopQuiParleState extends State<PopQuiParle> with SingleTickerProviderStat
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        AnimatedBuilder(
+        Entree(
+          depuis: const Offset(-40, 10),
+          child: AnimatedBuilder(
           animation: _danse,
-          builder: (context, enfant) => Transform.rotate(
-            angle: -0.1 + 0.08 * Curves.easeInOut.transform(_danse.value),
-            alignment: Alignment.bottomCenter,
-            child: Transform.translate(offset: Offset(0, -3 * _danse.value), child: enfant),
-          ),
+          builder: (context, enfant) {
+            final v = animationsReduites(context) ? 0.0 : _danse.value;
+            return Transform.rotate(
+              angle: -0.1 + 0.08 * Curves.easeInOut.transform(v),
+              alignment: Alignment.bottomCenter,
+              child: Transform.translate(offset: Offset(0, -3 * v), child: enfant),
+            );
+          },
           child: Image.asset('assets/marque/pop.png', height: taille, semanticLabel: 'Pop, la mascotte VJOD'),
+        ),
         ),
         const SizedBox(width: 6),
         Flexible(
@@ -510,11 +520,15 @@ class _MainDeCartesState extends State<MainDeCartes> {
             children: [
               for (final i in ordre)
                 AnimatedPositioned(
+                  key: ValueKey(i),
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeOutBack,
                   left: centre + (i - (n - 1) / 2) * 88,
                   top: (i == widget.choisie ? 0 : 34) + ((i - (n - 1) / 2).abs() * 6),
-                  child: GestureDetector(
+                  child: Entree(
+                    delai: Duration(milliseconds: 140 * i),
+                    depuis: const Offset(0, -220),
+                    child: GestureDetector(
                     onTap: () => i == widget.choisie ? widget.onJouer() : widget.onChoisir(i),
                     child: Transform.rotate(
                       angle: (i - (n - 1) / 2) * 0.2,
@@ -530,6 +544,7 @@ class _MainDeCartesState extends State<MainDeCartes> {
                         ),
                       ),
                     ),
+                  ),
                   ),
                 ),
             ],

@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import '../app.dart';
 import '../models/modeles.dart';
 import '../services/etat.dart';
+import '../services/ligues.dart';
 import '../services/plan_du_jour.dart';
 import '../services/sources.dart';
 import '../services/tirage.dart';
 import '../services/vjod_lien.dart';
 import '../theme/aura_theme.dart';
+import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
 import 'duel.dart';
 import 'plan_du_jour.dart';
@@ -85,6 +87,8 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
   Future<void> _valider(EtatJeu etat) async {
     final gagnees = await etat.validerSeance(_carte, pronostic: _pronostic, note: _note, verdict: _verdict.text.trim());
     if (!mounted) return;
+    await celebrer(context);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(gagnees > 0
           ? 'Ton pion avance de $gagnees case${gagnees > 1 ? 's' : ''} !'
@@ -134,6 +138,8 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           _AlorsCeFilm(seance: etat.enCoursAVoir.first),
           const SizedBox(height: 18),
         ],
+        _CourseEtSerie(etat: etat),
+        const SizedBox(height: 18),
         _CartePlanDuJour(resultat: etat.planDuJour),
         const SizedBox(height: 18),
         ChoixLarge(
@@ -234,6 +240,8 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           libelle: _chargement ? 'Pop mélange les cartes…' : 'Tirer mes 3 cartes',
           onPressed: _chargement ? null : () => _tirer(etat),
         ),
+        const SizedBox(height: 22),
+        _PendantCeTemps(etat: etat),
       ],
     );
   }
@@ -270,41 +278,30 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
 
   Widget _pronosticVue() {
     final f = _carte.film;
-    final etoiles = f.etoiles == null ? '' : 'Noté ${f.etoiles!.toStringAsFixed(1).replaceAll('.', ',')} sur 5';
     final vjod = VjodLien.disponible(f);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text('CARTE RÉVÉLÉE !', style: AuraTexte.titre(20, couleur: AuraCouleurs.creme)),
+        const SizedBox(height: 8),
         Transform.rotate(
-          angle: -0.025,
-          child: Container(
-            decoration: AuraTrait.panneau(),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  color: _carte.type.couleur,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  child: Text('CARTE RÉVÉLÉE !', style: AuraTexte.titre(16)),
-                ),
-                const Divider(height: 3, thickness: 3, color: AuraCouleurs.noir),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(f.titre.toUpperCase(), style: AuraTexte.titre(34)),
-                      const SizedBox(height: 6),
-                      Text(f.infos, style: AuraTexte.corps(14, couleur: AuraCouleurs.texteDoux)),
-                      if (etoiles.isNotEmpty) Text(etoiles, style: AuraTexte.corps(14, poids: FontWeight.w900)),
-                    ],
-                  ),
-                ),
-              ],
+          angle: -0.02,
+          child: Retournement(
+            dos: AspectRatio(
+              aspectRatio: 1.6,
+              child: Container(
+                decoration: AuraTrait.panneau(couleur: _carte.type.couleur),
+                alignment: Alignment.center,
+                child: const TitreCartoon('?', taille: 90, inclinaison: 0),
+              ),
             ),
+            face: AfficheIllustree(film: f, type: _carte.type),
           ),
         ),
+        if (f.synopsis != null) ...[
+          const SizedBox(height: 12),
+          Panneau(child: Text(f.synopsis!, style: AuraTexte.corps(14))),
+        ],
         const SizedBox(height: 18),
         Panneau(
           child: Column(
@@ -525,6 +522,7 @@ class _AlorsCeFilm extends StatelessWidget {
           autofocus: true,
           onNote: (n) async {
             final gagnees = await etat.validerEnCours(seance, note: n);
+            if (context.mounted) await celebrer(context);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(gagnees > 0 ? 'Billet validé : +$gagnees !' : 'Billet validé. Ton pion avait déjà avancé de 3 cases ce jour-là.'),
@@ -578,5 +576,136 @@ class _Etoiles extends StatelessWidget {
           ),
         ),
     ]);
+  }
+}
+
+/// Deux encarts en haut de Ce soir : la course contre Pop (qui mène ?) et
+/// la série en semaines.
+class _CourseEtSerie extends StatelessWidget {
+  const _CourseEtSerie({required this.etat});
+  final EtatJeu etat;
+
+  @override
+  Widget build(BuildContext context) {
+    final moi = etat.position;
+    final pop = etat.positionDePop;
+    final ecart = moi - pop;
+    final course = Panneau(
+      inclinaison: -0.012,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('TA COURSE CONTRE POP', style: AuraTexte.titre(15)),
+        const SizedBox(height: 4),
+        Text(
+          ecart > 0
+              ? 'Tu mènes de $ecart case${ecart > 1 ? 's' : ''} !'
+              : ecart == 0
+                  ? 'Coude à coude, case $moi.'
+                  : 'Pop mène de ${-ecart} case${ecart < -1 ? 's' : ''}.',
+          style: AuraTexte.corps(13, poids: FontWeight.w900),
+        ),
+        const SizedBox(height: 8),
+        LayoutBuilder(builder: (context, c) {
+          double x(int p) => (c.maxWidth - 30) * (p - 1) / 29;
+          return SizedBox(
+            height: 46,
+            child: Stack(clipBehavior: Clip.none, children: [
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 32,
+                child: Container(
+                  height: 10,
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(5), border: Border.all(width: 2)),
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(widthFactor: (moi - 1) / 29, child: Container(color: AuraCouleurs.ambre)),
+                ),
+              ),
+              Positioned(left: x(pop), top: 0, child: const Figurine.pop(hauteur: 36)),
+              Positioned(left: x(moi), top: 0, child: Figurine.profil(etat.profil, hauteur: 36)),
+            ]),
+          );
+        }),
+      ]),
+    );
+    final serie = Panneau(
+      couleur: AuraCouleurs.jaune,
+      inclinaison: 0.012,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('TA SÉRIE', style: AuraTexte.titre(15)),
+        const SizedBox(height: 4),
+        Text(etat.serie > 0 ? '${etat.serie}' : '0', style: AuraTexte.titre(40)),
+        Text(etat.serie > 1 ? 'semaines de cinéma' : (etat.serie == 1 ? 'semaine de cinéma' : 'Lance-la ce soir !'), style: AuraTexte.corps(12, poids: FontWeight.w900)),
+      ]),
+    );
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Expanded(flex: 3, child: course),
+      const SizedBox(width: 10),
+      Expanded(flex: 2, child: serie),
+    ]);
+  }
+}
+
+/// « Pendant ce temps, à la ligue » : ce que font les amis, sous le tirage.
+class _PendantCeTemps extends StatefulWidget {
+  const _PendantCeTemps({required this.etat});
+  final EtatJeu etat;
+
+  @override
+  State<_PendantCeTemps> createState() => _PendantCeTempsState();
+}
+
+class _PendantCeTempsState extends State<_PendantCeTemps> {
+  Future<List<Nouvelle>>? _fil;
+
+  @override
+  void initState() {
+    super.initState();
+    final l = widget.etat.ligues;
+    if (l != null && l.inscrit && l.ligues.isNotEmpty) _fil = l.fil(l.ligues.first);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final titre = Text('PENDANT CE TEMPS, À LA LIGUE', style: AuraTexte.titre(16, couleur: AuraCouleurs.creme));
+    if (_fil == null) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        titre,
+        const SizedBox(height: 8),
+        const PopQuiParle(
+          taille: 56,
+          texte: 'Pour l\'instant, il n\'y a que toi et moi. Invite tes amis depuis l\'onglet Ligue : vous gagnerez chacun une figurine dorée.',
+        ),
+      ]);
+    }
+    return FutureBuilder<List<Nouvelle>>(
+      future: _fil,
+      builder: (context, snap) {
+        final fil = (snap.data ?? const <Nouvelle>[]).where((n) => !n.moi).take(3).toList();
+        if (fil.isEmpty) return const SizedBox.shrink();
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          titre,
+          const SizedBox(height: 8),
+          for (final n in fil)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Panneau(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(children: [
+                  Figurine.profil(n.profil, hauteur: 40),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      n.verdict != null && n.verdict!.isNotEmpty ? '${n.phrase} « ${n.verdict} »' : n.phrase,
+                      style: AuraTexte.corps(13, poids: FontWeight.w900),
+                    ),
+                  ),
+                ]),
+              ),
+            ),
+        ]);
+      },
+    );
   }
 }

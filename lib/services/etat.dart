@@ -189,6 +189,10 @@ class EtatJeu extends ChangeNotifier {
   /// Les cartes jouées qui attendent d'être validées.
   List<SeanceEnCours> enCours = [];
 
+  /// Vrai juste après une avancée : le pion saute sur sa nouvelle case à
+  /// la prochaine visite du plateau.
+  bool pionVientDAvancer = false;
+
   /// Le dernier mot de Pop après une séance, affiché sur le plateau.
   String? motDePop;
 
@@ -371,6 +375,7 @@ class EtatJeu extends ChangeNotifier {
       if (note != null) Pop.surPronostic(pronostic: pronostic, note: note, graine: billets.length),
       if (pariGagne) 'Zut, j\'ai perdu mon pari : je recule de ${Pop.recul} cases. Mais je reviendrai.',
     ]);
+    if (cases > 0) pionVientDAvancer = true;
     position = (position + cases).clamp(1, Regles.taillePlateau);
     await _prefs.setInt('position', position);
     await _sauverBillets();

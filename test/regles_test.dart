@@ -20,7 +20,9 @@ import 'package:aura/services/pop.dart';
 import 'package:aura/services/premier_soir.dart';
 import 'package:aura/services/sources.dart';
 import 'package:aura/services/tirage.dart';
+import 'package:aura/widgets/animations.dart';
 import 'package:aura/widgets/aura_widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -590,6 +592,42 @@ void main() {
     test('R18 ses propres séances sont racontées à la deuxième personne', () {
       final n = Nouvelle.depuisJson({'titre': 'Coco', 'vu_le': '2026-11-05T21:00:00Z', 'joueur_id': 'jon', 'joueurs': {'pseudo': 'Jon'}}, 'jon');
       expect(n.phrase, 'Tu as vu « Coco ».');
+    });
+  });
+
+  group('R19 Les animations respectent l\'accessibilité', () {
+    testWidgets('R19 si l\'appareil demande moins d\'animations, Aura les coupe', (tester) async {
+      bool? reduit;
+      await tester.pumpWidget(MediaQuery(
+        data: const MediaQueryData(disableAnimations: true),
+        child: Builder(builder: (c) {
+          reduit = animationsReduites(c);
+          return const SizedBox();
+        }),
+      ));
+      expect(reduit, isTrue);
+    });
+
+    testWidgets('R19 une entrée en scène s\'affiche directement, sans mouvement', (tester) async {
+      await tester.pumpWidget(const MediaQuery(
+        data: MediaQueryData(disableAnimations: true),
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: Entree(delai: Duration(seconds: 5), child: SizedBox(key: Key('carte'), width: 10, height: 10)),
+        ),
+      ));
+      expect(find.byKey(const Key('carte')), findsOneWidget);
+      expect(find.ancestor(of: find.byKey(const Key('carte')), matching: find.byType(Opacity)), findsNothing);
+      await tester.pump(const Duration(seconds: 6));
+    });
+
+    testWidgets('R19 sinon, la carte arrive en fondu', (tester) async {
+      await tester.pumpWidget(const Directionality(
+        textDirection: TextDirection.ltr,
+        child: Entree(child: SizedBox(key: Key('carte'), width: 10, height: 10)),
+      ));
+      expect(find.ancestor(of: find.byKey(const Key('carte')), matching: find.byType(Opacity)), findsOneWidget);
+      await tester.pumpAndSettle();
     });
   });
 }

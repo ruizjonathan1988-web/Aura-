@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../app.dart';
 import '../models/modeles.dart';
 import '../services/carte_genres.dart';
+import '../services/etat.dart';
 import '../services/pop.dart';
 import '../services/tirage.dart';
 import '../theme/aura_theme.dart';
+import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
 
 enum TypeCase {
@@ -64,6 +66,14 @@ class PlateauEcran extends StatelessWidget {
 
   static const _mois = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
+  /// Le saut du pion ne se joue qu'une fois, à la première visite du plateau
+  /// après l'avancée.
+  static bool _consommerSaut(EtatJeu etat) {
+    final saute = etat.pionVientDAvancer;
+    etat.pionVientDAvancer = false;
+    return saute;
+  }
+
   @override
   Widget build(BuildContext context) {
     final etat = PorteeEtat.of(context);
@@ -98,7 +108,7 @@ class PlateauEcran extends StatelessWidget {
               const SizedBox(height: 12),
               PopQuiParle(texte: etat.motDePop ?? Pop.surPlateau(joueur: etat.position, pop: pop, jour: maintenant), taille: 70),
               const SizedBox(height: 16),
-              _Circuit(joueur: etat.profil, positionJoueur: etat.position, positionPop: pop),
+              _Circuit(joueur: etat.profil, positionJoueur: etat.position, positionPop: pop, saute: _consommerSaut(etat)),
               const SizedBox(height: 14),
               Wrap(
                 spacing: 12,
@@ -163,9 +173,10 @@ class PlateauEcran extends StatelessWidget {
 }
 
 class _Circuit extends StatelessWidget {
-  const _Circuit({required this.joueur, required this.positionJoueur, required this.positionPop});
+  const _Circuit({required this.joueur, required this.positionJoueur, required this.positionPop, this.saute = false});
 
   final Profil joueur;
+  final bool saute;
   final int positionJoueur;
   final int positionPop;
 
@@ -204,6 +215,7 @@ class _Circuit extends StatelessWidget {
                       numero: i + 1,
                       joueur: i + 1 == positionJoueur ? joueur : null,
                       pop: i + 1 == positionPop,
+                      saute: saute && i + 1 == positionJoueur,
                     ),
                   ),
                 Positioned(
@@ -223,10 +235,13 @@ class _Circuit extends StatelessWidget {
 }
 
 class _Case extends StatelessWidget {
-  const _Case({required this.numero, this.joueur, this.pop = false});
+  const _Case({required this.numero, this.joueur, this.pop = false, this.saute = false});
   final int numero;
   final Profil? joueur;
   final bool pop;
+
+  /// Le pion du joueur vient d'arriver ici : trois petits sauts.
+  final bool saute;
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +264,11 @@ class _Case extends StatelessWidget {
               bottom: 1,
               child: Row(children: [
                 if (pop) const Figurine.pop(hauteur: 32),
-                if (joueur != null) Transform.translate(offset: Offset(pop ? -10 : 0, 0), child: Figurine.profil(joueur!, hauteur: 32)),
+                if (joueur != null)
+                  Transform.translate(
+                    offset: Offset(pop ? -10 : 0, 0),
+                    child: Rebond(declencheur: numero, sauts: 3, hauteur: 12, auDemarrage: saute, child: Figurine.profil(joueur!, hauteur: 32)),
+                  ),
               ]),
             ),
           ],

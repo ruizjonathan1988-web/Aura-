@@ -9,6 +9,7 @@ import 'screens/profil.dart';
 import 'screens/semaine.dart';
 import 'services/etat.dart';
 import 'theme/aura_theme.dart';
+import 'widgets/animations.dart';
 import 'widgets/aura_widgets.dart';
 
 /// Donne l'état du joueur à tous les écrans, et les reconstruit quand il change.
@@ -46,13 +47,23 @@ class AuraApp extends StatelessWidget {
   }
 }
 
-/// Le premier lancement passe par le premier soir ; ensuite, le jeu.
-class _Depart extends StatelessWidget {
+/// Chaque lancement s'ouvre comme une séance de cinéma (rideau, Pop, titre,
+/// figurines). Puis le premier soir au tout premier lancement, et le jeu.
+class _Depart extends StatefulWidget {
   const _Depart();
 
   @override
-  Widget build(BuildContext context) =>
-      PorteeEtat.of(context).accueilFait ? const Coquille() : const PremierSoirEcran();
+  State<_Depart> createState() => _DepartState();
+}
+
+class _DepartState extends State<_Depart> {
+  bool _dansLaSalle = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_dansLaSalle) return Ouverture(onEntrer: () => setState(() => _dansLaSalle = true));
+    return PorteeEtat.of(context).accueilFait ? const Coquille() : const PremierSoirEcran();
+  }
 }
 
 enum Onglet {
