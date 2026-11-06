@@ -130,7 +130,7 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
     final etat = PorteeEtat.lire(context);
     final restes = PartieSoiree.cartes(_etat).where((c) => c['ecartee'] != true).toList();
     final carte = _carteDepuis(restes.firstWhere((c) => c['j'] == _etat['gagnant']));
-    await etat.commencerSeance(carte, pronostic: 3);
+    await etat.commencerSeance(carte, pronostic: 3, aPlusieurs: true);
     etat.mesures?.noter('duel', {'soiree': true});
     if (VjodLien.disponible(carte.film)) await VjodLien.ouvrir(carte.film);
     if (mounted) Navigator.of(context).pop();

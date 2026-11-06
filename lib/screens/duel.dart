@@ -142,7 +142,7 @@ class _DuelEcranState extends State<DuelEcran> {
 
   Future<void> _valider(CarteDefi carte) async {
     final etat = PorteeEtat.lire(context);
-    await etat.commencerSeance(carte, pronostic: 3);
+    await etat.commencerSeance(carte, pronostic: 3, aPlusieurs: true);
     if (VjodLien.disponible(carte.film)) {
       final erreur = await VjodLien.ouvrir(carte.film);
       if (erreur != null && mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(erreur)));

@@ -525,7 +525,7 @@ class _MainDeCartesState extends State<MainDeCartes> {
                   key: ValueKey(i),
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeOutBack,
-                  left: centre + (i - (n - 1) / 2) * 88,
+                  left: centre + (i - (n - 1) / 2) * (n > 3 ? 70 : 88),
                   top: (i == widget.choisie ? 0 : 34) + ((i - (n - 1) / 2).abs() * 6),
                   child: Entree(
                     delai: Duration(milliseconds: 140 * i),
