@@ -2,7 +2,7 @@
 
 Document de passation : tout ce qu'il faut savoir pour continuer Aura dans une nouvelle conversation. À coller ou à faire lire en début de session.
 
-Dernière mise à jour : 6 novembre 2026 (fin d'après-midi) : viser haut (R38), pouvoirs des pions (R39), coups du sort et crasses (R40).
+Dernière mise à jour : 6 novembre 2026 (fin d'après-midi) : viser haut (R38), pouvoirs des pions (R39), coups du sort et crasses (R40), retournements (R41).
 
 ## Qui et quoi
 
@@ -87,6 +87,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R38 Viser haut : plus fort, mais risqué | Niveau 10 : 4 cases, seul moyen de dépasser le plafond du jour (plafond 4 pour ce billet) ; abandonner un film coûte 1 case à 9, 2 cases à 10, rien en dessous, jamais sous la case 1 ; audace du mois = niveau de chaque billet, doublé à 9 et 10 (affichée sur Ce soir) | `Niveau.cases/plafond/recul/audace`, `EtatJeu.abandonnerSeance`, `EtatJeu.audaceDuMois` |
 | R39 Les pouvoirs des pions | Une charge par semaine (lundi à dimanche), plus une par tranche de 20 points d'audace du mois ; on arme son pouvoir dans Ce soir (on peut le désarmer sans rien perdre) ; il agit au prochain tirage (Boussole : 4 cartes ; Madeleine : films déjà vus permis) ou au prochain billet (Slow : séance notée ; Plume : pronostic pile ; Court-métrage : moins de 90 min ; Projectionniste : séance commencée en Duel ou Soirée jeu ; Remontada : derrière Pop ; chacun +1 case ; Marathon : plafond du jour à 4) ; la charge part même si la condition manque ; les bonus restent sous le plafond | `Pouvoirs`, `EtatJeu.armerPouvoir/pouvoirAuTirage/chargesPouvoir`, `Tirage.tirer(nombre:, revoir:)` |
 | R40 Coups du sort et crasses | Cases 4, 14 et 24 (« Coup de théâtre ») : s'y arrêter après une séance déclenche un coup, une fois par case et par mois, le même pour tous (calculé sur la date), trois coups différents par mois : Toboggan (−2), Échange de places avec Pop, Pop te double (+2 pour Pop), Le public est avec toi (+1), Entracte (rien) ; un coup qui fait du tort se pare avec une charge de pouvoir (pas celle déjà armée) ou le Bouclier du mois. Crasses en ligue : une par semaine (Niveau imposé à 8 au prochain tirage, Pop-corn renversé : −1 case sur la prochaine séance, Vol d'audace : 5 points passent chez l'expéditeur, Faux spoiler pour rire) ; on l'encaisse, la pare (une charge) ou la renvoie (une fois par mois) ; chaque effet ne s'applique qu'une fois, l'audace ne descend jamais sous 0 | `CoupsDuSort`, `Crasses`, `EtatJeu.resoudreCoup/repondreCrasse/encaisserGains`, migration `0007_crasses.sql` |
+| R41 Retournements | Journal du plateau : chaque séance, pouvoir, coup du sort, crasse, abandon s'y écrit, 12 lignes par mois, le plus récent d'abord ; Vent dans le dos : une séance vue derrière Pop rapporte 2 points d'audace (les tests R38 à R40 qui comptent l'audace au point près placent le joueur devant Pop avec `_devantPop`) ; Volte-face : Joker d'un par mois, seulement derrière Pop, échange les places ; pari de Sisyphe : proposé les 7 premiers jours, une fois par mois, +4 cases tout de suite, un film abandonné renvoie à la case 1 | `Retournements`, `EtatJeu.journal/volteFace/accepterSisyphe` |
 
 Tests d'écrans (`test/ecrans_test.dart`) : l'appli est ouverte comme par un joueur, sur un téléphone (390 × 844) et sur une télé (960 × 540) ; ouverture, premier soir complet, tous les onglets, une soirée complète (tirage, carte, billet, plateau), Plan du jour, Duel. Un débordement ou un plantage fait échouer la CI. Possible parce que les polices sont embarquées (`assets/polices`, licence OFL) au lieu d'être téléchargées.
 
@@ -170,6 +171,7 @@ Fait :
 - Viser haut (R38) : le 10 vaut 4 cases et peut dépasser le plafond du jour, abandonner coûte 1 case à 9 et 2 à 10, audace du mois affichée dans Ce soir.
 - Pouvoirs des pions (R39, `lib/services/pouvoirs.dart`, panneau « Ton pouvoir » dans Ce soir) : réels et équitables, environ une case par semaine chacun. Le Supporter devient « Remontada » (pas de sport dans Aura). Limite connue : un billet automatique (Jellyfin) consomme un pouvoir « au billet » armé alors que la note n'arrive qu'après ; Slow et Plume font alors chou blanc.
 - Coups du sort et crasses (R40, `lib/services/coups.dart`, panneau sur le Plateau, section « Les crasses » dans l'onglet Ligue, migration `0007_crasses.sql`). Choix faits sans Jon, à confirmer : « Le public est avec toi » (+1) et l'Échange ne passent pas par le plafond de 3 cases du jour (c'est le sort, pas le temps passé) ; l'Échange est une aubaine si on est derrière Pop et se pare si on est devant. **À faire par Jon : lancer `0007_crasses.sql` dans Supabase**, sinon la section des crasses reste vide.
+- Retournements (R41, `lib/services/retournements.dart`, sur le Plateau) : choisis par Claude le 6 novembre après une étude des athlètes de Magical Athlete (Jon : « je veux qu'au-delà de faire regarder des films le jeu soit vraiment fun »). Leçons retenues : les pouvoirs déclenchés par les autres sont les plus forts (Scoocher gagne 65 % des courses simulées : toujours plafonner) ; le rattrapage est dans les cartes (Flip Flop, Lovable Loser, Hare) ; le risque assumé plaît (Sisyphus) ; on reproche les interactions floues, d'où le journal. Comme les coups du sort, Sisyphe et Volte-face ne passent pas par le plafond de 3 cases (c'est un pari, pas du temps passé).
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
 ## Nuit du 6 novembre (travail autonome)
@@ -203,6 +205,8 @@ Choix validés par Jon le 6 novembre (questions posées, réponses données) :
    - Hôte, Projectionniste : +1 case pour une séance commencée à plusieurs (Soirée, Duel) ;
    - Supporter : devient « Remontada » (pas de sport dans Aura) : +1 case si le joueur est derrière Pop. Mettre à jour `Profil.pouvoir` et `Profil.effet` en conséquence.
 3. **R40 coups du sort et crasses** : fait, voir le tableau des règles. Demande d'origine : Jon veut « des retournements de situation, des choses drôles, des crasses ». Idées annoncées à Jon : cases pièges sur le plateau, Pop qui vole ou échange une place, crasses à envoyer à un ami de la ligue (lui imposer le niveau du soir, lui piquer un point d'audace…), toujours avec une parade pour que ça reste drôle et pas rageant.
+
+4. **Idées suivantes tirées de Magical Athlete** (à faire, dans l'ordre) : le Figurant (+1 case quand un ami de la ligue arme un pouvoir ou envoie une crasse, au plus une fois par jour) ; la figurine œuf (pouvoir inconnu, révélé à la 3e séance du mois) ; le draft des figurines du mois en ligue (le dernier du mois précédent choisit en premier).
 
 ## Retours de Jon à traiter
 

@@ -20,6 +20,7 @@ import 'plan_du_jour.dart';
 import 'pop.dart';
 import 'pouvoirs.dart';
 import 'rappels.dart';
+import 'retournements.dart';
 import 'source_tmdb.dart';
 import 'sources.dart';
 import 'tirage.dart';
@@ -508,6 +509,7 @@ class EtatJeu extends ChangeNotifier {
     final rattrapage = carteRattrapage && ceMois;
     // Pouvoir armé « au billet » (R39) : il agit maintenant, la charge part
     // même si la condition n'est pas remplie.
+    final popAvant = positionDePop;
     final pouvoir = pouvoirArme && Pouvoirs.moment(profil) == MomentPouvoir.billet;
     final bonusPouvoir = pouvoir
         ? Pouvoirs.bonus(
@@ -516,7 +518,7 @@ class EtatJeu extends ChangeNotifier {
             note: note,
             dureeMinutes: film?.dureeMinutes ?? dureeMinutes,
             aPlusieurs: aPlusieurs,
-            derrierePop: position < positionDePop,
+            derrierePop: position < popAvant,
           )
         : 0;
     if (pouvoir) await _consommerPouvoir();
@@ -551,18 +553,31 @@ class EtatJeu extends ChangeNotifier {
       ...billets,
     ]..sort((a, b) => b.date.compareTo(a.date));
     final pariGagne = Pop.parisPerdus(maintenant, billets) > pariAvant;
+    // Vent dans le dos (R41) : une séance vue derrière Pop rapporte de l'audace.
+    final vent = ceMois && position < popAvant;
+    if (vent) await _ajouterAudace(Retournements.ventDansLeDos);
     if (cases > 0) pionVientDAvancer = true;
     position = (position + cases).clamp(1, Regles.taillePlateau);
     // Coup de théâtre : le pion s'arrête sur une case 4, 14 ou 24 pas encore jouée ce mois-ci.
     final mois = moisDe(maintenant);
     final coup = cases > 0 && CoupsDuSort.estCaseCoup(position) && !(_prefs.getStringList('coups_$mois') ?? const []).contains('$position');
     if (coup) await _prefs.setString('coup_en_attente', '$mois|$position');
+    await _noter([
+      '« $titre » : ${cases == 0 ? 'aucune case (plafond du jour)' : '+$cases case${cases > 1 ? 's' : ''}'}, case $position.',
+      if (pouvoirAgi) 'Pouvoir ${profil.pouvoir} : il a fait passer une case de plus.',
+      if (pouvoir && !pouvoirAgi) 'Pouvoir ${profil.pouvoir} : chou blanc, charge utilisée.',
+      if (malus > 0) 'Pop-corn renversé : une case de moins.',
+      if (vent) 'Vent dans le dos : +${Retournements.ventDansLeDos} points d\'audace (tu étais derrière Pop).',
+      if (pariGagne) 'Pari de Pop relevé : il recule de ${Pop.recul} cases.',
+      if (coup) 'Case $position : Coup de théâtre !',
+    ]);
     final nouveaux = await _majCollection();
     _direPop([
       if (pouvoir) Pouvoirs.phrase(profil, agi: pouvoirAgi),
       if (note != null) Pop.surPronostic(pronostic: pronostic, note: note, graine: billets.length),
       if (coup) 'Case Coup de théâtre ! Va voir le plateau.',
       if (malus > 0) 'Pop-corn renversé : une case de moins, merci qui ?',
+      if (vent) 'Tu étais derrière moi : ${Retournements.ventDansLeDos} points d\'audace pour toi. Profites-en, ça ne durera pas.',
       if (pariGagne) 'Zut, j\'ai perdu mon pari : je recule de ${Pop.recul} cases. Mais je reviendrai.',
       for (final id in nouveaux) 'Nouvel exploit pour ta collection : ${Collection.nomDe(id)} !',
     ]);
@@ -653,10 +668,21 @@ class EtatJeu extends ChangeNotifier {
     if (s.niveau != null) {
       await _prefs.setStringList('niveaux_abandonnes', ['${s.niveau}', ..._abandons.map((n) => '$n')].take(5).toList());
       perdues = min(Niveau.recul(s.niveau), position - 1);
+    }
+    if (sisypheActif) {
+      // Le pari de Sisyphe est perdu : retour à la case 1.
+      perdues = position - 1;
+      await _prefs.setString('sisyphe_${moisDe(DateTime.now())}', 'perdu');
+      position = 1;
+      await _prefs.setInt('position', position);
+      _direPop(['Sisyphe ! Le rocher redescend : retour à la case 1. Je t\'avais prévenu, non ?']);
+      await _noter(['Film abandonné avec le pari de Sisyphe : retour à la case 1.']);
+    } else if (s.niveau != null) {
       if (perdues > 0) {
         position -= perdues;
         await _prefs.setInt('position', position);
         _direPop(['Tu t\'étais mis ${s.niveau}, et tu lâches ? Pari perdu : tu recules de ${perdues == 1 ? 'une case' : '$perdues cases'}. Je n\'en attendais pas moins.']);
+        await _noter(['« ${s.titre} » abandonné au niveau ${s.niveau} : −$perdues case${perdues > 1 ? 's' : ''}.']);
       }
     }
     notifyListeners();
@@ -722,6 +748,64 @@ class EtatJeu extends ChangeNotifier {
     return max(0, total + (_prefs.getInt('audace_$m') ?? 0));
   }
 
+  // Retournements (R41) : journal du plateau, Volte-face, pari de Sisyphe.
+
+  /// Le journal du plateau : ce qui est arrivé ce mois-ci, le plus récent d'abord.
+  List<String> get journal => _prefs.getStringList('journal_${moisDe(DateTime.now())}') ?? const [];
+
+  Future<void> _noter(List<String> lignes) async {
+    if (lignes.isEmpty) return;
+    final cle = 'journal_${moisDe(DateTime.now())}';
+    await _prefs.setStringList(cle, [...lignes, ...?_prefs.getStringList(cle)].take(Retournements.tailleJournal).toList());
+  }
+
+  /// Volte-face : un Joker par mois, seulement quand on est derrière Pop.
+  bool get volteFaceDispo => !(_prefs.getBool('volte_face_${moisDe(DateTime.now())}') ?? false) && position < positionDePop;
+
+  /// Prendre la place de Pop, et lui donner la sienne. Renvoie faux si impossible.
+  Future<bool> volteFace() async {
+    if (!volteFaceDispo) return false;
+    final mois = moisDe(DateTime.now());
+    final pop = positionDePop;
+    final d = CoupsDuSort.deplacement(CoupDuSort.echange, joueur: position, pop: pop);
+    position += d.joueur;
+    await _prefs.setInt('position', position);
+    await _prefs.setInt('pop_decalage_$mois', _decalageDePop(mois) + d.pop);
+    await _prefs.setBool('volte_face_$mois', true);
+    pionVientDAvancer = true;
+    _direPop(['Volte-face ! Tu me piques ma place ? C\'est petit. C\'est très petit. Bravo.']);
+    await _noter(['Volte-face : tu passes case $position, Pop recule case ${position - d.joueur}.']);
+    notifyListeners();
+    return true;
+  }
+
+  String? get _sisyphe => _prefs.getString('sisyphe_${moisDe(DateTime.now())}');
+
+  /// Le pari de Sisyphe se propose pendant la première semaine du mois, une fois.
+  bool get sisypheProposable => _sisyphe == null && DateTime.now().day <= Retournements.joursSisyphe;
+
+  /// Vrai tant que le pari tient : un film abandonné renvoie à la case 1.
+  bool get sisypheActif => _sisyphe == 'actif';
+
+  Future<bool> accepterSisyphe() async {
+    if (!sisypheProposable) return false;
+    await _prefs.setString('sisyphe_${moisDe(DateTime.now())}', 'actif');
+    position = min(Regles.taillePlateau, position + Retournements.avanceSisyphe);
+    await _prefs.setInt('position', position);
+    pionVientDAvancer = true;
+    _direPop(['Pari de Sisyphe accepté : ${Retournements.avanceSisyphe} cases d\'avance. Abandonne un seul film ce mois-ci et tu repars de la case 1.']);
+    await _noter(['Pari de Sisyphe : +${Retournements.avanceSisyphe} cases. Un film abandonné ce mois-ci = retour case 1.']);
+    notifyListeners();
+    return true;
+  }
+
+  /// Refuser le pari : il ne se repropose pas ce mois-ci.
+  Future<void> refuserSisyphe() async {
+    if (!sisypheProposable) return;
+    await _prefs.setString('sisyphe_${moisDe(DateTime.now())}', 'refuse');
+    notifyListeners();
+  }
+
   // Coups du sort et crasses (R40).
 
   /// Le coup du sort qui attend une décision, s'il y en a un ce mois-ci.
@@ -753,6 +837,7 @@ class EtatJeu extends ChangeNotifier {
         return false;
       }
       _direPop(['Paré ! ${c.coup.nom} ne t\'a rien fait. Je note, je note.']);
+      await _noter(['Case ${c.numero}, ${c.coup.nom} : paré ${parade == 'charge' ? 'avec une charge de pouvoir' : 'avec le Bouclier'}.']);
     } else {
       final d = CoupsDuSort.deplacement(c.coup, joueur: position, pop: pop);
       position = (position + d.joueur).clamp(1, Regles.taillePlateau);
@@ -760,6 +845,7 @@ class EtatJeu extends ChangeNotifier {
       final cle = 'pop_decalage_${moisDe(DateTime.now())}';
       if (d.pop != 0) await _prefs.setInt(cle, (_prefs.getInt(cle) ?? 0) + d.pop);
       _direPop(['${c.coup.nom} : ${c.coup.effet}']);
+      await _noter(['Case ${c.numero}, ${c.coup.nom} : ${c.coup.effet}']);
     }
     final mois = moisDe(DateTime.now());
     await _prefs.setStringList('coups_$mois', [...?_prefs.getStringList('coups_$mois'), '${c.numero}']);
@@ -811,6 +897,13 @@ class EtatJeu extends ChangeNotifier {
         }
         _direPop(['${c.nom} : ${c.effet}']);
     }
+    await _noter([
+      switch (r) {
+        Reponse.encaissee => 'Crasse encaissée, ${c.nom} : ${c.effet}',
+        Reponse.paree => 'Crasse parée (${c.nom}) avec une charge de pouvoir.',
+        Reponse.renvoyee => 'Crasse renvoyée à l\'envoyeur (${c.nom}).',
+      }
+    ]);
     notifyListeners();
     return true;
   }

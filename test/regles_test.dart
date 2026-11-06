@@ -32,6 +32,7 @@ import 'package:aura/services/pop.dart';
 import 'package:aura/services/pouvoirs.dart';
 import 'package:aura/services/premier_soir.dart';
 import 'package:aura/services/rappels.dart';
+import 'package:aura/services/retournements.dart';
 import 'package:aura/services/semaine_ligue.dart';
 import 'package:aura/services/source_tmdb.dart';
 import 'package:aura/services/soiree.dart';
@@ -61,6 +62,10 @@ CarteDefi _carte(String id, {TypeCarte type = TypeCarte.retro, int cases = 3, in
       film: _film(id, duree: duree),
       bulleDePop: '',
     );
+
+/// Pour les tests qui comptent l'audace au point près : le joueur n'est pas
+/// derrière Pop, donc pas de Vent dans le dos (R41).
+final Map<String, Object> _devantPop = {'pop_decalage_${EtatJeu.moisDe(DateTime.now())}': -60};
 
 Future<EtatJeu> _etat([Map<String, Object> valeurs = const {}]) async {
   SharedPreferences.setMockInitialValues(valeurs);
@@ -1632,7 +1637,7 @@ void main() {
 
     test('R38 l\'audace du mois : le niveau de chaque billet, doublé à 9 et 10', () async {
       expect([for (var n = 1; n <= 10; n++) Niveau.audace(n)], [1, 2, 3, 4, 5, 6, 7, 8, 18, 20]);
-      final e = await _etat();
+      final e = await _etat(_devantPop);
       await e.validerSeance(carte('a', 5), pronostic: 4);
       await e.validerSeance(carte('b', 10), pronostic: 4);
       await e.validerSeance(_carte('c'), pronostic: 4);
@@ -1703,7 +1708,7 @@ void main() {
     });
 
     test('R39 l\'audace recharge : un 10 réussi donne une charge de plus', () async {
-      final e = await _etat({'profil': 'degustateur'});
+      final e = await _etat({..._devantPop, 'profil': 'degustateur'});
       await e.validerSeance(carte('a', cases: Niveau.cases(10), niveau: 10), pronostic: 3);
       expect(e.audaceDuMois, 20);
       expect(e.chargesPouvoir, 2);
@@ -1852,7 +1857,7 @@ void main() {
       expect(e.niveauImpose, isNull);
       await e.repondreCrasse(Crasse.volDAudace, Reponse.encaissee);
       expect(e.audaceDuMois, 0, reason: 'jamais d\'audace négative');
-      final f = await _etat();
+      final f = await _etat(_devantPop);
       await f.validerSeance(carte('a', cases: Niveau.cases(10), niveau: 10), pronostic: 3);
       await f.repondreCrasse(Crasse.volDAudace, Reponse.encaissee);
       expect(f.audaceDuMois, 15);
@@ -1861,7 +1866,7 @@ void main() {
     });
 
     test('R40 parer coûte une charge, renvoyer une fois par mois, et le voleur touche ses points', () async {
-      final e = await _etat();
+      final e = await _etat(_devantPop);
       expect(await e.repondreCrasse(Crasse.popcorn, Reponse.paree), isTrue);
       expect(e.chargesPouvoir, 0);
       expect(await e.repondreCrasse(Crasse.popcorn, Reponse.paree), isFalse);
@@ -1876,6 +1881,72 @@ void main() {
       expect(await e.encaisserGains([vol, pare]), 5);
       expect(await e.encaisserGains([vol, pare]), 0);
       expect(e.audaceDuMois, 5);
+    });
+  });
+
+  group('R41 Retournements : rattrapage, risque et journal', () {
+    final mois = EtatJeu.moisDe(DateTime.now());
+    CarteDefi carte(String id, {int cases = 1}) =>
+        CarteDefi(type: TypeCarte.envie, defi: 'Défi', indice: '', cases: cases, joker: '', film: _film(id), bulleDePop: '');
+
+    test('R41 le journal du plateau raconte le mois, le plus récent d\'abord, 12 lignes au plus', () async {
+      final e = await _etat();
+      expect(e.journal, isEmpty);
+      await e.validerSeance(carte('a', cases: 2), pronostic: 3);
+      expect(e.journal.first, contains('« Film a » : +2 cases'));
+      await e.repondreCrasse(Crasse.fauxSpoiler, Reponse.encaissee);
+      expect(e.journal.first, contains('Crasse encaissée'));
+      for (var i = 0; i < 20; i++) {
+        await e.repondreCrasse(Crasse.fauxSpoiler, Reponse.encaissee);
+      }
+      expect(e.journal, hasLength(Retournements.tailleJournal));
+    });
+
+    test('R41 Vent dans le dos : une séance vue derrière Pop rapporte 2 points d\'audace', () async {
+      final e = await _etat({'pop_decalage_$mois': 5});
+      expect(e.position < e.positionDePop, isTrue);
+      await e.validerSeance(carte('a'), pronostic: 3);
+      expect(e.audaceDuMois, Retournements.ventDansLeDos);
+      expect(e.journal.any((l) => l.contains('Vent dans le dos')), isTrue);
+      final f = await _etat({'position': 30});
+      await f.validerSeance(carte('a'), pronostic: 3);
+      expect(f.audaceDuMois, 0, reason: 'devant Pop : pas de vent');
+    });
+
+    test('R41 Volte-face : un Joker par mois pour prendre la place de Pop, seulement quand on est derrière', () async {
+      final e = await _etat({'pop_decalage_$mois': 2});
+      final pop = e.positionDePop;
+      expect(e.volteFaceDispo, isTrue);
+      expect(await e.volteFace(), isTrue);
+      expect(e.position, pop);
+      expect(e.positionDePop, lessThan(pop));
+      expect(e.volteFaceDispo, isFalse);
+      expect(await e.volteFace(), isFalse);
+      final f = await _etat({'position': 30});
+      expect(f.volteFaceDispo, isFalse);
+      expect(await f.volteFace(), isFalse);
+    });
+
+    test('R41 le pari de Sisyphe : 4 cases d\'avance, un film abandonné renvoie à la case 1', () async {
+      final e = await _etat({'position': 3});
+      if (DateTime.now().day > Retournements.joursSisyphe) {
+        expect(e.sisypheProposable, isFalse, reason: 'proposé la première semaine seulement');
+        expect(await e.accepterSisyphe(), isFalse);
+        return;
+      }
+      expect(await e.accepterSisyphe(), isTrue);
+      expect(e.position, 3 + Retournements.avanceSisyphe);
+      expect(e.sisypheActif, isTrue);
+      expect(await e.accepterSisyphe(), isFalse, reason: 'une fois par mois');
+      await e.commencerSeance(carte('a'), pronostic: 3);
+      expect(await e.abandonnerSeance(e.enCours.single), 2 + Retournements.avanceSisyphe);
+      expect(e.position, 1);
+      expect(e.sisypheActif, isFalse);
+      expect(e.sisypheProposable, isFalse);
+      final f = await _etat();
+      await f.refuserSisyphe();
+      expect(f.sisypheProposable, isFalse);
+      expect(f.position, 1);
     });
   });
 }
