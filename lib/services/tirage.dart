@@ -72,7 +72,7 @@ class Tirage {
     if (retro != null) {
       cartes.add(CarteDefi(
         type: TypeCarte.retro,
-        defi: 'Un film d\'avant 1980',
+        defi: 'Un classique ${_suite(emotion)}, avant 1980',
         indice: _indice(retro),
         cases: 3,
         joker: 'Un classique : 3 cases, la plus belle récompense.',
@@ -85,7 +85,7 @@ class Tirage {
     if (voyage != null) {
       cartes.add(CarteDefi(
         type: TypeCarte.voyage,
-        defi: 'Un pays jamais vu',
+        defi: 'Un film ${_suite(emotion)}, d\'un pays jamais vu',
         indice: _indice(voyage),
         cases: 2,
         joker: 'Un voyage : 2 cases.',
@@ -98,7 +98,7 @@ class Tirage {
     if (pepite != null) {
       cartes.add(CarteDefi(
         type: TypeCarte.pepite,
-        defi: 'Une pépite très bien notée',
+        defi: 'Une pépite ${_suite(emotion)}, très bien notée',
         indice: _indice(pepite),
         cases: 2,
         joker: 'Une pépite : 2 cases.',
@@ -122,6 +122,15 @@ class Tirage {
     }
     return cartes.take(3).toList();
   }
+
+  /// L'envie dans le défi, pour que chaque envie donne d'autres cartes.
+  static String _suite(Emotion e) => switch (e) {
+        Emotion.frissonner => 'qui fait frissonner',
+        Emotion.rire => 'pour rire',
+        Emotion.bouleverse => 'qui émeut',
+        Emotion.evader => 'pour s\'évader',
+        Emotion.reflechir => 'qui fait réfléchir',
+      };
 
   /// Un indice qui ne donne ni le titre ni l'année exacte.
   String _indice(Film f) {
