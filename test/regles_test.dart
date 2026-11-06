@@ -2542,6 +2542,91 @@ void main() {
       expect(t, contains('aura.apk'));
     });
   });
+
+  group('R53 Le Pitch et le public de la Soirée jeu', () {
+    final trois = [
+      {'id': 'jon', 'pseudo': 'Jon', 'profil': 'fidele'},
+      {'id': 'lea', 'pseudo': 'Léa', 'profil': 'critique'},
+      {'id': 'max', 'pseudo': 'Max', 'profil': 'hote'},
+    ];
+    Map<String, dynamic> pitch() => Pitch.nouvelle(trois, [for (var i = 0; i < 12; i++) _film('p$i')], Random(4));
+    Map<String, dynamic> mots(Map<String, dynamic> e) {
+      final m = Pitch.mancheDe(e);
+      return PartieSoiree.appliquer(e, trois[m['conteur'] as int]['id'] as String, {'type': 'mots', 'mots': (m['proposes'] as List).take(3).toList()})!;
+    }
+
+    test('R53 une manche par joueur, 4 films et 12 mots chacune ; seul le conteur choisit, trois mots parmi les siens', () {
+      final e = pitch();
+      expect(e['manches'], hasLength(3));
+      expect(Pitch.mancheDe(e)['films'], hasLength(4));
+      expect(Pitch.mancheDe(e)['proposes'], hasLength(12));
+      expect(PartieSoiree.appliquer(e, 'lea', {'type': 'mots', 'mots': (Pitch.mancheDe(e)['proposes'] as List).take(3).toList()}), isNull);
+      expect(PartieSoiree.appliquer(e, 'jon', {'type': 'mots', 'mots': ['Pluie', 'Pluie', 'Nuit']}), isNull);
+      expect(PartieSoiree.appliquer(e, 'jon', {'type': 'mots', 'mots': ['pas proposé', 'x', 'y']}), isNull);
+      expect(mots(e)['phase'], 'pitch_vote');
+    });
+
+    test('R53 ni tous ni personne : 3 points au conteur et à ceux qui trouvent ; sinon 2 aux autres', () {
+      var e = mots(pitch());
+      final cible = Pitch.mancheDe(e)['cible'] as int;
+      e = PartieSoiree.appliquer(e, 'lea', {'type': 'vote', 'film': cible})!;
+      expect(PartieSoiree.appliquer(e, 'lea', {'type': 'vote', 'film': cible}), isNull, reason: 'un vote chacun');
+      expect(PartieSoiree.appliquer(e, 'jon', {'type': 'vote', 'film': cible}), isNull, reason: 'le conteur ne vote pas');
+      e = PartieSoiree.appliquer(e, 'max', {'type': 'vote', 'film': (cible + 1) % 4})!;
+      expect(e['phase'], 'pitch_revele');
+      expect(e['points'], [3, 3, 0]);
+      var f = mots(pitch());
+      final c2 = Pitch.mancheDe(f)['cible'] as int;
+      f = PartieSoiree.appliquer(f, 'lea', {'type': 'vote', 'film': c2})!;
+      f = PartieSoiree.appliquer(f, 'max', {'type': 'vote', 'film': c2})!;
+      expect(f['points'], [0, 2, 2], reason: 'tout le monde a trouvé : trop facile');
+    });
+
+    test('R53 le public qui trouve en majorité donne 1 point au conteur ; le gagnant lance le film qu\'il a décrit', () {
+      var e = mots(pitch());
+      final cible = Pitch.mancheDe(e)['cible'] as int;
+      e = PartieSoiree.appliquer(e, 'mamie', {'type': 'public', 'pseudo': 'Mamie'})!;
+      expect(PartieSoiree.appliquer(e, 'mamie', {'type': 'public', 'pseudo': 'Mamie'}), isNull);
+      e = PartieSoiree.appliquer(e, 'mamie', {'type': 'vote', 'film': cible})!;
+      e = PartieSoiree.appliquer(e, 'lea', {'type': 'vote', 'film': cible})!;
+      e = PartieSoiree.appliquer(e, 'max', {'type': 'vote', 'film': (cible + 2) % 4})!;
+      expect(e['points'], [4, 3, 0]);
+      for (var k = 1; k < 3; k++) {
+        e = PartieSoiree.suivante(e);
+        e = mots(e);
+        e = PartieSoiree.suivante(e);
+      }
+      e = PartieSoiree.suivante(e);
+      expect(e['phase'], 'fin');
+      final g = e['gagnant'] as int;
+      final sienne = (e['manches'] as List).cast<Map>().firstWhere((m) => m['conteur'] == g);
+      expect(e['film'], (sienne['films'] as List)[sienne['cible'] as int]);
+    });
+
+    test('R53 au quiz, le public soutient un joueur : s\'il se trompe et que son supporter trouve, il garde le point', () {
+      var e = PartieSoiree.distribuer(
+        trois.take(2).toList(),
+        [
+          [for (var i = 0; i < 3; i++) _carte('a$i')],
+          [for (var i = 0; i < 3; i++) _carte('b$i')],
+        ],
+        Quiz.tirer(PartieSoiree.nbQuestions, Random(2)),
+        Random(2),
+        public: [{'id': 'mamie', 'pseudo': 'Mamie'}],
+      );
+      e = {...e, 'phase': 'quiz'};
+      e = PartieSoiree.appliquer(e, 'mamie', {'type': 'soutenir', 'joueur': 1})!;
+      final q = (e['questions'] as List)[0] as Map;
+      final faux = (q['reponses'] as List).firstWhere((r) => r != q['bonne']);
+      e = PartieSoiree.appliquer(e, 'mamie', {'type': 'reponse', 'question': 0, 'choix': q['bonne']})!;
+      e = PartieSoiree.appliquer(e, 'jon', {'type': 'reponse', 'question': 0, 'choix': q['bonne']})!;
+      e = PartieSoiree.appliquer(e, 'lea', {'type': 'reponse', 'question': 0, 'choix': faux})!;
+      expect(e['revele'], isTrue);
+      expect(e['points'], [1, 1]);
+      expect(e['souffles'], [1]);
+      expect(PartieSoiree.appliquer(e, 'inconnu', {'type': 'soutenir', 'joueur': 0}), isNull, reason: 'il faut être dans le public');
+    });
+  });
 }
 
 class _SourceFixe implements SourceFilms {

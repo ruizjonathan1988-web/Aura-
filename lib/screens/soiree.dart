@@ -123,13 +123,46 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
       mains.add(main);
     }
     final joueurs = [for (final j in presents) {'id': j['joueur_id'], 'pseudo': j['pseudo'], 'profil': j['profil']}];
-    await _publier(PartieSoiree.distribuer(joueurs, mains, Quiz.tirer(PartieSoiree.nbQuestions, hasard), hasard));
+    await _publier(PartieSoiree.distribuer(joueurs, mains, Quiz.tirer(PartieSoiree.nbQuestions, hasard), hasard, public: _publicInscrit()));
+  }
+
+  /// Au-delà de quatre, les inscrits forment le public.
+  List<Map<String, dynamic>> _publicInscrit() => [
+        for (final j in _inscrits.skip(PartieSoiree.maxJoueurs)) {'id': j['joueur_id'], 'pseudo': j['pseudo']},
+      ];
+
+  Future<void> _pitch() async {
+    final etat = PorteeEtat.lire(context);
+    final hasard = math.Random();
+    final presents = _inscrits.take(PartieSoiree.maxJoueurs).toList();
+    final catalogue = await etat.source.catalogue(auHasard: false);
+    final bons = Tirage.hautDuPanier(catalogue.where((f) => !f.dejaVu && Tirage.assezBon(f)).toList(), minimum: presents.length * Pitch.parManche)
+      ..shuffle(hasard);
+    if (bons.length < presents.length * Pitch.parManche) {
+      setState(() => _erreur = 'Pas assez de films pour le Pitch.');
+      return;
+    }
+    final joueurs = [for (final j in presents) {'id': j['joueur_id'], 'pseudo': j['pseudo'], 'profil': j['profil']}];
+    await _publier(Pitch.nouvelle(joueurs, bons, hasard, public: _publicInscrit()));
   }
 
   Future<void> _lancer() async {
     final etat = PorteeEtat.lire(context);
-    final restes = PartieSoiree.cartes(_etat).where((c) => c['ecartee'] != true).toList();
-    final carte = _carteDepuis(restes.firstWhere((c) => c['j'] == _etat['gagnant']));
+    final CarteDefi carte;
+    if (_etat['mode'] == 'pitch') {
+      carte = CarteDefi(
+        type: TypeCarte.envie,
+        defi: 'Le film du Pitch',
+        indice: '',
+        cases: 2,
+        joker: '',
+        film: PartieSoiree.filmDepuisJson((_etat['film'] as Map).cast<String, dynamic>()),
+        bulleDePop: '',
+      );
+    } else {
+      final restes = PartieSoiree.cartes(_etat).where((c) => c['ecartee'] != true).toList();
+      carte = _carteDepuis(restes.firstWhere((c) => c['j'] == _etat['gagnant']));
+    }
     await etat.commencerSeance(carte, pronostic: 3, aPlusieurs: true);
     etat.mesures?.noter('duel', {'soiree': true});
     if (VjodLien.disponible(carte.film)) await VjodLien.ouvrir(carte.film);
@@ -156,6 +189,7 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
                     'attente' => _attente(),
                     'table' => _table(),
                     'quiz' => _quiz(),
+                    'pitch_mots' || 'pitch_vote' || 'pitch_revele' => _pitchTele(),
                     _ => _fin(),
                   },
                 ]),
@@ -200,9 +234,86 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
         else ...[
           if (_inscrits.length > PartieSoiree.maxJoueurs)
             Text('Quatre joueurs au plus : les premiers arrivés jouent.', style: AuraTexte.corps(15, poids: FontWeight.w900, couleur: AuraCouleurs.creme)),
-          AuraBouton(libelle: 'Distribuer les cartes (${_inscrits.length.clamp(2, PartieSoiree.maxJoueurs)} joueurs)', autofocus: true, onPressed: _distribuer),
+          AuraBouton(libelle: 'Partie classique : cartes et quiz (${_inscrits.length.clamp(2, PartieSoiree.maxJoueurs)} joueurs)', autofocus: true, onPressed: _distribuer),
+          const SizedBox(height: 10),
+          AuraBouton(libelle: 'Le Pitch : décrire un film en trois mots', principal: false, onPressed: _pitch),
+          if (_inscrits.length > PartieSoiree.maxJoueurs)
+            Text('Les suivants forment le public : ils votent et soufflent depuis leur téléphone.', style: AuraTexte.corps(14, couleur: AuraCouleurs.creme)),
         ],
       ];
+
+  Widget _publicBandeau() {
+    final p = PartieSoiree.publicDe(_etat);
+    if (p.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Text('LE PUBLIC · ${p.map((x) => x['pseudo']).join(', ')}', style: AuraTexte.titre(16, couleur: AuraCouleurs.creme)),
+    );
+  }
+
+  List<Widget> _pitchTele() {
+    final joueurs = _joueursDe(_etat);
+    final m = Pitch.mancheDe(_etat);
+    final films = [for (final f in (m['films'] as List)) PartieSoiree.filmDepuisJson((f as Map).cast<String, dynamic>())];
+    final phase = _etat['phase'];
+    final revele = phase == 'pitch_revele';
+    final votes = (m['votes'] as Map).cast<String, int>();
+    final pts = (_etat['points'] as List).cast<int>();
+    final mots = (m['mots'] as List).cast<String>();
+    return [
+      PopQuiParle(texte: _etat['message'] as String? ?? '', taille: 80),
+      const SizedBox(height: 12),
+      Row(children: [
+        for (var j = 0; j < joueurs.length; j++)
+          Expanded(
+            child: Panneau(
+              couleur: m['conteur'] == j ? AuraCouleurs.jaune : (votes.containsKey(joueurs[j]['id']) ? AuraCouleurs.vert : AuraCouleurs.creme),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(children: [
+                Figurine.profil(Profil.depuisNom(joueurs[j]['profil'] as String?), hauteur: 44),
+                const SizedBox(width: 8),
+                Expanded(child: Text('${joueurs[j]['pseudo']}${m['conteur'] == j ? ' raconte' : ''}', style: AuraTexte.corps(16, poids: FontWeight.w900))),
+                Text('${pts[j]}', style: AuraTexte.titre(30)),
+              ]),
+            ),
+          ),
+      ]),
+      const SizedBox(height: 16),
+      if (mots.isNotEmpty) Center(child: TitreCartoon(mots.join(' · '), taille: 48, inclinaison: -0.02)),
+      const SizedBox(height: 14),
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (final (i, f) in films.indexed)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Panneau(
+                couleur: revele && i == m['cible'] ? AuraCouleurs.vert : AuraCouleurs.creme,
+                padding: const EdgeInsets.all(12),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${i + 1}', style: AuraTexte.titre(30)),
+                  Text(f.titre, style: AuraTexte.titre(20)),
+                  Text(f.infos, style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
+                  if (revele)
+                    Text(
+                      [for (final v in votes.entries) if (v.value == i) joueurs.firstWhere((x) => x['id'] == v.key, orElse: () => {'pseudo': '?'})['pseudo']].join(', '),
+                      style: AuraTexte.corps(14, poids: FontWeight.w900),
+                    ),
+                ]),
+              ),
+            ),
+          ),
+      ]),
+      _publicBandeau(),
+      const SizedBox(height: 14),
+      if (phase != 'pitch_mots')
+        AuraBouton(
+          libelle: revele ? ((_etat['manche'] as int) + 1 < (_etat['manches'] as List).length ? 'Manche suivante' : 'Voir le gagnant') : 'Révéler maintenant',
+          autofocus: true,
+          principal: revele,
+          onPressed: () => _publier(PartieSoiree.suivante(_etat)),
+        ),
+    ];
+  }
 
   List<Widget> _table() {
     final joueurs = _joueursDe(_etat);
@@ -284,6 +395,12 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
             child: Text(r, style: AuraTexte.corps(20, poids: FontWeight.w900)),
           ),
         ),
+      if (revele && ((_etat['souffles'] as List?) ?? const []).isNotEmpty)
+        Text(
+          'Le public a soufflé la réponse à ${((_etat['souffles'] as List).cast<int>()).map((k) => joueurs[k]['pseudo']).join(' et ')} : un point quand même !',
+          style: AuraTexte.corps(16, poids: FontWeight.w900, couleur: AuraCouleurs.creme),
+        ),
+      _publicBandeau(),
       const SizedBox(height: 10),
       AuraBouton(
         libelle: revele ? 'Question suivante' : 'Révéler la réponse',
@@ -347,6 +464,7 @@ class _SoireeManetteEcranState extends State<SoireeManetteEcran> {
   Timer? _boucle;
   bool _veto = false;
   bool _envoi = false;
+  final List<String> _mots = [];
 
   @override
   void dispose() {
@@ -450,10 +568,12 @@ class _SoireeManetteEcranState extends State<SoireeManetteEcran> {
     final moi = widget.service.monId;
     final j = PartieSoiree.indexDe(e, moi ?? '');
     final joueurs = _joueursDe(e);
-    if (j < 0) return [const PopQuiParle(texte: 'La partie a commencé sans toi… Tu joueras la prochaine !')];
     String nomDe(int k) => joueurs[k]['pseudo'] as String;
+    if (j < 0) return _public(e, moi ?? '', nomDe);
     final autre = joueurs.length == 2 ? nomDe(1 - j) : 'tes adversaires';
     switch (e['phase']) {
+      case 'pitch_mots' || 'pitch_vote' || 'pitch_revele':
+        return _pitchManette(e, j, nomDe);
       case 'table':
         if (e['tour'] != j) return [PopQuiParle(texte: 'Au tour de ${nomDe(e['tour'] as int)}. Regarde la télé et prépare ton coup.')];
         final cartes = PartieSoiree.cartes(e);
@@ -502,6 +622,129 @@ class _SoireeManetteEcranState extends State<SoireeManetteEcran> {
         return [
           PopQuiParle(texte: g == j ? 'Tu as gagné ! Tu prends la télécommande : le film démarre sur la télé.' : '${g == null ? 'Quelqu\'un' : nomDe(g)} a gagné et prend la télécommande. Revanche à la prochaine soirée !'),
         ];
+    }
+  }
+
+  List<Widget> _public(Map<String, dynamic> e, String moi, String Function(int) nomDe) {
+    final k = PartieSoiree.indexPublic(e, moi);
+    if (e['phase'] == 'fin') return [const PopQuiParle(texte: 'La partie est finie. Regarde la télé : qui prend la télécommande ?')];
+    if (k < 0) {
+      return [
+        const PopQuiParle(texte: 'La partie a commencé sans toi. Rejoins le public : tu voteras, et tu pourras souffler les réponses.'),
+        const SizedBox(height: 12),
+        AuraBouton(libelle: 'Rejoindre le public', autofocus: true, onPressed: _envoi ? null : () => _geste({'type': 'public', 'pseudo': widget.pseudo})),
+      ];
+    }
+    final p = PartieSoiree.publicDe(e)[k];
+    final joueurs = _joueursDe(e);
+    if (e['mode'] == 'pitch') {
+      if (e['phase'] != 'pitch_vote') return [const PopQuiParle(texte: 'Tu es dans le public. Regarde la télé : le conteur prépare ses trois mots.')];
+      final m = Pitch.mancheDe(e);
+      if (((m['votes_public'] as Map?) ?? const {}).containsKey(moi)) return [const PopQuiParle(texte: 'Vote envoyé. Si le public trouve, le conteur gagne un point.')];
+      return [
+        TitreCartoon('Quel film ? ${(m['mots'] as List).join(' · ')}', taille: 26),
+        const SizedBox(height: 10),
+        for (final (i, f) in (m['films'] as List).indexed)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: ChoixLarge(libelle: '${i + 1} · ${(f as Map)['titre']}', autofocus: i == 0, onTap: _envoi ? null : () => _geste({'type': 'vote', 'film': i})),
+          ),
+      ];
+    }
+    final soutien = p['soutien'] as int?;
+    final widgets = <Widget>[
+      Text(soutien == null ? 'QUI SOUTIENS-TU ?' : 'TU SOUTIENS ${nomDe(soutien).toUpperCase()}', style: AuraTexte.titre(16)),
+      const SizedBox(height: 6),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (var j = 0; j < joueurs.length; j++) Pastille(libelle: nomDe(j), choisie: soutien == j, onTap: _envoi ? null : () => _geste({'type': 'soutenir', 'joueur': j})),
+      ]),
+      const SizedBox(height: 6),
+      Text('Si ton joueur se trompe et que tu trouves, tu lui souffles la réponse : il garde le point.', style: AuraTexte.corps(13, couleur: AuraCouleurs.creme)),
+      const SizedBox(height: 12),
+    ];
+    if (e['phase'] == 'quiz' && e['revele'] != true) {
+      final n = e['question'] as int;
+      final q = (e['questions'] as List)[n] as Map;
+      if (((e['reponses_public'] as Map?) ?? const {}).containsKey(moi)) {
+        widgets.add(const PopQuiParle(texte: 'Réponse envoyée. Croise les doigts pour ton joueur.'));
+      } else {
+        widgets.addAll([
+          TitreCartoon(q['texte'] as String, taille: 24),
+          const SizedBox(height: 8),
+          for (final (i, r) in (q['reponses'] as List).cast<String>().indexed)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ChoixLarge(libelle: r, autofocus: i == 0, onTap: _envoi ? null : () => _geste({'type': 'reponse', 'question': n, 'choix': r})),
+            ),
+        ]);
+      }
+    } else {
+      widgets.add(const PopQuiParle(texte: 'Regarde la télé : le quiz arrive bientôt.'));
+    }
+    return widgets;
+  }
+
+  List<Widget> _pitchManette(Map<String, dynamic> e, int j, String Function(int) nomDe) {
+    final m = Pitch.mancheDe(e);
+    final conteur = m['conteur'] as int;
+    final films = (m['films'] as List).cast<Map>();
+    switch (e['phase']) {
+      case 'pitch_mots':
+        if (conteur != j) return [PopQuiParle(texte: '${nomDe(conteur)} choisit ses trois mots en secret. Pas de triche !')];
+        final cible = films[m['cible'] as int];
+        return [
+          Panneau(
+            couleur: AuraCouleurs.jaune,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('TON FILM SECRET', style: AuraTexte.titre(14)),
+              Text('${cible['titre']}', style: AuraTexte.titre(26)),
+              Text('Fais-le deviner à quelques-uns, pas à tous : sinon tu ne marques rien.', style: AuraTexte.corps(13, poids: FontWeight.w900)),
+            ]),
+          ),
+          const SizedBox(height: 12),
+          Text('TROIS MOTS (${_mots.length}/${Pitch.nbMots})', style: AuraTexte.titre(16)),
+          const SizedBox(height: 6),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final (i, mot) in (m['proposes'] as List).cast<String>().indexed)
+              Pastille(
+                libelle: mot,
+                choisie: _mots.contains(mot),
+                autofocus: i == 0,
+                onTap: () => setState(() {
+                  if (_mots.contains(mot)) {
+                    _mots.remove(mot);
+                  } else if (_mots.length < Pitch.nbMots) {
+                    _mots.add(mot);
+                  }
+                }),
+              ),
+          ]),
+          const SizedBox(height: 12),
+          AuraBouton(
+            libelle: 'Envoyer mes trois mots',
+            onPressed: _envoi || _mots.length != Pitch.nbMots
+                ? null
+                : () async {
+                    final choisis = [..._mots];
+                    _mots.clear();
+                    await _geste({'type': 'mots', 'mots': choisis});
+                  },
+          ),
+        ];
+      case 'pitch_vote':
+        if (conteur == j) return [const PopQuiParle(texte: 'Ils réfléchissent… Garde ton air innocent.')];
+        if ((m['votes'] as Map).containsKey(widget.service.monId)) return [const PopQuiParle(texte: 'Vote envoyé. Regarde la télé.')];
+        return [
+          TitreCartoon((m['mots'] as List).join(' · '), taille: 28),
+          const SizedBox(height: 10),
+          for (final (i, f) in films.indexed)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ChoixLarge(libelle: '${i + 1} · ${f['titre']}', autofocus: i == 0, onTap: _envoi ? null : () => _geste({'type': 'vote', 'film': i})),
+            ),
+        ];
+      default:
+        return [PopQuiParle(texte: e['message'] as String? ?? 'Regarde la télé !')];
     }
   }
 }

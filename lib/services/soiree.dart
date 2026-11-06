@@ -61,11 +61,13 @@ abstract final class PartieSoiree {
     List<Map<String, dynamic>> joueurs,
     List<List<CarteDefi>> mains,
     List<Question> questions,
-    Random hasard,
-  ) =>
+    Random hasard, {
+    List<Map<String, dynamic>> public = const [],
+  }) =>
       {
         'phase': 'table',
         'joueurs': joueurs,
+        'public': [for (final p in public) {'id': p['id'], 'pseudo': p['pseudo']}],
         'cartes': [
           for (final (j, main) in mains.indexed)
             for (final c in main)
@@ -91,6 +93,45 @@ abstract final class PartieSoiree {
         'points': [for (final _ in joueurs) 0],
         'message': '${joueurs[0]['pseudo']} commence : sur ton téléphone, écarte une carte d\'un adversaire.',
       };
+
+  /// Le public (Jackbox) : ceux qui ne jouent pas mais votent. Au quiz,
+  /// chacun soutient un joueur ; au Pitch, il devine aussi.
+  static List<Map<String, dynamic>> publicDe(Map<String, dynamic> e) => [...((e['public'] as List?) ?? const []).cast<Map<String, dynamic>>()];
+
+  static int indexPublic(Map<String, dynamic> e, String id) => publicDe(e).indexWhere((p) => p['id'] == id);
+
+  /// Les gestes de ceux qui ne sont pas joueurs : entrer dans le public,
+  /// soutenir un joueur, répondre au quiz, voter au Pitch.
+  static Map<String, dynamic>? _geste(Map<String, dynamic> e, String id, Map<String, dynamic> action) {
+    final phase = e['phase'];
+    if (phase == 'attente' || phase == 'fin') return null;
+    final k = indexPublic(e, id);
+    switch (action['type']) {
+      case 'public':
+        if (k >= 0) return null;
+        final pseudo = '${action['pseudo'] ?? 'Public'}'.trim();
+        e['public'] = [...publicDe(e), {'id': id, 'pseudo': pseudo.isEmpty ? 'Public' : (pseudo.length > 24 ? pseudo.substring(0, 24) : pseudo)}];
+        return e;
+      case 'soutenir' when k >= 0:
+        final j = action['joueur'];
+        if (j is! int || j < 0 || j >= nbJoueurs(e)) return null;
+        final p = publicDe(e);
+        p[k] = {...p[k], 'soutien': j};
+        e['public'] = p;
+        return e;
+      case 'reponse' when k >= 0 && phase == 'quiz' && e['revele'] != true:
+        if (action['question'] != e['question']) return null;
+        final r = {...((e['reponses_public'] as Map?) ?? const {}).cast<String, String>()};
+        if (r.containsKey(id)) return null;
+        r[id] = '${action['choix']}';
+        e['reponses_public'] = r;
+        return e;
+      case 'vote' when k >= 0:
+        return Pitch.voteDuPublic(e, id, action);
+      default:
+        return null;
+    }
+  }
 
   static List<Map<String, dynamic>> cartes(Map<String, dynamic> e) => [...((e['cartes'] as List?) ?? const []).cast<Map<String, dynamic>>()];
 
@@ -132,7 +173,7 @@ abstract final class PartieSoiree {
   static Map<String, dynamic>? appliquer(Map<String, dynamic> etat, String joueurId, Map<String, dynamic> action) {
     final e = Map<String, dynamic>.from(etat);
     final j = indexDe(e, joueurId);
-    if (j < 0) return null;
+    if (j < 0) return _geste(e, joueurId, action);
     final n = nbJoueurs(e);
     final noms = ((e['joueurs'] as List).cast<Map<String, dynamic>>()).map((x) => x['pseudo'] as String).toList();
     switch (action['type']) {
@@ -158,6 +199,8 @@ abstract final class PartieSoiree {
           e['message'] = '${e['message']} À ${noms[e['tour'] as int]} de jouer.';
         }
         return e;
+      case 'mots' || 'vote':
+        return Pitch.appliquer(e, j, joueurId, action);
       case 'reponse' when e['phase'] == 'quiz' && e['revele'] != true:
         if (action['question'] != e['question']) return null;
         final reponses = {...(e['reponses'] as Map).cast<String, String>()};
@@ -175,10 +218,26 @@ abstract final class PartieSoiree {
     final q = (e['questions'] as List)[e['question'] as int] as Map;
     final reponses = (e['reponses'] as Map).cast<String, String>();
     final pts = [...(e['points'] as List).cast<int>()];
+    final bons = <int>{};
     for (final r in reponses.entries) {
       final j = indexDe(e, r.key);
-      if (j >= 0 && r.value == q['bonne']) pts[j]++;
+      if (j >= 0 && r.value == q['bonne']) {
+        pts[j]++;
+        bons.add(j);
+      }
     }
+    // Le public souffle : un joueur qui s'est trompé gagne quand même le
+    // point si quelqu'un qui le soutient a trouvé.
+    final publicRep = ((e['reponses_public'] as Map?) ?? const {}).cast<String, String>();
+    final souffles = <int>{};
+    for (final p in publicDe(e)) {
+      final soutien = p['soutien'];
+      if (soutien is int && soutien < pts.length && !bons.contains(soutien) && publicRep[p['id']] == q['bonne']) souffles.add(soutien);
+    }
+    for (final k in souffles) {
+      pts[k]++;
+    }
+    e['souffles'] = souffles.toList();
     e['points'] = pts;
     e['revele'] = true;
   }
@@ -186,6 +245,7 @@ abstract final class PartieSoiree {
   /// La télé passe à la question suivante (ou à la fin). Si quelqu'un n'a
   /// pas répondu, on révèle quand même.
   static Map<String, dynamic> suivante(Map<String, dynamic> etat) {
+    if (etat['mode'] == 'pitch') return Pitch.suivante(etat);
     final e = Map<String, dynamic>.from(etat);
     if (e['phase'] != 'quiz') return e;
     if (e['revele'] != true) {
@@ -209,8 +269,166 @@ abstract final class PartieSoiree {
     }
     e['question'] = suivanteQuestion;
     e['reponses'] = <String, String>{};
+    e['reponses_public'] = <String, String>{};
+    e['souffles'] = <int>[];
     e['revele'] = false;
     return e;
+  }
+}
+
+/// « Le Pitch » (façon Dixit) : à chaque manche, un conteur reçoit en
+/// secret un film parmi quatre et le décrit en trois mots choisis parmi
+/// douze. Les autres votent. Si tout le monde ou personne ne trouve, le
+/// conteur ne marque rien et les autres prennent 2 points ; sinon le conteur
+/// et ceux qui ont trouvé prennent 3 points. Si le public trouve en
+/// majorité, le conteur gagne 1 point de plus. Chacun raconte une fois ;
+/// le gagnant lance le film qu'il a décrit.
+abstract final class Pitch {
+  static const parManche = 4;
+  static const nbMots = 3;
+  static const motsProposes = 12;
+
+  static const mots = [
+    'Vengeance', 'Pluie', 'Fuite', 'Amour impossible', 'Monstre', 'Famille', 'Désert', 'Trahison', 'Fou rire', 'Nuit',
+    'Voyage', 'Secret', 'Enfance', 'Guerre', 'Musique', 'Argent', 'Espace', 'Folie', 'Prison', 'Mer',
+    'Train', 'Neige', 'Robot', 'Fantôme', 'Mariage', 'Enquête', 'Course', 'Danse', 'Magie', 'Ville',
+    'Campagne', 'Hiver', 'Été', 'Chien', 'Héros', 'Mensonge', 'Révolution', 'Rêve', 'Feu', 'Cuisine',
+  ];
+
+  static Map<String, dynamic> nouvelle(List<Map<String, dynamic>> joueurs, List<Film> films, Random hasard, {List<Map<String, dynamic>> public = const []}) {
+    final n = joueurs.length;
+    assert(films.length >= n * parManche);
+    return {
+      'mode': 'pitch',
+      'phase': 'pitch_mots',
+      'joueurs': joueurs,
+      'public': [for (final p in public) {'id': p['id'], 'pseudo': p['pseudo']}],
+      'manches': [
+        for (var k = 0; k < n; k++)
+          {
+            'conteur': k,
+            'films': [for (final f in films.skip(k * parManche).take(parManche)) PartieSoiree.filmVersJson(f)],
+            'cible': hasard.nextInt(parManche),
+            'proposes': ([...mots]..shuffle(hasard)).take(motsProposes).toList(),
+            'mots': <String>[],
+            'votes': <String, int>{},
+            'votes_public': <String, int>{},
+          },
+      ],
+      'manche': 0,
+      'points': [for (final _ in joueurs) 0],
+      'message': '${joueurs[0]['pseudo']} raconte : sur ton téléphone, décris ton film en trois mots.',
+    };
+  }
+
+  static Map<String, dynamic> mancheDe(Map<String, dynamic> e) => ((e['manches'] as List)[e['manche'] as int] as Map).cast<String, dynamic>();
+
+  static void _remplacerManche(Map<String, dynamic> e, Map<String, dynamic> m) {
+    final ms = [...(e['manches'] as List)];
+    ms[e['manche'] as int] = m;
+    e['manches'] = ms;
+  }
+
+  static Map<String, dynamic>? appliquer(Map<String, dynamic> e, int j, String id, Map<String, dynamic> action) {
+    if (e['mode'] != 'pitch') return null;
+    final m = mancheDe(e);
+    final noms = [for (final x in (e['joueurs'] as List).cast<Map>()) '${x['pseudo']}'];
+    switch (action['type']) {
+      case 'mots' when e['phase'] == 'pitch_mots' && m['conteur'] == j:
+        final choisis = [for (final x in (action['mots'] as List? ?? const [])) '$x'];
+        final proposes = (m['proposes'] as List).cast<String>();
+        if (choisis.length != nbMots || choisis.toSet().length != nbMots || !choisis.every(proposes.contains)) return null;
+        _remplacerManche(e, {...m, 'mots': choisis});
+        e['phase'] = 'pitch_vote';
+        e['message'] = '${noms[j]} a parlé : « ${choisis.join(' · ')} ». Votez sur vos téléphones !';
+        return e;
+      case 'vote' when e['phase'] == 'pitch_vote' && m['conteur'] != j:
+        final f = action['film'];
+        if (f is! int || f < 0 || f >= parManche) return null;
+        final votes = {...(m['votes'] as Map).cast<String, int>()};
+        if (votes.containsKey(id)) return null;
+        votes[id] = f;
+        _remplacerManche(e, {...m, 'votes': votes});
+        if (votes.length >= PartieSoiree.nbJoueurs(e) - 1) _reveler(e);
+        return e;
+      default:
+        return null;
+    }
+  }
+
+  static Map<String, dynamic>? voteDuPublic(Map<String, dynamic> e, String id, Map<String, dynamic> action) {
+    if (e['mode'] != 'pitch' || e['phase'] != 'pitch_vote') return null;
+    final m = mancheDe(e);
+    final f = action['film'];
+    if (f is! int || f < 0 || f >= parManche) return null;
+    final votes = {...((m['votes_public'] as Map?) ?? const {}).cast<String, int>()};
+    if (votes.containsKey(id)) return null;
+    votes[id] = f;
+    _remplacerManche(e, {...m, 'votes_public': votes});
+    return e;
+  }
+
+  static void _reveler(Map<String, dynamic> e) {
+    final m = mancheDe(e);
+    final n = PartieSoiree.nbJoueurs(e);
+    final conteur = m['conteur'] as int;
+    final cible = m['cible'] as int;
+    final votes = (m['votes'] as Map).cast<String, int>();
+    final trouveurs = [for (final v in votes.entries) if (v.value == cible) PartieSoiree.indexDe(e, v.key)].where((k) => k >= 0).toList();
+    final pts = [...(e['points'] as List).cast<int>()];
+    final noms = [for (final x in (e['joueurs'] as List).cast<Map>()) '${x['pseudo']}'];
+    final autres = n - 1;
+    String message;
+    if (trouveurs.isEmpty || trouveurs.length == autres) {
+      for (var k = 0; k < n; k++) {
+        if (k != conteur) pts[k] += 2;
+      }
+      message = trouveurs.isEmpty ? 'Personne n\'a trouvé : ${noms[conteur]} ne marque rien, les autres prennent 2 points.' : 'Tout le monde a trouvé : trop facile ! ${noms[conteur]} ne marque rien, les autres prennent 2 points.';
+    } else {
+      pts[conteur] += 3;
+      for (final k in trouveurs) {
+        pts[k] += 3;
+      }
+      message = '${trouveurs.map((k) => noms[k]).join(' et ')} ${trouveurs.length > 1 ? 'ont' : 'a'} trouvé : 3 points pour eux et pour ${noms[conteur]}.';
+    }
+    final vp = ((m['votes_public'] as Map?) ?? const {}).cast<String, int>();
+    if (vp.isNotEmpty && vp.values.where((v) => v == cible).length * 2 > vp.length) {
+      pts[conteur] += 1;
+      message = '$message Le public a compris : +1 pour ${noms[conteur]}.';
+    }
+    e['points'] = pts;
+    e['phase'] = 'pitch_revele';
+    e['message'] = message;
+  }
+
+  /// La télé passe à la suite : révéler si quelqu'un traîne, manche
+  /// suivante, ou fin.
+  static Map<String, dynamic> suivante(Map<String, dynamic> etat) {
+    final e = Map<String, dynamic>.from(etat);
+    switch (e['phase']) {
+      case 'pitch_vote':
+        _reveler(e);
+        return e;
+      case 'pitch_revele':
+        final suivante = (e['manche'] as int) + 1;
+        if (suivante < (e['manches'] as List).length) {
+          e['manche'] = suivante;
+          e['phase'] = 'pitch_mots';
+          final noms = [for (final x in (e['joueurs'] as List).cast<Map>()) '${x['pseudo']}'];
+          e['message'] = '${noms[mancheDe(e)['conteur'] as int]} raconte : sur ton téléphone, décris ton film en trois mots.';
+          return e;
+        }
+        final pts = (e['points'] as List).cast<int>();
+        final meilleur = pts.reduce(max);
+        final gagnant = pts.indexOf(meilleur);
+        final sienne = (e['manches'] as List).cast<Map>().firstWhere((m) => m['conteur'] == gagnant);
+        e['phase'] = 'fin';
+        e['gagnant'] = gagnant;
+        e['film'] = (sienne['films'] as List)[sienne['cible'] as int];
+        return e;
+      default:
+        return e;
+    }
   }
 }
 
