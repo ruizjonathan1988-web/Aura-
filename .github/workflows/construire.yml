@@ -57,6 +57,23 @@ jobs:
           name: aura-apk
           path: aura.apk
 
+      # Aura lit « Ce qui change » sur la release pour sa fenêtre de mise à jour
+      # (lib/services/mise_a_jour.dart) : le titre de la PR fusionnée.
+      - name: Ce qui change
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          titre=$(printf '%s\n' "$MESSAGE" | head -n 1 | sed -E 's/ \(#[0-9]+\)$//')
+          {
+            echo "Aura, le jeu de société du cinéma. Un jeu VJOD."
+            echo "Même APK pour la box Android TV et le téléphone. Les mises à jour s'installent depuis l'appli."
+            echo
+            echo "Ce qui change :"
+            echo "- $titre"
+          } > notes.md
+          cat notes.md
+
       - name: Publier la dernière version
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
@@ -66,9 +83,7 @@ jobs:
           prerelease: true
           make_latest: true
           files: aura.apk
-          body: |
-            Aura, le jeu de société du cinéma. Un jeu VJOD.
-            Même APK pour la box Android TV et le téléphone.
+          body_path: notes.md
 
       - name: Mettre en ligne la version web
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
