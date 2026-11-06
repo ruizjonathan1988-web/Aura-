@@ -23,6 +23,7 @@ import 'package:aura/services/juste_un_film.dart';
 import 'package:aura/services/ligues.dart';
 import 'package:aura/services/ma_tv.dart';
 import 'package:aura/services/mesures.dart';
+import 'package:aura/services/mise_a_jour.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/plateformes.dart';
 import 'package:aura/services/pop.dart';
@@ -1447,6 +1448,43 @@ void main() {
       expect(relu.enVod, isFalse);
       expect(relu.tmdbId, 7);
       expect(horsServeur(7).avecVod(true).vu().enVod, isTrue);
+    });
+  });
+
+  group('R35 Mise à jour automatique', () {
+    final installee = DateTime.utc(2026, 11, 6, 10);
+    Map<String, dynamic> release(String publiee, {String corps = '', String nom = 'aura.apk'}) => {
+          'tag_name': 'derniere',
+          'body': corps,
+          'assets': [
+            {'name': nom, 'updated_at': publiee, 'size': 42000000, 'browser_download_url': 'https://github.com/ruizjonathan1988-web/Aura-/releases/download/derniere/$nom'},
+          ],
+        };
+
+    test('R35 un APK publié après l\'installation est proposé, avec ce qui change', () {
+      final v = MiseAJour.depuisRelease(
+        release('2026-11-06T13:32:00Z', corps: 'Aura, le jeu de société du cinéma.\n\nCe qui change :\n- Mise à jour automatique\n- \n'),
+        installee,
+      )!;
+      expect(v.adresse.toString(), endsWith('/derniere/aura.apk'));
+      expect(v.nouveautes, ['Mise à jour automatique']);
+      expect(v.taille, 42000000);
+      expect(v.publieeLe, DateTime.utc(2026, 11, 6, 13, 32));
+    });
+
+    test('R35 à jour, APK manquant ou réponse bizarre : rien n\'est proposé', () {
+      // Publié juste avant l'installation (la marge de deux minutes).
+      expect(MiseAJour.depuisRelease(release('2026-11-06T10:01:30Z'), installee), isNull);
+      expect(MiseAJour.depuisRelease(release('2026-11-05T22:00:00Z'), installee), isNull);
+      expect(MiseAJour.depuisRelease(release('2026-11-06T13:00:00Z', nom: 'autre.apk'), installee), isNull);
+      expect(MiseAJour.depuisRelease({'message': 'Not Found'}, installee), isNull);
+      expect(MiseAJour.depuisRelease('pas un objet', installee), isNull);
+      expect(MiseAJour.nouveautesDepuis('Sans rubrique'), isEmpty);
+    });
+
+    test('R35 sans le canal Android, la vérification ne casse rien', () async {
+      // Ici (tests), le canal Android n'existe pas : jamais d'erreur, rien de proposé.
+      expect(await MiseAJour.verifier(forcer: true), isNull);
     });
   });
 }
