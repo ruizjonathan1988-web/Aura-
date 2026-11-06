@@ -516,7 +516,7 @@ class EtatJeu extends ChangeNotifier {
     final pouvoir = pp != null && pouvoirArme && Pouvoirs.moment(pp) == MomentPouvoir.billet;
     final bonusPouvoir = pouvoir
         ? Pouvoirs.bonus(
-            pp!,
+            pp,
             pronostic: pronostic,
             note: note,
             dureeMinutes: film?.dureeMinutes ?? dureeMinutes,
@@ -525,7 +525,7 @@ class EtatJeu extends ChangeNotifier {
           )
         : 0;
     if (pouvoir) await _consommerPouvoir();
-    final plafond = pouvoir ? Pouvoirs.plafond(pp!, Niveau.plafond(niveau)) : Niveau.plafond(niveau);
+    final plafond = pouvoir ? Pouvoirs.plafond(pp, Niveau.plafond(niveau)) : Niveau.plafond(niveau);
     // Crasse « Pop-corn renversé » encaissée : une case de moins, une fois.
     final malus = ceMois ? (_prefs.getInt('malus_cases') ?? 0) : 0;
     if (malus > 0) await _prefs.remove('malus_cases');
@@ -567,8 +567,8 @@ class EtatJeu extends ChangeNotifier {
     if (coup) await _prefs.setString('coup_en_attente', '$mois|$position');
     await _noter([
       '« $titre » : ${cases == 0 ? 'aucune case (plafond du jour)' : '+$cases case${cases > 1 ? 's' : ''}'}, case $position.',
-      if (pouvoirAgi) 'Pouvoir ${pp!.pouvoir} : il a fait passer une case de plus.',
-      if (pouvoir && !pouvoirAgi) 'Pouvoir ${pp!.pouvoir} : chou blanc, charge utilisée.',
+      if (pouvoirAgi) 'Pouvoir ${pp.pouvoir} : il a fait passer une case de plus.',
+      if (pouvoir && !pouvoirAgi) 'Pouvoir ${pp.pouvoir} : chou blanc, charge utilisée.',
       if (malus > 0) 'Pop-corn renversé : une case de moins.',
       if (vent) 'Vent dans le dos : +${Retournements.ventDansLeDos} points d\'audace (tu étais derrière Pop).',
       if (pariGagne) 'Pari de Pop relevé : il recule de ${Pop.recul} cases.',
@@ -576,7 +576,7 @@ class EtatJeu extends ChangeNotifier {
     ]);
     final nouveaux = await _majCollection();
     _direPop([
-      if (pouvoir) Pouvoirs.phrase(pp!, agi: pouvoirAgi),
+      if (pouvoir) Pouvoirs.phrase(pp, agi: pouvoirAgi),
       if (note != null) Pop.surPronostic(pronostic: pronostic, note: note, graine: billets.length),
       if (coup) 'Case Coup de théâtre ! Va voir le plateau.',
       if (malus > 0) 'Pop-corn renversé : une case de moins, merci qui ?',
