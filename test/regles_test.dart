@@ -1575,7 +1575,7 @@ void main() {
 
     test('R37 le niveau suit la séance jusqu\'au billet, et le 10 donne le trophée Coup d\'audace', () async {
       final e = await _etat();
-      final carte = CarteDefi(type: TypeCarte.envie, defi: 'Défi', indice: '', cases: 3, joker: '', film: _film('a'), bulleDePop: '', niveau: 10);
+      final carte = CarteDefi(type: TypeCarte.envie, defi: 'Défi', indice: '', cases: Niveau.cases(10), joker: '', film: _film('a'), bulleDePop: '', niveau: 10);
       await e.commencerSeance(carte, pronostic: 4);
       expect(e.enCours.single.niveau, 10);
       expect(SeanceEnCours.depuisJson(e.enCours.single.versJson()).niveau, 10);

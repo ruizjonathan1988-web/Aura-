@@ -187,7 +187,7 @@ Jon a demandé une appli « finie, présentable, jouable, rigolote, avec une for
 
 Choix validés par Jon le 6 novembre (questions posées, réponses données) :
 
-1. **R38 risque et audace** : écrit sur la branche `niveau-risque-audace` (pas encore de PR). Ouvrir la PR, CI verte, fusionner.
+1. **R38 risque et audace** : PR #41. Première CI rouge : le test R37 fabriquait une carte de niveau 10 à 3 cases écrites en dur ; il prend maintenant `Niveau.cases(10)`, comme le tirage.
 2. **R39 pouvoirs des pions** (à faire) : chaque pouvoir s'utilise une fois par semaine, plus une utilisation par tranche de 20 points d'audace du mois. Le joueur « arme » son pouvoir (panneau sur Ce soir) ; il se déclenche au prochain tirage (Boussole, Madeleine) ou au prochain billet (les autres), et la charge est consommée même si la condition n'est pas remplie. Chaque pouvoir vaut environ +1 case par semaine :
    - Explorateur, Boussole : une 4e carte au tirage ;
    - Dégustateur, Slow : +1 case si la séance est notée ;
