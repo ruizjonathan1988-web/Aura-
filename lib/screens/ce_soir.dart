@@ -25,6 +25,7 @@ import 'juste_un_film.dart';
 import 'plan_du_jour.dart';
 import 'reglages.dart';
 import 'soiree.dart';
+import 'deck.dart';
 
 enum _Etape { envie, cartes, pronostic, billet }
 
@@ -185,6 +186,12 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GeneriqueEcran(mois: generique))),
         ),
       _CourseEtSerie(etat: etat),
+      if (etat.billets.isNotEmpty && etat.boostersDispo() > 0)
+        ChoixLarge(
+          libelle: 'TON BOOSTER D\'ATOUTS T\'ATTEND · Trois cartes à collectionner pour ton deck.',
+          couleur: AuraCouleurs.violet,
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DeckEcran())),
+        ),
       _CartePlanDuJour(resultat: etat.planDuJour),
     ];
     final principal = <Widget>[

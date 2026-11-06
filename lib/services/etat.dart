@@ -28,6 +28,7 @@ import 'retournements.dart';
 import 'rivaux.dart';
 import 'source_tmdb.dart';
 import 'sources.dart';
+import 'deck.dart';
 import 'tirage.dart';
 
 enum ModeJeu { demo, vjod }
@@ -532,7 +533,30 @@ class EtatJeu extends ChangeNotifier {
     // Crasse « Pop-corn renversé » encaissée : une case de moins, une fois.
     final malus = ceMois ? (_prefs.getInt('malus_cases') ?? 0) : 0;
     if (malus > 0) await _prefs.remove('malus_cases');
-    final bonus = (joker ? 1 : 0) + (rattrapage ? Fidelite.rattrapage : 0) + bonusPouvoir - malus;
+    // Le Deck d'atouts (R49) : les atouts posés dont le défi est rempli.
+    final effetDeck = ceMois
+        ? Deck.effets(
+            deck,
+            atouts,
+            ContexteAtout(
+              billet: Billet(
+                titre: titre,
+                type: type,
+                pronostic: pronostic,
+                cases: 0,
+                date: date,
+                note: note,
+                genres: film?.genres ?? genres,
+                annee: film?.annee ?? annee,
+                pays: film?.pays ?? pays,
+                niveau: niveau,
+              ),
+              avant: billets,
+              dureeMinutes: film?.dureeMinutes ?? dureeMinutes,
+            ),
+          )
+        : (cases: 0, audace: 0, declenches: const <Atout>[]);
+    final bonus = (joker ? 1 : 0) + (rattrapage ? Fidelite.rattrapage : 0) + bonusPouvoir + effetDeck.cases - malus;
     final deja = casesLe(date);
     final cases = ceMois ? Regles.casesAccordees(demandees: max(0, demandees + bonus), dejaGagneesAujourdhui: deja, plafond: plafond) : 0;
     // Le pouvoir n'a « agi » que s'il a vraiment fait passer une case de plus.
@@ -567,6 +591,7 @@ class EtatJeu extends ChangeNotifier {
     // Vent dans le dos (R41) : une séance vue derrière Pop rapporte de l'audace.
     final vent = ceMois && ouvert(Etape.niveaux) && position < popAvant;
     if (vent) await _ajouterAudace(Retournements.ventDansLeDos);
+    if (effetDeck.audace > 0) await _ajouterAudace(effetDeck.audace);
     if (cases > 0) pionVientDAvancer = true;
     position = (position + cases).clamp(1, Regles.taillePlateau);
     // Coup de théâtre : le pion s'arrête sur une case 4, 14 ou 24 pas encore jouée ce mois-ci.
@@ -578,6 +603,8 @@ class EtatJeu extends ChangeNotifier {
       if (pouvoirAgi) 'Pouvoir ${pp.pouvoir} : il a fait passer une case de plus.',
       if (pouvoir && !pouvoirAgi) 'Pouvoir ${pp.pouvoir} : chou blanc, charge utilisée.',
       if (malus > 0) 'Pop-corn renversé : une case de moins.',
+      if (effetDeck.declenches.isNotEmpty)
+        'Atouts : ${effetDeck.declenches.map((a) => a.nom).join(', ')}${effetDeck.cases > 0 ? ' (+1 case)' : ''}${effetDeck.audace > 0 ? ', +${effetDeck.audace} d\'audace' : ''}.',
       if (vent) 'Vent dans le dos : +${Retournements.ventDansLeDos} points d\'audace (tu étais derrière Pop).',
       if (pariGagne) 'Pari de Pop relevé : il recule de ${Pop.recul} cases.',
       if (coup) 'Case $position : Coup de théâtre !',
@@ -586,6 +613,7 @@ class EtatJeu extends ChangeNotifier {
     _direPop([
       if (pouvoir) Pouvoirs.phrase(pp, agi: pouvoirAgi),
       if (note != null) Pop.surPronostic(pronostic: pronostic, note: note, graine: billets.length),
+      if (effetDeck.declenches.isNotEmpty) Deck.phraseDePop(effetDeck.declenches, graine: billets.length),
       if (coup) 'Case Coup de théâtre ! Va voir le plateau.',
       if (malus > 0) 'Pop-corn renversé : une case de moins, merci qui ?',
       if (vent) 'Tu étais derrière moi : ${Retournements.ventDansLeDos} points d\'audace pour toi. Profites-en, ça ne durera pas.',
@@ -1357,6 +1385,79 @@ class EtatJeu extends ChangeNotifier {
   Set<String> get collection => {...?_prefs.getStringList('collection')};
 
   int get bluffsGagnes => _prefs.getKeys().where((k) => k.startsWith('bluff_') && (_prefs.getBool(k) ?? false)).length;
+
+  // Le Deck d'atouts (R49).
+
+  /// Les atouts possédés et leur nombre d'exemplaires.
+  Map<String, int> get atouts {
+    final brut = _prefs.getString('atouts');
+    if (brut == null) return const {};
+    try {
+      return {for (final e in (jsonDecode(brut) as Map).entries) '${e.key}': (e.value as num).toInt()};
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  /// Les atouts posés dans le deck.
+  List<String> get deck => [for (final id in _prefs.getStringList('deck') ?? const <String>[]) if ((atouts[id] ?? 0) > 0) id];
+
+  int get emplacements => Deck.emplacements(atouts.length);
+
+  DateTime? get _dernierBooster => DateTime.tryParse(_prefs.getString('booster_don') ?? '');
+
+  /// Les boosters à ouvrir aujourd'hui (au plus deux en réserve).
+  int boostersDispo([DateTime? aujourdhui]) =>
+      Deck.disponibles(reserve: _prefs.getInt('booster_reserve') ?? 0, dernierDon: _dernierBooster, aujourdhui: aujourdhui ?? DateTime.now());
+
+  /// Ouvre un booster : trois atouts, ajoutés à la collection. Les nouveaux
+  /// vont dans le deck s'il reste de la place. Une série complète donne son
+  /// exploit. Vide quand il n'y a pas de booster à ouvrir.
+  Future<({List<Atout> cartes, Set<String> nouveaux, List<Serie> series})> ouvrirBooster({Random? hasard, DateTime? maintenant}) async {
+    final m = maintenant ?? DateTime.now();
+    final dispo = boostersDispo(m);
+    if (dispo <= 0) return (cartes: const <Atout>[], nouveaux: const <String>{}, series: const <Serie>[]);
+    final sans = _prefs.getInt('booster_sans_epique') ?? 0;
+    final cartes = Deck.booster(hasard ?? Random(), sansEpique: sans);
+    final avant = atouts;
+    final apres = {...avant};
+    for (final c in cartes) {
+      apres[c.id] = (apres[c.id] ?? 0) + 1;
+    }
+    final nouveaux = {for (final c in cartes) if (!avant.containsKey(c.id)) c.id};
+    await _prefs.setString('atouts', jsonEncode(apres));
+    await _prefs.setInt('booster_reserve', dispo - 1);
+    await _prefs.setString('booster_don', jourDe(m));
+    await _prefs.setInt('booster_sans_epique', cartes.any((c) => c.rarete.index >= Rarete.epique.index) ? 0 : sans + 1);
+    final places = Deck.emplacements(apres.length);
+    final d = deck;
+    for (final id in nouveaux) {
+      if (d.length >= places) break;
+      d.add(id);
+    }
+    await _prefs.setStringList('deck', d);
+    final completes = Deck.seriesCompletes(apres).where((s) => !Deck.seriesCompletes(avant).contains(s)).toList();
+    for (final s in completes) {
+      await ajouterExploit(s.exploit);
+    }
+    _mesurer('booster', {'nouveaux': nouveaux.length});
+    notifyListeners();
+    return (cartes: cartes, nouveaux: nouveaux, series: completes);
+  }
+
+  /// Pose un atout dans le deck (s'il reste une place) ou l'en retire.
+  Future<bool> basculerAtout(String id) async {
+    final d = deck;
+    if (d.contains(id)) {
+      d.remove(id);
+    } else {
+      if ((atouts[id] ?? 0) <= 0 || d.length >= emplacements) return false;
+      d.add(id);
+    }
+    await _prefs.setStringList('deck', d);
+    notifyListeners();
+    return true;
+  }
 
   /// Ajoute un exploit gagné hors du plateau (campagne bouclée, cadeau
   /// réussi). Renvoie vrai s'il est nouveau.

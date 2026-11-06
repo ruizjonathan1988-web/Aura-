@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
 import 'package:aura/services/apres_seance.dart';
+import 'package:aura/services/deck.dart';
 import 'package:aura/services/aura.dart';
 import 'package:aura/services/avis_du_jeu.dart';
 import 'package:aura/services/cadeaux.dart';
@@ -2339,6 +2340,96 @@ void main() {
       expect(majDepuisJellyfin(null, p, t), isNull);
       final vue = Proposition(id: 'p', de: 'u', deNom: 'Jon', pourNom: 'Léa', filmCle: 'tmdb:1', titre: 'X', vuLe: t, aime: true, creeLe: t);
       expect(majDepuisJellyfin({'Played': false, 'IsFavorite': false}, vue, t), isNull);
+    });
+  });
+
+  group('R49 Le Deck d\'atouts', () {
+    Billet billet({int? annee = 1970, int pronostic = 4, int? note = 4, List<String> pays = const ['France'], List<String> genres = const ['Drama'], DateTime? date, String type = 'Rétro', int? niveau}) => Billet(
+          titre: 'X',
+          type: type,
+          pronostic: pronostic,
+          cases: 0,
+          date: date ?? DateTime(2026, 11, 4, 21),
+          note: note,
+          annee: annee,
+          pays: pays,
+          genres: genres,
+          niveau: niveau,
+        );
+
+    test('R49 les atouts posés et possédés se déclenchent ; une case au plus par film, l\'audace s\'additionne', () {
+      final e = Deck.effets(['projectionniste', 'critique', 'nouvelle_vague', 'cascadeur'], {'projectionniste': 1, 'critique': 1, 'nouvelle_vague': 1}, ContexteAtout(billet: billet()));
+      expect(e.declenches.map((a) => a.id), ['projectionniste', 'critique', 'nouvelle_vague']);
+      expect(e.cases, 1, reason: 'deux atouts à une case : une seule case');
+      expect(e.audace, 2);
+      final rien = Deck.effets(['critique'], {'critique': 1}, ContexteAtout(billet: billet(note: 2)));
+      expect((rien.cases, rien.audace, rien.declenches), (0, 0, isEmpty));
+    });
+
+    test('R49 les doubles font monter le niveau : 3 exemplaires niveau 2, 6 niveau 3, une d\'audace de plus par niveau', () {
+      expect([1, 2, 3, 5, 6, 9].map(Deck.niveau), [1, 1, 2, 2, 3, 3]);
+      final e = Deck.effets(['projectionniste'], {'projectionniste': 6}, ContexteAtout(billet: billet()));
+      expect(e.audace, 2 + 2);
+    });
+
+    test('R49 des défis lisibles : dimanche, film d\'hier, 3e de la semaine, pays nouveau du mois', () {
+      final dimanche = DateTime(2026, 11, 8, 21);
+      expect(Deck.de('generique')!.condition(ContexteAtout(billet: billet(date: dimanche))), isTrue);
+      final hier = billet(date: dimanche.subtract(const Duration(days: 1)));
+      expect(Deck.de('plan_sequence')!.condition(ContexteAtout(billet: billet(date: dimanche), avant: [hier])), isTrue);
+      expect(Deck.de('realisatrice')!.condition(ContexteAtout(billet: billet(date: dimanche), avant: [hier, billet(date: DateTime(2026, 11, 3))])), isTrue);
+      expect(Deck.de('realisatrice')!.condition(ContexteAtout(billet: billet(date: dimanche), avant: [hier])), isFalse);
+      expect(Deck.de('tour_du_monde')!.condition(ContexteAtout(billet: billet(pays: ['Japon']), avant: [billet(pays: ['France'])])), isTrue);
+      expect(Deck.de('tour_du_monde')!.condition(ContexteAtout(billet: billet(pays: ['France']), avant: [billet(pays: ['France'])])), isFalse);
+      expect(Deck.de('ralenti')!.condition(ContexteAtout(billet: billet(), dureeMinutes: 160)), isTrue);
+    });
+
+    test('R49 24 atouts en 3 séries de 8, chacun avec un gain ; 4e place à 15 atouts différents', () {
+      expect(Deck.atouts, hasLength(24));
+      expect(Deck.atouts.map((a) => a.id).toSet(), hasLength(24));
+      for (final s in Serie.values) {
+        expect(Deck.dela(s), hasLength(8));
+        expect(Collection.exploits.any((x) => x.id == s.exploit), isTrue);
+      }
+      expect(Deck.atouts.every((a) => a.cases > 0 || a.audace > 0), isTrue);
+      expect(Deck.atouts.where((a) => a.rarete == Rarete.commune).every((a) => a.cases == 0), isTrue, reason: 'les communes ne donnent que de l\'audace');
+      expect((Deck.emplacements(14), Deck.emplacements(15)), (3, 4));
+    });
+
+    test('R49 un booster : 3 atouts ; un Épique ou mieux garanti au 10e booster', () {
+      for (var g = 0; g < 200; g++) {
+        expect(Deck.booster(Random(g)), hasLength(3));
+        final garanti = Deck.booster(Random(g), sansEpique: Deck.garantie - 1);
+        expect(garanti.any((a) => a.rarete.index >= Rarete.epique.index), isTrue);
+      }
+    });
+
+    test('R49 un booster par jour, au plus deux en réserve', () {
+      final lundi = DateTime(2026, 11, 2, 10);
+      expect(Deck.disponibles(reserve: 0, dernierDon: null, aujourdhui: lundi), 1);
+      expect(Deck.disponibles(reserve: 0, dernierDon: lundi, aujourdhui: lundi.add(const Duration(hours: 8))), 0);
+      expect(Deck.disponibles(reserve: 0, dernierDon: lundi, aujourdhui: lundi.add(const Duration(days: 1))), 1);
+      expect(Deck.disponibles(reserve: 0, dernierDon: lundi, aujourdhui: lundi.add(const Duration(days: 6))), 2);
+    });
+
+    test('R49 ouvrir son booster : la collection grandit, les nouveaux vont au deck, pas deux fois le même jour', () async {
+      final e = await _etat();
+      final r = await e.ouvrirBooster(hasard: Random(3));
+      expect(r.cartes, hasLength(3));
+      expect(e.atouts.values.fold<int>(0, (a, b) => a + b), 3);
+      expect(e.deck, isNotEmpty);
+      expect(e.deck.length, lessThanOrEqualTo(3));
+      expect(e.boostersDispo(), 0);
+      expect((await e.ouvrirBooster()).cartes, isEmpty);
+    });
+
+    test('R49 au billet : la Critique donne sa case et le plafond du jour tient', () async {
+      final e = await _etat({'atouts': jsonEncode({'critique': 1}), 'deck': ['critique'], ..._devantPop});
+      expect(await e.validerSeance(_carte('a', type: TypeCarte.envie, cases: 1), pronostic: 4, note: 4), 2);
+      expect(await e.validerSeance(_carte('b', cases: 3), pronostic: 4, note: 4), 1, reason: 'plafond de 3 cases par jour');
+      expect(await e.basculerAtout('critique'), isTrue);
+      expect(e.deck, isEmpty);
+      expect(await e.basculerAtout('inconnu'), isFalse);
     });
   });
 }
