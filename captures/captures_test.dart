@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_visible_for_testing_member
 // Les captures d'écran d'Aura, pour relire l'interface sans appareil :
 // la CI les dessine (avec les vraies polices) et les garde en artefact.
 // Lancées à part : flutter test captures/captures_test.dart --update-goldens
