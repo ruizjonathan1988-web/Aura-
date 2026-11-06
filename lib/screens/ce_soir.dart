@@ -346,14 +346,25 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
 
   /// Le pouvoir du pion (R39) : ses charges, et le bouton pour l'armer.
   Widget _pouvoir(EtatJeu etat) {
-    final p = etat.profil;
+    final pp = etat.profilDuPouvoir;
+    if (pp == null) {
+      final f = etat.figurineDuMois;
+      return Panneau(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('FIGURINE DU MOIS : ${f.nom.toUpperCase()}', style: AuraTexte.titre(16)),
+          const SizedBox(height: 6),
+          Text(f.explication, style: AuraTexte.corps(14)),
+        ]),
+      );
+    }
+    final p = pp;
     final charges = etat.chargesPouvoir;
     final arme = etat.pouvoirArme;
     final reste = Pouvoirs.audaceParCharge - etat.audaceDuMois % Pouvoirs.audaceParCharge;
     return Panneau(
       couleur: arme ? AuraCouleurs.jaune : AuraCouleurs.creme,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('TON POUVOIR : ${p.pouvoir.toUpperCase()}', style: AuraTexte.titre(16)),
+        Text(etat.oeufEclos ? 'L\'ŒUF A ÉCLOS : ${p.pouvoir.toUpperCase()}' : 'TON POUVOIR : ${p.pouvoir.toUpperCase()}', style: AuraTexte.titre(16)),
         const SizedBox(height: 6),
         Text(p.effet, style: AuraTexte.corps(14)),
         const SizedBox(height: 6),

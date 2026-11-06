@@ -22,6 +22,7 @@ import 'pop.dart';
 import 'pouvoirs.dart';
 import 'rappels.dart';
 import 'retournements.dart';
+import 'rivaux.dart';
 import 'source_tmdb.dart';
 import 'sources.dart';
 import 'tirage.dart';
@@ -511,10 +512,11 @@ class EtatJeu extends ChangeNotifier {
     // Pouvoir armé « au billet » (R39) : il agit maintenant, la charge part
     // même si la condition n'est pas remplie.
     final popAvant = positionDePop;
-    final pouvoir = ouvert(Etape.pouvoirs) && pouvoirArme && Pouvoirs.moment(profil) == MomentPouvoir.billet;
+    final pp = profilDuPouvoir;
+    final pouvoir = pp != null && pouvoirArme && Pouvoirs.moment(pp) == MomentPouvoir.billet;
     final bonusPouvoir = pouvoir
         ? Pouvoirs.bonus(
-            profil,
+            pp!,
             pronostic: pronostic,
             note: note,
             dureeMinutes: film?.dureeMinutes ?? dureeMinutes,
@@ -523,7 +525,7 @@ class EtatJeu extends ChangeNotifier {
           )
         : 0;
     if (pouvoir) await _consommerPouvoir();
-    final plafond = pouvoir ? Pouvoirs.plafond(profil, Niveau.plafond(niveau)) : Niveau.plafond(niveau);
+    final plafond = pouvoir ? Pouvoirs.plafond(pp!, Niveau.plafond(niveau)) : Niveau.plafond(niveau);
     // Crasse « Pop-corn renversé » encaissée : une case de moins, une fois.
     final malus = ceMois ? (_prefs.getInt('malus_cases') ?? 0) : 0;
     if (malus > 0) await _prefs.remove('malus_cases');
@@ -565,8 +567,8 @@ class EtatJeu extends ChangeNotifier {
     if (coup) await _prefs.setString('coup_en_attente', '$mois|$position');
     await _noter([
       '« $titre » : ${cases == 0 ? 'aucune case (plafond du jour)' : '+$cases case${cases > 1 ? 's' : ''}'}, case $position.',
-      if (pouvoirAgi) 'Pouvoir ${profil.pouvoir} : il a fait passer une case de plus.',
-      if (pouvoir && !pouvoirAgi) 'Pouvoir ${profil.pouvoir} : chou blanc, charge utilisée.',
+      if (pouvoirAgi) 'Pouvoir ${pp!.pouvoir} : il a fait passer une case de plus.',
+      if (pouvoir && !pouvoirAgi) 'Pouvoir ${pp!.pouvoir} : chou blanc, charge utilisée.',
       if (malus > 0) 'Pop-corn renversé : une case de moins.',
       if (vent) 'Vent dans le dos : +${Retournements.ventDansLeDos} points d\'audace (tu étais derrière Pop).',
       if (pariGagne) 'Pari de Pop relevé : il recule de ${Pop.recul} cases.',
@@ -574,7 +576,7 @@ class EtatJeu extends ChangeNotifier {
     ]);
     final nouveaux = await _majCollection();
     _direPop([
-      if (pouvoir) Pouvoirs.phrase(profil, agi: pouvoirAgi),
+      if (pouvoir) Pouvoirs.phrase(pp!, agi: pouvoirAgi),
       if (note != null) Pop.surPronostic(pronostic: pronostic, note: note, graine: billets.length),
       if (coup) 'Case Coup de théâtre ! Va voir le plateau.',
       if (malus > 0) 'Pop-corn renversé : une case de moins, merci qui ?',
@@ -706,7 +708,7 @@ class EtatJeu extends ChangeNotifier {
 
   /// Armer son pouvoir, s'il reste une charge. Renvoie vrai si c'est fait.
   Future<bool> armerPouvoir() async {
-    if (!ouvert(Etape.pouvoirs) || pouvoirArme || chargesPouvoir <= 0) return false;
+    if (profilDuPouvoir == null || pouvoirArme || chargesPouvoir <= 0) return false;
     await _prefs.setBool('pouvoir_arme', true);
     notifyListeners();
     return true;
@@ -735,11 +737,12 @@ class EtatJeu extends ChangeNotifier {
   /// Au tirage de Ce soir : si le pouvoir armé agit au tirage (Boussole,
   /// Madeleine), il est consommé et ses réglages sont renvoyés.
   Future<({int nombre, bool revoir})> pouvoirAuTirage() async {
-    if (!ouvert(Etape.pouvoirs) || !pouvoirArme || Pouvoirs.moment(profil) != MomentPouvoir.tirage) return (nombre: 3, revoir: false);
+    final pp = profilDuPouvoir;
+    if (pp == null || !pouvoirArme || Pouvoirs.moment(pp) != MomentPouvoir.tirage) return (nombre: 3, revoir: false);
     await _consommerPouvoir();
-    _direPop([Pouvoirs.phrase(profil, agi: true)]);
+    _direPop([Pouvoirs.phrase(pp, agi: true)]);
     notifyListeners();
-    return (nombre: Pouvoirs.cartesAuTirage(profil), revoir: Pouvoirs.revoir(profil));
+    return (nombre: Pouvoirs.cartesAuTirage(pp), revoir: Pouvoirs.revoir(pp));
   }
 
   /// L'audace du mois : la somme des points d'audace des billets du mois.
@@ -777,12 +780,90 @@ class EtatJeu extends ChangeNotifier {
         casesRestantes: Regles.casesParJourMax - casesLe(DateTime.now()),
         toutOuvert: toutOuvert,
         coupEnAttente: coupEnAttente?.numero,
-        pouvoirCharge: chargesPouvoir > 0,
+        pouvoirCharge: profilDuPouvoir != null && chargesPouvoir > 0,
         pouvoirArme: pouvoirArme,
-        nomPouvoir: profil.pouvoir,
+        nomPouvoir: profilDuPouvoir?.pouvoir ?? '',
         niveauImpose: niveauImpose,
         sisyphe: sisypheActif,
       );
+
+  // Rivaux robots et figurine du mois (R43).
+
+  /// La figurine du mois : ton pouvoir, l'œuf mystère ou le Figurant.
+  FigurineDuMois get figurineDuMois => FigurineDuMois.depuisNom(_prefs.getString('figurine_${moisDe(DateTime.now())}'));
+
+  /// Le choix se fait la première semaine du mois, une fois, pouvoirs ouverts.
+  bool get figurineAChoisir =>
+      ouvert(Etape.pouvoirs) && _prefs.getString('figurine_${moisDe(DateTime.now())}') == null && DateTime.now().day <= Retournements.joursSisyphe;
+
+  Future<void> choisirFigurine(FigurineDuMois f) async {
+    if (!figurineAChoisir) return;
+    await _prefs.setString('figurine_${moisDe(DateTime.now())}', f.name);
+    if (f != FigurineDuMois.pouvoir) await _prefs.setBool('pouvoir_arme', false);
+    _direPop([switch (f) {
+      FigurineDuMois.pouvoir => 'Classique. Je respecte.',
+      FigurineDuMois.oeuf => 'Un œuf ! Je me demande ce qui va en sortir. Moi, je parie sur un poulet.',
+      FigurineDuMois.figurant => 'Le Figurant : tu ne fais rien, mais tu es partout. Comme moi au cinéma.',
+    }]);
+    await _noter(['Figurine du mois : ${f.nom}.']);
+    notifyListeners();
+  }
+
+  int get _seancesDuMois => billets.where((b) => moisDe(b.date) == moisDe(DateTime.now())).length;
+
+  /// Vrai quand l'œuf a éclos (3 séances ce mois-ci).
+  bool get oeufEclos => figurineDuMois == FigurineDuMois.oeuf && _seancesDuMois >= Oeuf.seancesPourEclore;
+
+  /// Le profil dont on utilise le pouvoir ce mois-ci, ou null s'il n'y en a pas
+  /// (pouvoirs pas encore ouverts, œuf pas éclos, Figurant).
+  Profil? get profilDuPouvoir {
+    if (!ouvert(Etape.pouvoirs)) return null;
+    return switch (figurineDuMois) {
+      FigurineDuMois.pouvoir => profil,
+      FigurineDuMois.oeuf => oeufEclos ? Oeuf.eclosion(profil, DateTime.now()) : null,
+      FigurineDuMois.figurant => null,
+    };
+  }
+
+  /// Le Figurant avance d'une case quand quelque chose arrive, une fois par jour.
+  Future<void> _figurant(String quoi) async {
+    if (!ouvert(Etape.pouvoirs) || figurineDuMois != FigurineDuMois.figurant) return;
+    final cle = 'figurant_${jourDe(DateTime.now())}';
+    if (_prefs.getBool(cle) ?? false) return;
+    await _prefs.setBool(cle, true);
+    position = min(Regles.taillePlateau, position + 1);
+    await _prefs.setInt('position', position);
+    await _noter(['Le Figurant était dans le champ ($quoi) : +1 case.']);
+  }
+
+  /// La case d'un rival, retours de crasse compris.
+  int positionDe(Rival r) =>
+      (Rivaux.position(r, DateTime.now()) - (_prefs.getInt('rival_${r.name}_${moisDe(DateTime.now())}') ?? 0)).clamp(1, Regles.taillePlateau);
+
+  /// La crasse d'un rival cette semaine, si elle attend une réponse.
+  ({Rival rival, Crasse crasse})? get crasseDesRivaux {
+    if (!ouvert(Etape.crasses)) return null;
+    final c = Rivaux.crasseDeLaSemaine(DateTime.now());
+    if (c == null) return null;
+    final lundi = Pop.lundiDe(DateTime.now());
+    if (_prefs.getBool('crasse_rival_${jourDe(lundi)}') ?? false) return null;
+    return c;
+  }
+
+  /// Répondre à la crasse d'un rival : comme pour un ami, et un renvoi le fait reculer.
+  Future<bool> repondreAuRival(Reponse r) async {
+    final c = crasseDesRivaux;
+    if (c == null) return false;
+    if (!await repondreCrasse(c.crasse, r)) return false;
+    if (r == Reponse.renvoyee) {
+      final cle = 'rival_${c.rival.name}_${moisDe(DateTime.now())}';
+      await _prefs.setInt(cle, (_prefs.getInt(cle) ?? 0) + Rivaux.reculRenvoi);
+      await _noter(['${c.rival.nom} recule de ${Rivaux.reculRenvoi} cases : bien fait.']);
+    }
+    await _prefs.setBool('crasse_rival_${jourDe(Pop.lundiDe(DateTime.now()))}', true);
+    notifyListeners();
+    return true;
+  }
 
   // Retournements (R41) : journal du plateau, Volte-face, pari de Sisyphe.
 
@@ -886,6 +967,7 @@ class EtatJeu extends ChangeNotifier {
     final mois = moisDe(DateTime.now());
     await _prefs.setStringList('coups_$mois', [...?_prefs.getStringList('coups_$mois'), '${c.numero}']);
     await _prefs.remove('coup_en_attente');
+    await _figurant('un coup de théâtre');
     notifyListeners();
     return true;
   }
@@ -904,8 +986,10 @@ class EtatJeu extends ChangeNotifier {
   /// Un renvoi à l'expéditeur par mois.
   bool get peutRenvoyerUneCrasse => Crasses.peutRenvoyer(DateTime.now(), _dates('crasses_renvois'));
 
-  Future<void> noterCrasseEnvoyee() async =>
-      _prefs.setStringList('crasses_envoyees', [DateTime.now().toIso8601String(), ...?_prefs.getStringList('crasses_envoyees')].take(10).toList());
+  Future<void> noterCrasseEnvoyee() async {
+    await _prefs.setStringList('crasses_envoyees', [DateTime.now().toIso8601String(), ...?_prefs.getStringList('crasses_envoyees')].take(10).toList());
+    await _figurant('ta crasse');
+  }
 
   /// Répondre à une crasse reçue. Encaissée : son effet s'applique ici.
   /// Parée : une charge de pouvoir. Renvoyée : une fois par mois. Renvoie
@@ -940,6 +1024,7 @@ class EtatJeu extends ChangeNotifier {
         Reponse.renvoyee => 'Crasse renvoyée à l\'envoyeur (${c.nom}).',
       }
     ]);
+    await _figurant('une crasse');
     notifyListeners();
     return true;
   }

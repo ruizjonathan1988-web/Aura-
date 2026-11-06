@@ -7,6 +7,7 @@ import '../services/coups.dart';
 import '../services/etat.dart';
 import '../services/pop.dart';
 import '../services/retournements.dart';
+import '../services/rivaux.dart';
 import '../services/tirage.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/animations.dart';
@@ -112,6 +113,28 @@ class PlateauEcran extends StatelessWidget {
               PopQuiParle(texte: etat.motDePop ?? Pop.surPlateau(joueur: etat.position, pop: pop, jour: maintenant), taille: 70),
               const SizedBox(height: 16),
               _Circuit(joueur: etat.profil, positionJoueur: etat.position, positionPop: pop, saute: _consommerSaut(etat)),
+              const SizedBox(height: 14),
+              _LaCourse(etat: etat, pop: pop),
+              if (etat.figurineAChoisir) ...[
+                const SizedBox(height: 14),
+                Panneau(
+                  couleur: AuraCouleurs.jaune,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('TA FIGURINE DU MOIS', style: AuraTexte.titre(16)),
+                    const SizedBox(height: 6),
+                    for (final f in FigurineDuMois.values)
+                      Padding(padding: const EdgeInsets.only(bottom: 4), child: Text('${f.nom} : ${f.explication}', style: AuraTexte.corps(13))),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      for (final f in FigurineDuMois.values) Pastille(libelle: f.nom, choisie: false, onTap: () => etat.choisirFigurine(f)),
+                    ]),
+                  ]),
+                ),
+              ],
+              if (etat.crasseDesRivaux != null) ...[
+                const SizedBox(height: 14),
+                _CrasseDuRival(etat: etat),
+              ],
               if (etat.sisypheProposable) ...[
                 const SizedBox(height: 14),
                 Panneau(
@@ -517,6 +540,62 @@ class _CoupDeTheatre extends StatelessWidget {
           Pastille(libelle: tort ? 'Encaisser' : 'D\'accord !', choisie: false, autofocus: true, onTap: () => etat.resoudreCoup()),
           if (tort && etat.peutParerAvecCharge) Pastille(libelle: 'Parer (1 charge de pouvoir)', choisie: false, onTap: () => etat.resoudreCoup(parade: 'charge')),
           if (tort && etat.bouclierDispo) Pastille(libelle: 'Parer avec le Bouclier du mois', choisie: false, onTap: () => etat.resoudreCoup(parade: 'bouclier')),
+        ]),
+      ]),
+    );
+  }
+}
+
+/// La course du mois (R43) : toi, Pop et les deux rivaux robots.
+class _LaCourse extends StatelessWidget {
+  const _LaCourse({required this.etat, required this.pop});
+
+  final EtatJeu etat;
+  final int pop;
+
+  @override
+  Widget build(BuildContext context) {
+    final coureurs = [
+      ('Toi', etat.position),
+      ('Pop', pop),
+      for (final r in Rival.values) (r.nom, etat.positionDe(r)),
+    ]..sort((a, b) => b.$2.compareTo(a.$2));
+    return Panneau(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('LA COURSE DU MOIS', style: AuraTexte.titre(16)),
+        const SizedBox(height: 6),
+        for (final (i, c) in coureurs.indexed)
+          Text('${i + 1}. ${c.$1} · case ${c.$2}', style: AuraTexte.corps(14, poids: c.$1 == 'Toi' ? FontWeight.w900 : FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text('${Rival.bobine.nom} : ${Rival.bobine.caractere} ${Rival.pellicule.nom} : ${Rival.pellicule.caractere}',
+            style: AuraTexte.corps(12, couleur: AuraCouleurs.texteDoux)),
+      ]),
+    );
+  }
+}
+
+/// La crasse d'un rival (R43) : comme celle d'un ami, avec sa parade.
+class _CrasseDuRival extends StatelessWidget {
+  const _CrasseDuRival({required this.etat});
+
+  final EtatJeu etat;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = etat.crasseDesRivaux!;
+    return Panneau(
+      couleur: AuraCouleurs.rose,
+      inclinaison: -0.01,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('${c.rival.nom.toUpperCase()} T\'A FAIT UNE CRASSE : ${c.crasse.nom.toUpperCase()}', style: AuraTexte.titre(15)),
+        const SizedBox(height: 4),
+        Text(c.crasse.effet, style: AuraTexte.corps(14, poids: FontWeight.w900)),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          Pastille(libelle: 'Encaisser', choisie: false, onTap: () => etat.repondreAuRival(Reponse.encaissee)),
+          if (etat.peutParerAvecCharge) Pastille(libelle: 'Parer (1 charge de pouvoir)', choisie: false, onTap: () => etat.repondreAuRival(Reponse.paree)),
+          if (etat.peutRenvoyerUneCrasse)
+            Pastille(libelle: 'Renvoyer (${c.rival.nom} recule de ${Rivaux.reculRenvoi})', choisie: false, onTap: () => etat.repondreAuRival(Reponse.renvoyee)),
         ]),
       ]),
     );

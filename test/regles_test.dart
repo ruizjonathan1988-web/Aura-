@@ -34,6 +34,7 @@ import 'package:aura/services/pouvoirs.dart';
 import 'package:aura/services/premier_soir.dart';
 import 'package:aura/services/rappels.dart';
 import 'package:aura/services/retournements.dart';
+import 'package:aura/services/rivaux.dart';
 import 'package:aura/services/semaine_ligue.dart';
 import 'package:aura/services/source_tmdb.dart';
 import 'package:aura/services/soiree.dart';
@@ -2001,6 +2002,81 @@ void main() {
       expect(cachee.first, contains('Plafond du jour'));
       expect(cachee.any((l) => l.contains('Slow')), isFalse, reason: 'les pouvoirs ne sont pas encore ouverts');
       expect(cachee.last, contains('Ton pouvoir'));
+    });
+  });
+
+  group('R43 Rivaux robots et figurine du mois', () {
+    final mois = EtatJeu.moisDe(DateTime.now());
+    CarteDefi carte(String id) => CarteDefi(type: TypeCarte.envie, defi: 'Défi', indice: '', cases: 1, joker: '', film: _film(id), bulleDePop: '');
+
+    test('R43 Bobine avance chaque jour sauf le dimanche, Pellicule de 0 à 2 ; tout se calcule depuis la date', () {
+      expect(Rivaux.position(Rival.bobine, DateTime(2026, 11, 8)), 7, reason: '1er et 8 novembre 2026 sont des dimanches');
+      expect(Rivaux.position(Rival.bobine, DateTime(2026, 11, 30)), 26);
+      final p = Rivaux.position(Rival.pellicule, DateTime(2026, 11, 10));
+      expect(p, inInclusiveRange(1, 21));
+      expect(Rivaux.position(Rival.pellicule, DateTime(2026, 11, 10)), p);
+      expect(Rivaux.position(Rival.pellicule, DateTime(2026, 11, 11)), greaterThanOrEqualTo(p));
+    });
+
+    test('R43 chaque semaine, un rival fait une crasse à partir d\'un jour fixé, et ne change pas d\'avis', () {
+      final semaine = [for (var j = 2; j <= 8; j++) Rivaux.crasseDeLaSemaine(DateTime(2026, 11, j, 20))];
+      final premier = semaine.indexWhere((c) => c != null);
+      expect(premier, inInclusiveRange(0, 4), reason: 'entre lundi et vendredi');
+      expect(semaine.skip(premier).every((c) => c == semaine[premier]), isTrue);
+      expect(semaine.take(premier).every((c) => c == null), isTrue);
+    });
+
+    test('R43 la crasse d\'un rival se règle une fois ; renvoyée, il recule de 2', () async {
+      final e = await _etat();
+      final c = Rivaux.crasseDeLaSemaine(DateTime.now());
+      if (c == null) {
+        expect(e.crasseDesRivaux, isNull);
+        return;
+      }
+      expect(e.crasseDesRivaux, c);
+      final avant = e.positionDe(c.rival);
+      expect(await e.repondreAuRival(Reponse.renvoyee), isTrue);
+      expect(e.positionDe(c.rival), max(1, avant - Rivaux.reculRenvoi));
+      expect(e.crasseDesRivaux, isNull);
+      expect(await e.repondreAuRival(Reponse.encaissee), isFalse);
+      final f = await _etat({'tout_ouvert': false});
+      expect(f.crasseDesRivaux, isNull, reason: 'les crasses ne sont pas encore ouvertes');
+    });
+
+    test('R43 l\'œuf éclot à la 3e séance du mois et donne le pouvoir d\'une autre figurine', () async {
+      for (var m = 1; m <= 12; m++) {
+        for (final p in Profil.values) {
+          expect(Oeuf.eclosion(p, DateTime(2026, m)), isNot(p));
+        }
+      }
+      final e = await _etat({'profil': 'critique', 'figurine_$mois': 'oeuf'});
+      expect(e.profilDuPouvoir, isNull);
+      expect(await e.armerPouvoir(), isFalse);
+      for (final id in ['a', 'b', 'c']) {
+        await e.validerSeance(carte(id), pronostic: 3);
+      }
+      expect(e.oeufEclos, isTrue);
+      expect(e.profilDuPouvoir, Oeuf.eclosion(Profil.critique, DateTime.now()));
+      expect(await e.armerPouvoir(), isTrue);
+    });
+
+    test('R43 le Figurant n\'a pas de pouvoir, mais avance d\'une case quand il se passe quelque chose, une fois par jour', () async {
+      final e = await _etat({'figurine_$mois': 'figurant', 'position': 5});
+      expect(e.profilDuPouvoir, isNull);
+      expect(await e.armerPouvoir(), isFalse);
+      await e.repondreCrasse(Crasse.fauxSpoiler, Reponse.encaissee);
+      expect(e.position, 6);
+      await e.noterCrasseEnvoyee();
+      expect(e.position, 6, reason: 'une fois par jour');
+      final f = await _etat({'position': 5});
+      if (DateTime.now().day <= Retournements.joursSisyphe) {
+        expect(f.figurineAChoisir, isTrue);
+        await f.choisirFigurine(FigurineDuMois.figurant);
+        expect(f.figurineDuMois, FigurineDuMois.figurant);
+        expect(f.figurineAChoisir, isFalse);
+      } else {
+        expect(f.figurineAChoisir, isFalse, reason: 'le choix se fait la première semaine');
+      }
     });
   });
 }
