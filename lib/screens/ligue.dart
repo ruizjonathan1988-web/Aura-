@@ -10,6 +10,7 @@ import '../services/ligues.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
 import 'cadeaux.dart';
+import 'aura.dart';
 
 /// La ligue entre amis : inscription par pseudo, création ou rejointe par
 /// code, classement du mois. Sans serveur, le duel solo contre Pop.
@@ -74,6 +75,8 @@ class _LigueEcranState extends State<LigueEcran> {
             }),
           ),
         const SizedBox(height: 16),
+        _EntreeAura(service: service),
+        const SizedBox(height: 16),
         _DuelPop(etat: etat),
       ]);
     }
@@ -94,6 +97,8 @@ class _LigueEcranState extends State<LigueEcran> {
         const SizedBox(height: 20),
         _Crasses(key: ValueKey('crasses${ligue.id}'), etat: etat, service: service, ligue: ligue),
       ],
+      const SizedBox(height: 16),
+      _EntreeAura(service: service),
       const SizedBox(height: 16),
       CadeauxVue(key: ValueKey('cadeaux${ligue.id}'), service: service, ligue: ligue),
       const SizedBox(height: 16),
@@ -659,4 +664,18 @@ class _FigurineDoreeState extends State<_FigurineDoree> {
       ),
     );
   }
+}
+
+
+/// L'entrée de l'aura (R48) : proposer des films à la maison et aux amis.
+class _EntreeAura extends StatelessWidget {
+  const _EntreeAura({required this.service});
+  final ServiceLigues service;
+
+  @override
+  Widget build(BuildContext context) => ChoixLarge(
+        libelle: 'L\'AURA · Propose des films à la maison et à tes amis : ton aura grandit quand ils les regardent et les aiment.',
+        couleur: AuraCouleurs.jaune,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AuraEcran(ligues: service))),
+      );
 }
