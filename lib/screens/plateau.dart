@@ -14,6 +14,7 @@ import '../theme/aura_theme.dart';
 import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
 import 'generique.dart';
+import 'deck.dart';
 
 enum TypeCase {
   depart('Départ', AuraCouleurs.caseBleu),
@@ -242,6 +243,13 @@ class PlateauEcran extends StatelessWidget {
                 icone: Icons.movie_creation_rounded,
                 principal: false,
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GeneriqueEcran(mois: DateTime(maintenant.year, maintenant.month)))),
+              ),
+              const SizedBox(height: 10),
+              AuraBouton(
+                libelle: etat.boostersDispo() > 0 ? 'Mon deck · un booster t\'attend !' : 'Mon deck d\'atouts',
+                icone: Icons.style_rounded,
+                principal: etat.boostersDispo() > 0,
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DeckEcran())),
               ),
               const SizedBox(height: 20),
               if (etat.albumDuMois.isNotEmpty) ...[
