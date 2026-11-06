@@ -10,6 +10,7 @@ import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
 import 'package:aura/services/carte_genres.dart';
 import 'package:aura/services/collection.dart';
+import 'package:aura/services/config.dart';
 import 'package:aura/services/connexion_vjod.dart';
 import 'package:aura/services/duel.dart';
 import 'package:aura/services/etat.dart';
@@ -428,6 +429,17 @@ void main() {
       expect(recue.url.toString(), 'https://vjod.exemple.fr/Users/AuthenticateByName');
       expect(recue.headers['X-Emby-Authorization'], contains('DeviceId="aura-test"'));
       expect(jsonDecode(recue.body), {'Username': 'jon', 'Pw': 'secret'});
+    });
+
+    test('R13 le serveur VJOD de Jon est pré-rempli, chemin /jellyfin compris', () async {
+      expect(Config.serveurVjod, 'https://ava88.zen.usbx.me/jellyfin');
+      late Uri appel;
+      final client = MockClient((r) async {
+        appel = r.url;
+        return http.Response(reponse, 200);
+      });
+      await ConnexionVjod(adresse: Config.serveurVjod, appareil: 'a', client: client).avecIdentifiants('jon', 'x');
+      expect(appel.toString(), 'https://ava88.zen.usbx.me/jellyfin/Users/AuthenticateByName');
     });
 
     test('R13 un mauvais mot de passe donne un message clair', () async {

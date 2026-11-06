@@ -74,7 +74,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 
 Tests d'écrans (`test/ecrans_test.dart`) : l'appli est ouverte comme par un joueur, sur un téléphone (390 × 844) et sur une télé (960 × 540) ; ouverture, premier soir complet, tous les onglets, une soirée complète (tirage, carte, billet, plateau), Plan du jour, Duel. Un débordement ou un plantage fait échouer la CI. Possible parce que les polices sont embarquées (`assets/polices`, licence OFL) au lieu d'être téléchargées.
 
-Règles sans test automatique : « pas de pochettes surprises payantes » (rien à vendre pour l'instant), le plafond de 3 cases côté serveur (trigger SQL `plafonner_cases`, pas exécuté en CI), et la navigation aux flèches (à vérifier à la main sur la box). Exception connue à R10 : sur la télé, l'adresse du serveur VJOD se tape encore dans les Réglages (sauf si `VJOD_SERVEUR` est fourni à la compilation) ; la connexion elle-même passe par un code Quick Connect.
+Règles sans test automatique : « pas de pochettes surprises payantes » (rien à vendre pour l'instant), le plafond de 3 cases côté serveur (trigger SQL `plafonner_cases`, pas exécuté en CI), et la navigation aux flèches (à vérifier à la main sur la box). Exception connue à R10 : l'adresse du serveur VJOD reste modifiable au clavier dans les Réglages, mais elle est pré-remplie ; sur la télé, la connexion passe par un code Quick Connect.
 
 ## Les rythmes du jeu
 
@@ -125,7 +125,7 @@ Fait :
 - Carte des genres (`lib/services/carte_genres.dart`, section du Plateau) : 8 régions (Polar, Comédie, Drame, Évasion, Animation, Frissons, Classiques avant 1980, Cinéma d'ailleurs hors France et États-Unis). Les billets gardent désormais genres, année et pays. Chaque lundi Pop vise une région libre et la prend si on ne la défend pas avant dimanche ; chacune lui vaut une case ; on la reprend en y regardant un film.
 - Français relu dans toute l'appli (textes de Pop, cartes, test, profils, messages) ; genres, pays et durées traduits à l'écran (`lib/services/traduction.dart`).
 - Sélection de démonstration : 42 films reconnus (classements IMDb et SensCritique), synopsis rédigés pour Aura. Le tirage garde d'abord les 40 % les mieux notés.
-- Connexion VJOD pour les utilisateurs de Jon (`lib/services/connexion_vjod.dart`, Réglages) : code Quick Connect sur la télé, identifiant et mot de passe VJOD au téléphone, ou clé d'API (avancé). Plus besoin de clé d'API. Une carte « Tu utilises VJOD ? » invite à brancher sa bibliothèque depuis Ce soir. Pour pré-remplir l'adresse du serveur pour tous, compiler avec `--dart-define=VJOD_SERVEUR=https://…` (à ajouter dans le workflow quand Jon donnera l'adresse).
+- Connexion VJOD pour les utilisateurs de Jon (`lib/services/connexion_vjod.dart`, Réglages) : code Quick Connect sur la télé, identifiant et mot de passe VJOD au téléphone, ou clé d'API (avancé). Plus besoin de clé d'API. Une carte « Tu utilises VJOD ? » invite à brancher sa bibliothèque depuis Ce soir. L'adresse du serveur de Jon, `https://ava88.zen.usbx.me/jellyfin`, est pré-remplie (`Config.serveurVjod`, remplaçable par `--dart-define=VJOD_SERVEUR=…`).
 - Duel du canapé (`lib/screens/duel.dart`, `lib/services/duel.dart`, accès depuis Ce soir) : deux figurines, une envie chacun, 6 cartes retournées sur la table, élimination à tour de rôle avec un Veto chacun, Pop commente, mini-quiz de 6 questions sur des films reconnus (3 chacun), égalité tranchée par la meilleure note ; le gagnant « prend la télécommande » et lance le film (séance gardée pour la validation).
 - Revenir sans être puni (`lib/services/fidelite.dart`) : après 3 jours d'absence, Pop accueille (« j'ai gardé ta place au chaud ») et offre une carte de rattrapage (+2 cases sur la prochaine séance). Série comptée en semaines sur le Plateau, une semaine sans film ne la casse pas.
 - Pop bluffe : chaque semaine, avant la séance de l'Affiche, Bluff en solo contre Pop (trouver le vrai résumé parmi trois). Gagné = Joker +1 case. Pop se dandine quand il parle (animation légère).
@@ -150,7 +150,7 @@ Jon a demandé une appli « finie, présentable, jouable, rigolote, avec une for
 
 1. Installer le dernier APK : https://github.com/ruizjonathan1988-web/Aura-/releases/download/derniere/aura.apk
 2. Dans Supabase, éditeur SQL : lancer `supabase/migrations/0003_mesures.sql`, `0004_invitation.sql` puis `0005_semaine_et_soiree.sql` (et vérifier que `0001`, `0002` et les connexions anonymes sont bien en place). Lire les chiffres avec `select * from public.mesures;`.
-3. Donner l'adresse de son serveur VJOD pour la pré-remplir chez ses utilisateurs (ajouter `--dart-define=VJOD_SERVEUR=…` dans `.github/workflows/construire.yml`).
+3. Adresse du serveur VJOD : fait, `https://ava88.zen.usbx.me/jellyfin` est pré-remplie dans les Réglages (`Config.serveurVjod`).
 4. Tester sur la box : flèches et OK partout, ouverture, Duel, Révélation (le dimanche), connexion par code Quick Connect.
 
 ## Retours de Jon à traiter

@@ -17,8 +17,10 @@ abstract final class Config {
       : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRyam9jd21zbGt4dGx1dWhzdmd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM5MTE2MzksImV4cCI6MjEwOTQ4NzYzOX0.dIR1DCJAY9C1tQn_--oPw3m9eebTNMT6M7E6K7OmQOc';
 
   /// L'adresse du serveur VJOD (Jellyfin) proposée par défaut aux joueurs,
-  /// pour qu'ils n'aient qu'à se connecter. Vide : chacun tape la sienne.
-  static const serveurVjod = String.fromEnvironment('VJOD_SERVEUR');
+  /// pour qu'ils n'aient qu'à se connecter avec leur identifiant VJOD ou un
+  /// code Quick Connect. Remplaçable à la compilation (VJOD_SERVEUR).
+  static const _serveurCompile = String.fromEnvironment('VJOD_SERVEUR');
+  static const serveurVjod = _serveurCompile != '' ? _serveurCompile : 'https://ava88.zen.usbx.me/jellyfin';
 
   static bool get serveur => supabaseUrl.isNotEmpty && supabaseCle.isNotEmpty;
 }
