@@ -1487,6 +1487,17 @@ class EtatJeu extends ChangeNotifier {
     return ouvert(Etape.niveaux) ? Festivals.de(d) : null;
   }
 
+  /// Le Bingo du film (R55) : ses points deviennent de l'audace (5 au plus),
+  /// une fois par soirée.
+  Future<void> gagnerAudaceBingo(String soiree, int points) async {
+    final cle = 'bingo_compte_$soiree';
+    if (_prefs.getBool(cle) ?? false) return;
+    await _prefs.setBool(cle, true);
+    final n = points.clamp(0, 5);
+    if (n > 0) await _ajouterAudace(n);
+    notifyListeners();
+  }
+
   // Le Deck d'atouts (R49).
 
   /// Les atouts possédés et leur nombre d'exemplaires.

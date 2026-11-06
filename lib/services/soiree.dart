@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/modeles.dart';
 import 'duel.dart';
 import 'ligues.dart';
+import 'bingo.dart';
 
 /// La Soirée jeu : la télé est le plateau, les téléphones sont les manettes.
 /// C'est le Duel du canapé, de 2 à 4 joueurs, chacun depuis son téléphone :
@@ -36,6 +37,8 @@ abstract final class PartieSoiree {
         if (f.serveurId != null) 'serveur': f.serveurId,
         if (f.tmdbId != null) 'tmdb': f.tmdbId,
         if (f.enVod != null) 'vod': f.enVod,
+        if (f.genres.isNotEmpty) 'genres': f.genres,
+        if (f.pays.isNotEmpty) 'pays': f.pays,
         'source': f.source.name,
       };
 
@@ -50,6 +53,8 @@ abstract final class PartieSoiree {
         serveurId: j['serveur'] as String?,
         tmdbId: j['tmdb'] as int?,
         enVod: j['vod'] as bool?,
+        genres: [for (final g in (j['genres'] as List? ?? const [])) '$g'],
+        pays: [for (final p in (j['pays'] as List? ?? const [])) '$p'],
         source: SourceFilm.values.firstWhere((s) => s.name == j['source'], orElse: () => SourceFilm.demo),
       );
 
@@ -172,6 +177,7 @@ abstract final class PartieSoiree {
   /// geste n'est pas permis (pas son tour, carte interdite…).
   static Map<String, dynamic>? appliquer(Map<String, dynamic> etat, String joueurId, Map<String, dynamic> action) {
     final e = Map<String, dynamic>.from(etat);
+    if (e['phase'] == 'bingo') return BingoSoiree.appliquer(e, joueurId, action);
     final j = indexDe(e, joueurId);
     if (j < 0) return _geste(e, joueurId, action);
     final n = nbJoueurs(e);
@@ -245,6 +251,7 @@ abstract final class PartieSoiree {
   /// La télé passe à la question suivante (ou à la fin). Si quelqu'un n'a
   /// pas répondu, on révèle quand même.
   static Map<String, dynamic> suivante(Map<String, dynamic> etat) {
+    if (etat['phase'] == 'bingo') return BingoSoiree.suivante(etat);
     if (etat['mode'] == 'pitch') return Pitch.suivante(etat);
     final e = Map<String, dynamic>.from(etat);
     if (e['phase'] != 'quiz') return e;
@@ -429,6 +436,94 @@ abstract final class Pitch {
       default:
         return e;
     }
+  }
+}
+
+/// Le Bingo du film dans la Soirée jeu (R55) : joueurs et public, chacun
+/// sa grille. Étapes : « jeu » (on coche), « generique » (on conteste),
+/// « fin » (les points).
+abstract final class BingoSoiree {
+  static List<String> participants(Map<String, dynamic> e) => [
+        for (final j in ((e['joueurs'] as List?) ?? const []).cast<Map>()) '${j['id']}',
+        for (final p in PartieSoiree.publicDe(e)) '${p['id']}',
+      ];
+
+  static String nomDe(Map<String, dynamic> e, String id) {
+    for (final j in [...((e['joueurs'] as List?) ?? const []).cast<Map>(), ...PartieSoiree.publicDe(e)]) {
+      if (j['id'] == id) return '${j['pseudo']}';
+    }
+    return '?';
+  }
+
+  static Map<String, dynamic> demarrer(Map<String, dynamic> etat, List<String> genres, Random hasard) {
+    final e = Map<String, dynamic>.from(etat);
+    e['phase'] = 'bingo';
+    e['bingo'] = {
+      'etape': 'jeu',
+      'grilles': {for (final id in participants(e)) id: Bingo.grille(genres, hasard)},
+      'cochees': <String, List<int>>{},
+      'contestes': <String, List<String>>{},
+    };
+    return e;
+  }
+
+  static Map<String, dynamic> _b(Map<String, dynamic> e) => (e['bingo'] as Map).cast<String, dynamic>();
+
+  static Set<int> cocheesDe(Map<String, dynamic> e, String id) => {for (final x in (((_b(e)['cochees'] as Map?) ?? const {})[id] as List? ?? const [])) (x as num).toInt()};
+
+  static int contestations(Map<String, dynamic> e, String id, int k) => (((_b(e)['contestes'] as Map?) ?? const {})['$id|$k'] as List? ?? const []).length;
+
+  static Map<String, dynamic>? appliquer(Map<String, dynamic> e, String id, Map<String, dynamic> action) {
+    final b = _b(e);
+    final grilles = (b['grilles'] as Map).cast<String, dynamic>();
+    if (!grilles.containsKey(id)) return null;
+    switch (action['type']) {
+      case 'cocher' when b['etape'] == 'jeu':
+        final k = action['case'];
+        if (k is! int || k < 0 || k >= Bingo.cases) return null;
+        final mes = cocheesDe(e, id);
+        if (!mes.remove(k)) mes.add(k);
+        e['bingo'] = {...b, 'cochees': {...(b['cochees'] as Map).cast<String, dynamic>(), id: (mes.toList()..sort())}};
+        return e;
+      case 'contester' when b['etape'] == 'generique':
+        final qui = '${action['qui']}';
+        final k = action['case'];
+        if (qui == id || k is! int || !cocheesDe(e, qui).contains(k)) return null;
+        final contestes = (b['contestes'] as Map).cast<String, dynamic>();
+        final cle = '$qui|$k';
+        final deja = [for (final v in (contestes[cle] as List? ?? const [])) '$v'];
+        if (deja.contains(id)) return null;
+        e['bingo'] = {...b, 'contestes': {...contestes, cle: [...deja, id]}};
+        return e;
+      default:
+        return null;
+    }
+  }
+
+  /// Les points de chacun, au générique.
+  static Map<String, int> points(Map<String, dynamic> e) {
+    final ids = participants(e);
+    final autres = ids.length - 1;
+    return {
+      for (final id in ids)
+        id: () {
+          final cochees = cocheesDe(e, id);
+          final rejetees = {for (final k in cochees) if (Bingo.rejetee(contestations(e, id, k), autres)) k};
+          return Bingo.points(cochees: cochees, rejetees: rejetees);
+        }(),
+    };
+  }
+
+  static Map<String, dynamic> suivante(Map<String, dynamic> etat) {
+    final e = Map<String, dynamic>.from(etat);
+    final b = _b(e);
+    switch (b['etape']) {
+      case 'jeu':
+        e['bingo'] = {...b, 'etape': 'generique'};
+      case 'generique':
+        e['bingo'] = {...b, 'etape': 'fin', 'points': points(e)};
+    }
+    return e;
   }
 }
 

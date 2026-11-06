@@ -14,6 +14,7 @@ import '../theme/aura_theme.dart';
 import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
 import '../widgets/ou_le_voir.dart';
+import '../services/bingo.dart';
 
 CarteDefi _carteDepuis(Map<String, dynamic> c) => CarteDefi(
       type: TypeCarte.values.firstWhere((t) => t.name == c['type'], orElse: () => TypeCarte.envie),
@@ -165,8 +166,9 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
     }
     await etat.commencerSeance(carte, pronostic: 3, aPlusieurs: true);
     etat.mesures?.noter('duel', {'soiree': true});
+    // Le Bingo du film (R55) : les téléphones reçoivent leur grille.
+    await _publier(BingoSoiree.demarrer(_etat, carte.film.genres, math.Random()));
     if (VjodLien.disponible(carte.film)) await VjodLien.ouvrir(carte.film);
-    if (mounted) Navigator.of(context).pop();
   }
 
   @override
@@ -190,6 +192,7 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
                     'table' => _table(),
                     'quiz' => _quiz(),
                     'pitch_mots' || 'pitch_vote' || 'pitch_revele' => _pitchTele(),
+                    'bingo' => _bingoTele(),
                     _ => _fin(),
                   },
                 ]),
@@ -249,6 +252,62 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
       padding: const EdgeInsets.only(top: 10),
       child: Text('LE PUBLIC · ${p.map((x) => x['pseudo']).join(', ')}', style: AuraTexte.titre(16, couleur: AuraCouleurs.creme)),
     );
+  }
+
+  List<Widget> _bingoTele() {
+    final b = (_etat['bingo'] as Map).cast<String, dynamic>();
+    final etape = b['etape'];
+    final ids = BingoSoiree.participants(_etat);
+    if (etape == 'jeu') {
+      return [
+        const PopQuiParle(
+          texte: 'Bingo du film ! Chacun a sa grille secrète sur son téléphone. Cochez en silence quand ça arrive à l\'écran. Et méfiez-vous de mes cases…',
+          taille: 90,
+        ),
+        const SizedBox(height: 14),
+        Wrap(spacing: 12, runSpacing: 10, children: [
+          for (final id in ids)
+            Panneau(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: Text('${BingoSoiree.nomDe(_etat, id)} · ${BingoSoiree.cocheesDe(_etat, id).length} case(s)', style: AuraTexte.corps(18, poids: FontWeight.w900)),
+            ),
+        ]),
+        const SizedBox(height: 16),
+        AuraBouton(libelle: 'Générique ! On compare les grilles', autofocus: true, onPressed: () => _publier(PartieSoiree.suivante(_etat))),
+      ];
+    }
+    final grilles = (b['grilles'] as Map).cast<String, dynamic>();
+    final points = ((b['points'] as Map?) ?? const {}).cast<String, dynamic>();
+    final autres = ids.length - 1;
+    return [
+      PopQuiParle(
+        texte: etape == 'fin'
+            ? 'Les comptes sont faits. Bluffer au Bingo, c\'est risqué : la salle a l\'œil.'
+            : 'Voilà ce que chacun prétend avoir vu. Si vous n\'y croyez pas, contestez depuis vos téléphones !',
+        taille: 80,
+      ),
+      const SizedBox(height: 12),
+      for (final id in ids) ...[
+        Text('${BingoSoiree.nomDe(_etat, id).toUpperCase()}${etape == 'fin' ? ' · ${points[id] ?? 0} POINT(S)' : ''}', style: AuraTexte.titre(20, couleur: AuraCouleurs.creme)),
+        const SizedBox(height: 6),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final k in BingoSoiree.cocheesDe(_etat, id))
+            Panneau(
+              couleur: Bingo.rejetee(BingoSoiree.contestations(_etat, id, k), autres) ? AuraCouleurs.rouge : AuraCouleurs.vert,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: Text(
+                '${(grilles[id] as List)[k]}${BingoSoiree.contestations(_etat, id, k) > 0 ? ' · ${BingoSoiree.contestations(_etat, id, k)} contestation(s)' : ''}',
+                style: AuraTexte.corps(14, poids: FontWeight.w900),
+              ),
+            ),
+        ]),
+        const SizedBox(height: 12),
+      ],
+      if (etape == 'generique')
+        AuraBouton(libelle: 'Les résultats', autofocus: true, onPressed: () => _publier(PartieSoiree.suivante(_etat)))
+      else
+        AuraBouton(libelle: 'Fin de la soirée', autofocus: true, onPressed: () => Navigator.of(context).pop()),
+    ];
   }
 
   List<Widget> _pitchTele() {
@@ -465,6 +524,8 @@ class _SoireeManetteEcranState extends State<SoireeManetteEcran> {
   bool _veto = false;
   bool _envoi = false;
   final List<String> _mots = [];
+  Set<int>? _bingo;
+  bool _bingoCompte = false;
 
   @override
   void dispose() {
@@ -569,6 +630,7 @@ class _SoireeManetteEcranState extends State<SoireeManetteEcran> {
     final j = PartieSoiree.indexDe(e, moi ?? '');
     final joueurs = _joueursDe(e);
     String nomDe(int k) => joueurs[k]['pseudo'] as String;
+    if (e['phase'] == 'bingo') return _bingoManette(e, moi ?? '');
     if (j < 0) return _public(e, moi ?? '', nomDe);
     final autre = joueurs.length == 2 ? nomDe(1 - j) : 'tes adversaires';
     switch (e['phase']) {
@@ -682,6 +744,74 @@ class _SoireeManetteEcranState extends State<SoireeManetteEcran> {
       widgets.add(const PopQuiParle(texte: 'Regarde la télé : le quiz arrive bientôt.'));
     }
     return widgets;
+  }
+
+  List<Widget> _bingoManette(Map<String, dynamic> e, String moi) {
+    final b = (e['bingo'] as Map).cast<String, dynamic>();
+    final grille = ((b['grilles'] as Map)[moi] as List?)?.cast<String>();
+    if (grille == null) return [const PopQuiParle(texte: 'Le Bingo a commencé sans toi. Regarde le film, et prépare tes contestations !')];
+    final etape = b['etape'];
+    if (etape == 'jeu') {
+      final mes = _bingo ??= BingoSoiree.cocheesDe(e, moi);
+      return [
+        const TitreCartoon('Ta grille secrète', taille: 26),
+        const SizedBox(height: 4),
+        Text('Coche quand ça arrive. Bluffer, c\'est permis… mais le salon peut contester au générique.', style: AuraTexte.corps(13, couleur: AuraCouleurs.creme)),
+        const SizedBox(height: 10),
+        GridView.count(
+          crossAxisCount: Bingo.cote,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 6,
+          crossAxisSpacing: 6,
+          childAspectRatio: .82,
+          children: [
+            for (var k = 0; k < Bingo.cases; k++)
+              Touchable(
+                etiquette: '${grille[k]}${mes.contains(k) ? ', cochée' : ''}',
+                onTap: () {
+                  setState(() {
+                    if (!mes.remove(k)) mes.add(k);
+                  });
+                  widget.service.geste(_rejointe!, {'type': 'cocher', 'case': k});
+                },
+                builder: (context, focus, appui) => Panneau(
+                  couleur: mes.contains(k) ? AuraCouleurs.jaune : AuraCouleurs.creme,
+                  padding: const EdgeInsets.all(5),
+                  child: Center(
+                    child: Text(grille[k], textAlign: TextAlign.center, maxLines: 5, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(10.5, poids: FontWeight.w900)),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ];
+    }
+    final ids = BingoSoiree.participants(e).where((id) => id != moi).toList();
+    if (etape == 'generique') {
+      final contestes = ((b['contestes'] as Map?) ?? const {}).cast<String, dynamic>();
+      return [
+        const TitreCartoon('Ils l\'ont vraiment vu ?', taille: 26),
+        const SizedBox(height: 8),
+        for (final id in ids)
+          for (final k in BingoSoiree.cocheesDe(e, id))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: ChoixLarge(
+                libelle: '${BingoSoiree.nomDe(e, id)} : ${((b['grilles'] as Map)[id] as List)[k]}${(contestes['$id|$k'] as List? ?? const []).contains(moi) ? ' · contesté' : ' · Contester ?'}',
+                onTap: _envoi || (contestes['$id|$k'] as List? ?? const []).contains(moi) ? null : () => _geste({'type': 'contester', 'qui': id, 'case': k}),
+              ),
+            ),
+      ];
+    }
+    final pts = (((b['points'] as Map?) ?? const {})[moi] as num?)?.toInt() ?? 0;
+    if (!_bingoCompte) {
+      _bingoCompte = true;
+      final etat = PorteeEtat.lire(context);
+      final code = _rejointe ?? '';
+      WidgetsBinding.instance.addPostFrameCallback((_) => etat.gagnerAudaceBingo(code, pts));
+    }
+    return [PopQuiParle(texte: 'Bingo terminé : $pts point${pts.abs() > 1 ? 's' : ''}. ${pts > 0 ? 'Ça te fait ${pts.clamp(0, 5)} d\'audace.' : 'Tu bluffes mal. Je note.'}')];
   }
 
   List<Widget> _pitchManette(Map<String, dynamic> e, int j, String Function(int) nomDe) {
