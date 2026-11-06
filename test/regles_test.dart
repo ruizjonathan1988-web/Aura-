@@ -2521,12 +2521,13 @@ void main() {
     });
 
     test('R52 réussi une fois par semaine : 3 d\'audace et un booster', () async {
+      // Pas de booster ouvert avant : ses atouts tirés au hasard fausseraient l'audace.
       final e = await _etat({'defi_semaine': 'avant1970', ..._devantPop});
-      await e.ouvrirBooster();
+      expect(e.boostersDispo(), 1);
       await e.validerSeance(carte('a', annee: 1950), pronostic: 3);
       expect(e.defiSemaineReussi(DateTime.now()), isTrue);
       expect(e.audaceDuMois, 3);
-      expect(e.boostersDispo(), 1);
+      expect(e.boostersDispo(), 2);
       await e.validerSeance(carte('b', annee: 1955), pronostic: 3);
       expect(e.audaceDuMois, 3, reason: 'une seule fois par semaine');
     });
