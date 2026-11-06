@@ -30,6 +30,7 @@ import 'source_tmdb.dart';
 import 'sources.dart';
 import 'deck.dart';
 import 'festival.dart';
+import 'casse.dart';
 import 'partage.dart';
 import 'sons.dart';
 import 'veille.dart';
@@ -599,6 +600,15 @@ class EtatJeu extends ChangeNotifier {
     final vent = ceMois && ouvert(Etape.niveaux) && position < popAvant;
     if (vent) await _ajouterAudace(Retournements.ventDansLeDos);
     if (audaceDeck > 0) await _ajouterAudace(audaceDeck);
+    // Le Casse (R56) : les serrures que ce film ouvre.
+    if (ceMois && Casse.enCours(date)) {
+      final serrures = Casse.serrures(date);
+      final ok = casseOuvertes(date);
+      for (var i = 0; i < serrures.length; i++) {
+        if (serrures[i].condition(contexte)) ok.add(i);
+      }
+      await _prefs.setStringList('casse_ok_${Casse.mois(date)}', [for (final i in ok) '$i']);
+    }
     // Le Défi de la semaine (R52) : une fois par semaine, 3 d'audace et un booster.
     final defiSemaine = defiSemaineDe(date);
     final defiReussi = ceMois && defiSemaine != null && !defiSemaineReussi(date) && defiSemaine.condition(contexte);
@@ -1456,12 +1466,80 @@ class EtatJeu extends ChangeNotifier {
 
   int get bluffsGagnes => _prefs.getKeys().where((k) => k.startsWith('bluff_') && (_prefs.getBool(k) ?? false)).length;
 
+  // Le Casse de la Cinémathèque (R56).
+
+  /// Les serrures du mois que mes films ont ouvertes (toutes, pas seulement les miennes).
+  Set<int> casseOuvertes(DateTime d) => {for (final x in _prefs.getStringList('casse_ok_${Casse.mois(d)}') ?? const <String>[]) int.parse(x)};
+
+  /// Pour la Taupe : ouvrir sa serrure pour de vrai (sinon, pour de faux).
+  bool casseVraie(DateTime d) => _prefs.getBool('casse_vraie_${Casse.mois(d)}') ?? false;
+
+  Future<void> changerCasseVraie(DateTime d, bool v) async {
+    await _prefs.setBool('casse_vraie_${Casse.mois(d)}', v);
+    notifyListeners();
+  }
+
+  /// En solo : l'équipe, c'est toi (le Perceur) et les rivaux robots.
+  Map<String, Role> get rolesSolo => Casse.roles(['moi', ...Casse.robots], Casse.graine(DateTime.now()), forcePerceur: 'moi');
+
+  String? casseAccuse(DateTime d) => _prefs.getString('casse_accuse_${Casse.mois(d)}');
+
+  Future<void> accuserEnSolo(DateTime d, String robot) async {
+    await _prefs.setString('casse_accuse_${Casse.mois(d)}', robot);
+    notifyListeners();
+  }
+
+  /// Les serrures ouvertes en solo : les miennes si un film les a ouvertes,
+  /// celles des robots à leur jour (pour de faux si c'est la Taupe).
+  Map<int, bool> ouverturesSolo(DateTime d) {
+    final roles = Casse.roles(['moi', ...Casse.robots], Casse.graine(d), forcePerceur: 'moi');
+    final mes = casseOuvertes(d);
+    final out = <int, bool>{};
+    for (final e in roles.entries) {
+      for (final s in e.value.serrures) {
+        if (e.key == 'moi') {
+          if (mes.contains(s)) out[s] = true;
+        } else if (Casse.jourDuCasse(d) >= Casse.jourDuRobot(e.key, d)) {
+          out[s] = !e.value.taupe;
+        }
+      }
+    }
+    return out;
+  }
+
+  /// Le résultat déjà révélé ce mois-ci, ou nul.
+  ({bool reussi, bool taupeDemasquee})? casseRevele(DateTime d) {
+    final r = _prefs.getString('casse_fini_${Casse.mois(d)}');
+    if (r == null) return null;
+    final p = r.split('|');
+    return (reussi: p[0] == '1', taupeDemasquee: p.length > 1 && p[1] == '1');
+  }
+
+  /// La révélation : récompenses une seule fois par mois. [jeSuisLaTaupe]
+  /// gagne si le Casse rate.
+  Future<void> terminerCasse(DateTime d, {required bool reussi, required bool taupeDemasquee, bool jeSuisLaTaupe = false}) async {
+    final cle = 'casse_fini_${Casse.mois(d)}';
+    if (_prefs.getString(cle) != null) return;
+    await _prefs.setString(cle, '${reussi ? 1 : 0}|${taupeDemasquee ? 1 : 0}');
+    if (jeSuisLaTaupe) {
+      if (!reussi) await _ajouterAudace(Casse.audaceTaupe);
+    } else if (reussi) {
+      await _ajouterAudace(Casse.audaceReussite);
+      final m = moisDe(d);
+      await _prefs.setInt('pop_decalage_$m', _decalageDePop(m) - Casse.recul);
+      await ajouterExploit('casse');
+    }
+    notifyListeners();
+  }
+
   /// Le Défi de la semaine (R52). « defi_semaine » le force (« aucun » le
   /// coupe), pour les tests.
   DefiSemaine? defiSemaineDe(DateTime d) {
     final force = _prefs.getString('defi_semaine');
     if (force == 'aucun') return null;
     if (force != null) return DefisSemaine.parId(force);
+    // La dernière semaine du mois, place au Casse (R56).
+    if (Casse.enCours(d)) return null;
     return DefisSemaine.de(d);
   }
 
