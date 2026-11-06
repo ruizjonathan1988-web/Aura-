@@ -9,9 +9,11 @@ import '../services/config.dart';
 import '../services/connexion_vjod.dart';
 import '../services/etat.dart';
 import '../services/historique.dart';
+import '../services/mise_a_jour.dart';
 import '../services/sources.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
+import '../widgets/fenetre_mise_a_jour.dart';
 
 enum _Methode { quickConnect, identifiants, cle }
 
@@ -146,6 +148,14 @@ class _ReglagesEcranState extends State<ReglagesEcran> {
     if (mounted) setState(() => _vjod = false);
   }
 
+  Future<void> _chercherMiseAJour() async {
+    setState(() => _message = 'Je regarde s\'il y a une nouvelle version…');
+    final v = await MiseAJour.verifier(forcer: true);
+    if (!mounted) return;
+    setState(() => _message = v == null ? 'Pas de nouvelle version : Aura est à jour (ou GitHub ne répond pas).' : null);
+    if (v != null) await proposerMiseAJour(context, v);
+  }
+
   @override
   Widget build(BuildContext context) {
     final etat = PorteeEtat.of(context);
@@ -187,6 +197,10 @@ class _ReglagesEcranState extends State<ReglagesEcran> {
                     if (_vjod) ...[const SizedBox(height: 16), _connexion()],
                     const SizedBox(height: 16),
                     const _Historique(),
+                    if (MiseAJour.possible) ...[
+                      const SizedBox(height: 16),
+                      AuraBouton(libelle: 'Chercher une mise à jour', icone: Icons.system_update_rounded, principal: false, onPressed: _chercherMiseAJour),
+                    ],
                     const SizedBox(height: 16),
                     Text(
                       'Aura compte de façon anonyme les ouvertures, les cartes jouées et les séances validées, pour devenir plus amusant. Ni nom, ni e-mail, ni titre de film.',

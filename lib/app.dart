@@ -8,9 +8,11 @@ import 'screens/premier_soir.dart';
 import 'screens/profil.dart';
 import 'screens/semaine.dart';
 import 'services/etat.dart';
+import 'services/mise_a_jour.dart';
 import 'theme/aura_theme.dart';
 import 'widgets/animations.dart';
 import 'widgets/aura_widgets.dart';
+import 'widgets/fenetre_mise_a_jour.dart';
 
 /// Donne l'état du joueur à tous les écrans, et les reconstruit quand il change.
 class PorteeEtat extends InheritedNotifier<EtatJeu> {
@@ -97,6 +99,13 @@ class _CoquilleState extends State<Coquille> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _miseAJour());
+  }
+
+  /// Une nouvelle version d'Aura ? On la propose (au plus une fois par heure).
+  Future<void> _miseAJour() async {
+    final v = await MiseAJour.verifier();
+    if (v != null && mounted) await proposerMiseAJour(context, v);
   }
 
   @override
@@ -109,7 +118,10 @@ class _CoquilleState extends State<Coquille> with WidgetsBindingObserver {
   /// de la carte jouée a été vu : le billet se crée tout seul.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) PorteeEtat.lire(context).verifierSeances();
+    if (state == AppLifecycleState.resumed) {
+      PorteeEtat.lire(context).verifierSeances();
+      _miseAJour();
+    }
   }
 
   void _aller(Onglet o) => setState(() => _onglet = o);

@@ -2,7 +2,7 @@
 
 Document de passation : tout ce qu'il faut savoir pour continuer Aura dans une nouvelle conversation. À coller ou à faire lire en début de session.
 
-Dernière mise à jour : 6 novembre 2026 (après-midi) : Juste un film, propositions revues, tout le cinéma de VJOD, statut VOD de Ma TV.
+Dernière mise à jour : 6 novembre 2026 (après-midi) : Juste un film, propositions revues, tout le cinéma de VJOD, statut VOD de Ma TV, mise à jour automatique.
 
 ## Qui et quoi
 
@@ -81,6 +81,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R32 Jamais d'impasse | Chaque envie a des genres exclus (une comédie de guerre ne fait pas réfléchir, un dessin animé familial ne fait pas frissonner) ; la sélection de démonstration donne 3 cartes pour chaque envie et chaque durée ; trop peu de films : Pop allonge la durée et le dit, puis prend une autre envie, jamais un navet | `Emotion.exclus`, `Tirage.tirerSansImpasse` |
 | R33 Tout le cinéma de VJOD | En édition VJOD, la bibliothèque puis les films TMDB (note 6/10 et 300 avis au moins, envie et durée demandées à TMDB) ; un film du serveur n'apparaît qu'une fois, en version serveur ; TMDB en panne ne bloque rien ; « Lancer dans VJOD » ouvre `moonfin://tmdb?id=…` (fiche VJOD : VOD IPTV ou demande Seerr) | `SourceTmdb`, `SourceToutVjod`, `VjodLien` |
 | R34 En VOD ou à demander | Hors serveur, Aura demande à Ma TV (adresse lue dans la collection Jellyfin « VJOD – TV », clé du profil via `/tv/api/enroll`, clé commune si Ma TV est ancien, rien si l'accès est coupé) si chaque film est en VOD : `/tv/api/vod/tmdb?kind=movie&ids=…`, 150 à la fois, réponses gardées pour la session ; « Où le voir » dit « en VOD, prêt à lancer » ou « pas en VOD, à demander » ; Ma TV absent ou en panne : on ne sait rien, rien ne casse | `MaTv`, `SourceAvecMaTv`, `OuLeVoir.ligneVjod` |
+| R35 Mise à jour automatique | Sur Android, à l'ouverture et au retour dans l'appli (au plus une fois par heure, ou à la demande dans les Réglages) : l'APK `aura.apk` de la release `derniere` publié plus de deux minutes après l'installation est proposé, avec « Ce qui change » (lignes « - » de la release) ; téléchargé dans l'appli puis donné à l'installeur d'Android ; sans autorisation « applis inconnues », Aura ouvre la bonne page des réglages ; GitHub muet : rien n'est proposé | `MiseAJour`, `proposerMiseAJour`, `tool/android/` |
 
 Tests d'écrans (`test/ecrans_test.dart`) : l'appli est ouverte comme par un joueur, sur un téléphone (390 × 844) et sur une télé (960 × 540) ; ouverture, premier soir complet, tous les onglets, une soirée complète (tirage, carte, billet, plateau), Plan du jour, Duel. Un débordement ou un plantage fait échouer la CI. Possible parce que les polices sont embarquées (`assets/polices`, licence OFL) au lieu d'être téléchargées.
 
@@ -159,6 +160,7 @@ Fait :
 - Juste un film (`lib/screens/juste_un_film.dart`, `lib/services/juste_un_film.dart`, accès « Pas envie de jouer ? » sous le tirage de Ce soir) : pour les soirs sans jeu, trois idées à changer une par une ou toutes d'un coup, filtres envie (dont « Peu importe »), durée et époque, « Où le voir » et « Lancer dans VJOD ». Rien ne compte pour le plateau.
 - Propositions revues : envies avec genres exclus, 23 films reconnus de plus dans la sélection de démonstration (65 au total, au moins 5 de moins d'une heure et demie par envie), et plus jamais « aucun film » : Pop allonge la durée ou change d'envie en le disant.
 - Tout le cinéma de VJOD (`lib/services/source_tmdb.dart`) : en édition VJOD, les cartes, l'Affiche, le Plan du jour et « Juste un film » piochent dans la bibliothèque Jellyfin et dans les films reconnus de TMDB. Hors serveur, « Où le voir » dit « Dans VJOD : en VOD tout de suite, ou à demander », et « Lancer dans VJOD » ouvre la fiche du titre dans VJOD, qui choisit la VOD IPTV ou la demande Seerr. Il faut VJOD 4.36 (PR VJOD #50, lien `moonfin://tmdb`). Ma TV dit à l'avance si un film est en VOD (R34, `lib/services/ma_tv.dart`) : « Où le voir » l'affiche, et dans « Juste un film » le bouton devient « Demander dans VJOD » quand il faut le demander. Pas testé sur le vrai serveur (la seedbox n'est pas joignable d'ici) : à confirmer par Jon.
+- Mise à jour automatique (R35), comme VJOD : `lib/services/mise_a_jour.dart`, `lib/widgets/fenetre_mise_a_jour.dart`, et côté Android `tool/android/MainActivity.kt` et `MiseAJour.kt`, que `tool/configurer_android.py` place dans le projet généré (canal `fr.vjod.aura/mise_a_jour`, permission `REQUEST_INSTALL_PACKAGES`). La CI écrit « Ce qui change » (titre de la PR fusionnée) sur la release. Pas de version d'essai à valider comme dans VJOD : chaque fusion sur main est proposée à tous les appareils. Il faut installer à la main une dernière fois une version qui contient ce code.
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
 ## Nuit du 6 novembre (travail autonome)
@@ -167,7 +169,7 @@ Jon a demandé une appli « finie, présentable, jouable, rigolote, avec une for
 
 **À faire par Jon :**
 
-1. Installer le dernier APK : https://github.com/ruizjonathan1988-web/Aura-/releases/download/derniere/aura.apk
+1. Installer le dernier APK : https://github.com/ruizjonathan1988-web/Aura-/releases/download/derniere/aura.apk (version web : https://ruizjonathan1988-web.github.io/Aura-/). Depuis R35, les versions suivantes se proposent toutes seules.
 2. ~~Migrations Supabase~~ : `0001` à `0006` lancées par Jon le 6 novembre (succès). Reste à vérifier que les connexions anonymes sont activées. Lire les chiffres avec `select * from public.mesures;`.
 3. Adresse du serveur VJOD : fait, `https://ava88.zen.usbx.me/jellyfin` est pré-remplie dans les Réglages (`Config.serveurVjod`).
 4. Tester sur la box : flèches et OK partout, ouverture, Duel, Révélation (le dimanche), connexion par code Quick Connect.

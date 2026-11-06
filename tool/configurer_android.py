@@ -5,7 +5,10 @@
 - accès réseau, y compris en http vers un Jellyfin local ;
 - droit de lancer VJOD avec les liens moonfin:// (visibilité des paquets, Android 11+) ;
 - notifications du lendemain (« Alors, ce film ? ») : permission, récepteurs de
-  flutter_local_notifications, et désucrage Java dans build.gradle.
+  flutter_local_notifications, et désucrage Java dans build.gradle ;
+- mise à jour automatique, comme VJOD : droit d'installer des paquets, et
+  l'activité principale remplacée par celle de `tool/android/` (canal
+  `fr.vjod.aura/mise_a_jour`).
 
 Le script peut être relancé : il ne modifie que ce qui manque.
 """
@@ -56,6 +59,7 @@ if moonfin not in xml:
 
 avant("<application", '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n')
 avant("<application", '    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\n')
+avant("<application", '    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>\n')
 
 recepteurs = """
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
@@ -89,3 +93,21 @@ for nom in ("build.gradle.kts", "build.gradle"):
         g += "\ndependencies {\n    " + dep + "\n}\n"
         gradle.write_text(g, encoding="utf-8")
         print(f"Désucrage activé : {gradle}")
+
+# Mise à jour automatique : l'activité principale et l'installeur, dans le
+# paquet que `flutter create` a choisi.
+sources = Path(__file__).resolve().parent / "android"
+activites = [f for f in chemin.parent.rglob("MainActivity.*") if f.suffix in (".kt", ".java")]
+if activites:
+    activite = activites[0]
+    paquet = re.search(r"^package\s+([\w.]+)", activite.read_text(encoding="utf-8"), re.M).group(1)
+    dossier = chemin.parent / "kotlin" / Path(*paquet.split("."))
+    dossier.mkdir(parents=True, exist_ok=True)
+    if activite.suffix == ".java":
+        activite.unlink()
+    for nom in ("MainActivity.kt", "MiseAJour.kt"):
+        texte = (sources / nom).read_text(encoding="utf-8").replace("package PAQUET", f"package {paquet}", 1)
+        (dossier / nom).write_text(texte, encoding="utf-8")
+    print(f"Mise à jour automatique branchée : {dossier}")
+else:
+    sys.exit("MainActivity introuvable : la mise à jour automatique ne serait pas branchée.")
