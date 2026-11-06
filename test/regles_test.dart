@@ -18,6 +18,7 @@ import 'package:aura/services/mesures.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/pop.dart';
 import 'package:aura/services/premier_soir.dart';
+import 'package:aura/services/rappels.dart';
 import 'package:aura/services/sources.dart';
 import 'package:aura/services/tirage.dart';
 import 'package:aura/widgets/animations.dart';
@@ -628,6 +629,29 @@ void main() {
       ));
       expect(find.ancestor(of: find.byKey(const Key('carte')), matching: find.byType(Opacity)), findsOneWidget);
       await tester.pumpAndSettle();
+    });
+  });
+
+  group('R20 Le rappel du lendemain', () {
+    test('R20 un seul rappel, le lendemain à midi et demi', () {
+      expect(Rappels.moment(DateTime(2026, 11, 5, 21, 40)), DateTime(2026, 11, 6, 12, 30));
+      expect(Rappels.moment(DateTime(2026, 11, 30, 23, 59)), DateTime(2026, 12, 1, 12, 30));
+    });
+
+    test('R20 les trois boutons donnent une note, un simple toucher n\'en donne pas', () {
+      expect(Rappels.lire('d1', 'note_4'), ('d1', 4));
+      expect(Rappels.lire('d1', null), ('d1', null));
+      expect(Rappels.lire(null, 'note_5'), isNull);
+    });
+
+    test('R20 noter depuis la notification valide la séance en un geste', () async {
+      final e = await _etat();
+      await e.commencerSeance(_carte('a'), pronostic: 4);
+      expect(await e.repondreRappel('a', null), isNull);
+      expect(e.enCours, hasLength(1), reason: 'un simple toucher ne valide rien');
+      expect(await e.repondreRappel('a', 5), 3);
+      expect(e.enCours, isEmpty);
+      expect(e.billets.single.note, 5);
     });
   });
 }

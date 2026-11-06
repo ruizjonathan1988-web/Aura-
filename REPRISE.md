@@ -66,6 +66,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R17 Mesures | Une ouverture comptée par jour ; file hors ligne plafonnée à 200 ; seulement six types d'événements, sans titre de film | `ServiceMesures` |
 | R18 Amis | Le fil raconte la séance d'un ami en une phrase (« Léa a vu « … » et lui donne 4 sur 5. ») ; ses propres séances à la deuxième personne | `Nouvelle` |
 | R19 Animations | Coupées si l'appareil demande moins d'animations ; sinon les entrées se font en fondu | `animationsReduites`, `Entree` |
+| R20 Rappel du lendemain | Un seul rappel, le lendemain à 12 h 30 ; trois boutons (Bof 2, Bien 4, Génial 5) ; noter depuis la notification valide la séance ; un simple toucher ne valide rien | `Rappels`, `EtatJeu.repondreRappel` |
 
 Tests d'écrans (`test/ecrans_test.dart`) : l'appli est ouverte comme par un joueur, sur un téléphone (390 × 844) et sur une télé (960 × 540) ; ouverture, premier soir complet, tous les onglets, une soirée complète (tirage, carte, billet, plateau), Plan du jour, Duel. Un débordement ou un plantage fait échouer la CI. Possible parce que les polices sont embarquées (`assets/polices`, licence OFL) au lieu d'être téléchargées.
 
@@ -129,6 +130,7 @@ Fait :
 - Animations (`lib/widgets/animations.dart`, d'après le prototype du canevas mis à jour le 6 nov.) : ouverture en salle de cinéma à chaque lancement (rideau de velours qui s'écarte, projecteur, Pop qui tournoie, « AURA » qui claque, les 8 figurines en file, « Entrer dans la salle ») ; cartes distribuées une à une avec rebond ; carte jouée qui se retourne en affiche illustrée (rayons, cercles, titre, pastille de note) ; tampon « Vu ! » et confettis à la validation ; pion qui fait trois sauts sur sa nouvelle case ; pastilles qui rebondissent ; Pop qui arrive et se dandine. Tout est coupé si l'appareil demande moins d'animations.
 - Ce soir enrichi : encarts « Ta course contre Pop » (jauge et figurines) et « Ta série » ; fil « Pendant ce temps, à la ligue » sous le tirage (ou invitation à créer sa ligue).
 - Polices embarquées (Anton, Nunito 700/800/900, sous-ensemble latin, converties depuis Google Fonts) : plus de téléchargement au premier lancement, l'appli marche hors ligne sur la box. Le paquet `google_fonts` est retiré.
+- Rappel du lendemain (`lib/services/rappels.dart`, Android) : quand une carte est jouée, une notification est prévue le lendemain à 12 h 30, « Alors, Le Samouraï ? », avec trois boutons de note ; un geste valide le billet. Annulée dès que plus rien n'attend. Le script `tool/configurer_android.py` ajoute la permission, les récepteurs et le désucrage Java.
 - Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
@@ -148,7 +150,7 @@ La priorité est la rétention : d'abord colmater les fuites, ensuite l'effet «
 5. Mesures : fait côté appli ; lancer `0003_mesures.sql` dans Supabase, puis lire `select * from public.mesures;`.
 6. Supabase : vérifier que `0001` puis `0002` ont bien été lancés et que les connexions anonymes sont activées (à confirmer par Jon), puis les événements d'amis (« Léa a deviné ton Curseur ») et la figurine débloquée pour les deux quand on invite un ami.
 7. Duel du canapé : fait. À vérifier sur la box (focus des cartes aux flèches, lisibilité à 3 mètres).
-8. Version publique : notification du lendemain « Alors, Le Samouraï ? » avec les étoiles, plateformes via TMDB (JustWatch), import Letterboxd ou Trakt, licences.
+8. Version publique : plateformes via TMDB (JustWatch), import Letterboxd ou Trakt, licences. (La notification du lendemain est faite.)
 
 À noter pour une future session VJOD (pas dans Aura) : ajouter dans `lib/data/services/deep_link_service.dart` un lien `moonfin://tmdb?type=movie&id=…` vers la fiche « Regarder / Demander », pour lancer aussi les titres de Ma TV.
 

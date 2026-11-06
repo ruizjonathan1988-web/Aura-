@@ -10,6 +10,7 @@ import 'ligues.dart';
 import 'mesures.dart';
 import 'plan_du_jour.dart';
 import 'pop.dart';
+import 'rappels.dart';
 import 'sources.dart';
 import 'tirage.dart';
 
@@ -414,6 +415,7 @@ class EtatJeu extends ChangeNotifier {
     ].take(5).toList();
     await _sauverEnCours();
     await _prefs.setInt('stat_cartes', (_prefs.getInt('stat_cartes') ?? 0) + 1);
+    Rappels.alorsCeFilm(filmId: carte.film.id, titre: carte.film.titre, carteJouee: DateTime.now());
     _mesurer('carte_jouee', {'type': carte.type.libelle, 'source': carte.film.source.name});
     notifyListeners();
   }
@@ -509,8 +511,18 @@ class EtatJeu extends ChangeNotifier {
     return ((_prefs.getInt('stat_billets') ?? 0) / cartes).clamp(0, 1).toDouble();
   }
 
-  Future<void> _sauverEnCours() =>
-      _prefs.setStringList('en_cours', enCours.map((s) => jsonEncode(s.versJson())).toList());
+  Future<void> _sauverEnCours() {
+    if (enCours.isEmpty) Rappels.annuler();
+    return _prefs.setStringList('en_cours', enCours.map((s) => jsonEncode(s.versJson())).toList());
+  }
+
+  /// Réponse à la notification du lendemain : une note valide la séance en
+  /// un geste ; un simple toucher ouvre l'appli sur « Alors, ce film ? ».
+  Future<int?> repondreRappel(String filmId, int? note) async {
+    final s = enCours.where((x) => x.filmId == filmId).firstOrNull;
+    if (s == null || note == null) return null;
+    return validerEnCours(s, note: note);
+  }
 
   /// Envoie aux ligues les séances du mois qui ne sont pas encore parties.
   Future<void> synchroniser() async {

@@ -3,7 +3,9 @@
 - visible sur Android TV (leanback, pas d'écran tactile obligatoire, bannière) ;
 - nom « Aura » ;
 - accès réseau, y compris en http vers un Jellyfin local ;
-- droit de lancer VJOD avec les liens moonfin:// (visibilité des paquets, Android 11+).
+- droit de lancer VJOD avec les liens moonfin:// (visibilité des paquets, Android 11+) ;
+- notifications du lendemain (« Alors, ce film ? ») : permission, récepteurs de
+  flutter_local_notifications, et désucrage Java dans build.gradle.
 
 Le script peut être relancé : il ne modifie que ce qui manque.
 """
@@ -52,5 +54,38 @@ if moonfin not in xml:
     else:
         xml = xml.replace("</manifest>", f"    <queries>{intent}\n    </queries>\n</manifest>", 1)
 
+avant("<application", '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n')
+avant("<application", '    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\n')
+
+recepteurs = """
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"/>
+"""
+if "ScheduledNotificationReceiver" not in xml:
+    xml = xml.replace("</application>", recepteurs + "    </application>", 1)
+
 chemin.write_text(xml, encoding="utf-8")
 print(f"Manifeste prêt : {chemin}")
+
+# Désucrage Java, demandé par flutter_local_notifications.
+app = chemin.parents[2]
+for nom in ("build.gradle.kts", "build.gradle"):
+    gradle = app / nom
+    if not gradle.exists():
+        continue
+    g = gradle.read_text(encoding="utf-8")
+    kts = nom.endswith(".kts")
+    if "desugar_jdk_libs" not in g:
+        active = "isCoreLibraryDesugaringEnabled = true" if kts else "coreLibraryDesugaringEnabled true"
+        g = re.sub(r"compileOptions\s*\{", "compileOptions {\n        " + active, g, count=1)
+        dep = 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' if kts else "coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'"
+        g += "\ndependencies {\n    " + dep + "\n}\n"
+        gradle.write_text(g, encoding="utf-8")
+        print(f"Désucrage activé : {gradle}")
