@@ -38,8 +38,9 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Film _film(String id, {double? note = 7.5, int annee = 2010, int duree = 100, bool vu = false, int? votes}) =>
-    Film(id: id, titre: 'Film $id', note: note, annee: annee, dureeMinutes: duree, genres: const ['Thriller'], pays: const ['France'], dejaVu: vu, nombreVotes: votes);
+Film _film(String id,
+        {double? note = 7.5, int annee = 2010, int duree = 100, bool vu = false, int? votes, List<String> genres = const ['Thriller'], List<String> pays = const ['France']}) =>
+    Film(id: id, titre: 'Film $id', note: note, annee: annee, dureeMinutes: duree, genres: genres, pays: pays, dejaVu: vu, nombreVotes: votes);
 
 CarteDefi _carte(String id, {TypeCarte type = TypeCarte.retro, int cases = 3, int duree = 100}) => CarteDefi(
       type: type,
@@ -1137,6 +1138,27 @@ void main() {
       expect(carte.type, TypeCarte.cadeau);
       expect(carte.cases, 2);
       expect(carte.defi, 'Cadeau de Léa');
+    });
+  });
+
+  group('R30 Les cartes suivent l\'envie', () {
+    test('R30 chaque envie donne d\'autres défis et seulement des films de ses genres', () {
+      final catalogue = [
+        for (var i = 0; i < 6; i++) _film('rire$i', note: 7.8, annee: 1950 + i * 12, pays: ['Pays$i'], genres: const ['Comedy']),
+        for (var i = 0; i < 6; i++) _film('peur$i', note: 7.8, annee: 1950 + i * 12, pays: ['Pays$i'], genres: const ['Horror']),
+      ];
+      final rire = Tirage(hasard: Random(1)).tirer(catalogue: catalogue, emotion: Emotion.rire, duree: Duree.soiree, profil: Profil.fidele);
+      final peur = Tirage(hasard: Random(1)).tirer(catalogue: catalogue, emotion: Emotion.frissonner, duree: Duree.soiree, profil: Profil.fidele);
+      expect(rire.every((c) => c.film.id.startsWith('rire')), isTrue);
+      expect(peur.every((c) => c.film.id.startsWith('peur')), isTrue);
+      expect(rire.every((c) => c.defi.contains('pour rire')), isTrue);
+      expect(peur.every((c) => c.defi.contains('frissonner')), isTrue);
+    });
+
+    test('R30 un pays déjà vu ne fait pas une carte Voyage', () {
+      final catalogue = [_film('a', note: 7, annee: 2000, pays: const ['France'], genres: const ['Comedy'])];
+      final cartes = Tirage(hasard: Random(1)).tirer(catalogue: catalogue, emotion: Emotion.rire, duree: Duree.soiree, profil: Profil.fidele, paysVus: {'France'});
+      expect(cartes.any((c) => c.type == TypeCarte.voyage), isFalse);
     });
   });
 }

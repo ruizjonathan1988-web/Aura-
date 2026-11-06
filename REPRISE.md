@@ -76,6 +76,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R27 Jokers, finale, générique | Bouclier : Pop ne prend pas la région visée cette semaine-là ; un Joker de chaque par mois ; en fin de mois, résultat contre Pop gardé, champion si devant ; générique dans l'ordre d'apparition, sans les films hors saison | `CarteDesGenres` (boucliers), `EtatJeu`, `Generique` |
 | R28 Campagnes | Chaque campagne garde les 5 films les mieux notés de son thème (un par pays pour le Tour du monde) ; elle avance avec les billets et se boucle ; l'exploit n'est donné qu'une fois | `Campagnes` |
 | R29 Cadeau cacheté et Flair | Scellé jusqu'au jour prévu ; dates proposées ce soir, demain, vendredi, samedi, dimanche sans doublon ; Flair = part des cadeaux notés 4 ou 5 (les non notés ne comptent pas) ; jouer un cadeau = carte à 2 cases | `Cadeau`, `Cadeaux` |
+| R30 Les cartes suivent l'envie | Le défi de chaque carte reprend l'envie choisie (« Un classique pour rire, avant 1980 ») et seuls ses genres sont tirés ; un pays déjà vu dans les billets ne donne pas de carte Voyage | `Tirage` |
 
 Tests d'écrans (`test/ecrans_test.dart`) : l'appli est ouverte comme par un joueur, sur un téléphone (390 × 844) et sur une télé (960 × 540) ; ouverture, premier soir complet, tous les onglets, une soirée complète (tirage, carte, billet, plateau), Plan du jour, Duel. Un débordement ou un plantage fait échouer la CI. Possible parce que les polices sont embarquées (`assets/polices`, licence OFL) au lieu d'être téléchargées.
 
@@ -163,6 +164,9 @@ Jon a demandé une appli « finie, présentable, jouable, rigolote, avec une for
 2. ~~Migrations Supabase~~ : `0001` à `0006` lancées par Jon le 6 novembre (succès). Reste à vérifier que les connexions anonymes sont activées. Lire les chiffres avec `select * from public.mesures;`.
 3. Adresse du serveur VJOD : fait, `https://ava88.zen.usbx.me/jellyfin` est pré-remplie dans les Réglages (`Config.serveurVjod`).
 4. Tester sur la box : flèches et OK partout, ouverture, Duel, Révélation (le dimanche), connexion par code Quick Connect.
+
+- 6 novembre : Jon trouvait que toutes les envies proposaient la même chose. Les films changeaient, mais les trois défis affichés (avant 1980, pays jamais vu, pépite) étaient toujours identiques et le pays « jamais vu » ignorait ses billets. Les défis reprennent maintenant l'envie (R30). Titre « Envie de quoi ce soir ? » réduit pour ne plus être coupé.
+- APK : la CI signait avec une clé neuve à chaque construction, d'où « Application non installée » sur une mise à jour. PR « Signature fixe de l'APK » (`tool/signature.keystore`) en attente de l'accord de Jon.
 
 ## Retours de Jon à traiter
 

@@ -60,7 +60,8 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     });
     try {
       final catalogue = await etat.source.catalogue(emotion: _emotion);
-      final cartes = _tirage.tirer(catalogue: catalogue, emotion: _emotion, duree: _duree, profil: etat.profil);
+      final paysVus = {for (final b in etat.billets) ...b.pays};
+      final cartes = _tirage.tirer(catalogue: catalogue, emotion: _emotion, duree: _duree, profil: etat.profil, paysVus: paysVus);
       setState(() {
         _cartes = cartes;
         _choisie = 0;
@@ -173,8 +174,8 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
               clipBehavior: Clip.none,
               children: [
                 const Padding(
-                  padding: EdgeInsets.only(right: 120, top: 8),
-                  child: TitreCartoon('Envie de quoi ce soir ?', taille: 38),
+                  padding: EdgeInsets.only(right: 120, top: 16),
+                  child: TitreCartoon('Envie de quoi ce soir\u00a0?', taille: 34),
                 ),
                 Positioned(
                   right: -4,
