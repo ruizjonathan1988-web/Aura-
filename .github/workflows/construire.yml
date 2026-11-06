@@ -42,6 +42,8 @@ jobs:
 
       - name: APK (télé et téléphone)
         run: |
+          # Toujours la même signature, pour que chaque version s'installe par-dessus la précédente.
+          mkdir -p ~/.android && cp tool/signature.keystore ~/.android/debug.keystore
           flutter build apk --release \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
