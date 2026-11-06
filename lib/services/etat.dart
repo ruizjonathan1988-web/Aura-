@@ -9,6 +9,7 @@ import 'affiche.dart';
 import 'carte_genres.dart';
 import 'collection.dart';
 import 'config.dart';
+import 'coups.dart';
 import 'fidelite.dart';
 import 'historique.dart';
 import 'ligues.dart';
@@ -232,7 +233,11 @@ class EtatJeu extends ChangeNotifier {
   String? motDePop;
 
   /// La case de Pop, l'adversaire du solo.
-  int get positionDePop => Pop.position(DateTime.now(), billets, boucliers: boucliers);
+  int get positionDePop =>
+      (Pop.position(DateTime.now(), billets, boucliers: boucliers) + _decalageDePop(moisDe(DateTime.now()))).clamp(1, Regles.taillePlateau);
+
+  /// Ce que les coups du sort ont fait gagner ou perdre à Pop ce mois-là.
+  int _decalageDePop(String mois) => _prefs.getInt('pop_decalage_$mois') ?? 0;
 
   /// La carte des genres du mois, Boucliers compris.
   CarteDesGenres get carte => CarteDesGenres.de(DateTime.now(), billets, boucliers: boucliers);
@@ -345,7 +350,7 @@ class EtatJeu extends ChangeNotifier {
     if (annee == null || m == null) return;
     final dernierJour = DateTime(annee, m + 1, 0, 23, 59);
     final duMois = billets.where((b) => b.date.year == annee && b.date.month == m).toList();
-    final pop = Pop.position(dernierJour, duMois, boucliers: boucliers);
+    final pop = (Pop.position(dernierJour, duMois, boucliers: boucliers) + _decalageDePop(mois)).clamp(1, Regles.taillePlateau);
     _prefs.setStringList('saison_$mois', ['$position', '$pop', '${duMois.length}']);
     if (position > pop && duMois.isNotEmpty) {
       _prefs.setStringList('collection', {...collection, 'champion'}.toList());
@@ -516,12 +521,15 @@ class EtatJeu extends ChangeNotifier {
         : 0;
     if (pouvoir) await _consommerPouvoir();
     final plafond = pouvoir ? Pouvoirs.plafond(profil, Niveau.plafond(niveau)) : Niveau.plafond(niveau);
-    final bonus = (joker ? 1 : 0) + (rattrapage ? Fidelite.rattrapage : 0) + bonusPouvoir;
+    // Crasse « Pop-corn renversé » encaissée : une case de moins, une fois.
+    final malus = ceMois ? (_prefs.getInt('malus_cases') ?? 0) : 0;
+    if (malus > 0) await _prefs.remove('malus_cases');
+    final bonus = (joker ? 1 : 0) + (rattrapage ? Fidelite.rattrapage : 0) + bonusPouvoir - malus;
     final deja = casesLe(date);
-    final cases = ceMois ? Regles.casesAccordees(demandees: demandees + bonus, dejaGagneesAujourdhui: deja, plafond: plafond) : 0;
+    final cases = ceMois ? Regles.casesAccordees(demandees: max(0, demandees + bonus), dejaGagneesAujourdhui: deja, plafond: plafond) : 0;
     // Le pouvoir n'a « agi » que s'il a vraiment fait passer une case de plus.
     final pouvoirAgi = pouvoir &&
-        cases > (ceMois ? Regles.casesAccordees(demandees: demandees + bonus - bonusPouvoir, dejaGagneesAujourdhui: deja, plafond: Niveau.plafond(niveau)) : 0);
+        cases > (ceMois ? Regles.casesAccordees(demandees: max(0, demandees + bonus - bonusPouvoir), dejaGagneesAujourdhui: deja, plafond: Niveau.plafond(niveau)) : 0);
     if (joker) await _prefs.setBool('joker_bluff', false);
     if (rattrapage) await _prefs.setBool('carte_rattrapage', false);
     final pariAvant = Pop.parisPerdus(maintenant, billets);
@@ -545,10 +553,16 @@ class EtatJeu extends ChangeNotifier {
     final pariGagne = Pop.parisPerdus(maintenant, billets) > pariAvant;
     if (cases > 0) pionVientDAvancer = true;
     position = (position + cases).clamp(1, Regles.taillePlateau);
+    // Coup de théâtre : le pion s'arrête sur une case 4, 14 ou 24 pas encore jouée ce mois-ci.
+    final mois = moisDe(maintenant);
+    final coup = cases > 0 && CoupsDuSort.estCaseCoup(position) && !(_prefs.getStringList('coups_$mois') ?? const []).contains('$position');
+    if (coup) await _prefs.setString('coup_en_attente', '$mois|$position');
     final nouveaux = await _majCollection();
     _direPop([
       if (pouvoir) Pouvoirs.phrase(profil, agi: pouvoirAgi),
       if (note != null) Pop.surPronostic(pronostic: pronostic, note: note, graine: billets.length),
+      if (coup) 'Case Coup de théâtre ! Va voir le plateau.',
+      if (malus > 0) 'Pop-corn renversé : une case de moins, merci qui ?',
       if (pariGagne) 'Zut, j\'ai perdu mon pari : je recule de ${Pop.recul} cases. Mais je reviendrai.',
       for (final id in nouveaux) 'Nouvel exploit pour ta collection : ${Collection.nomDe(id)} !',
     ]);
@@ -679,12 +693,16 @@ class EtatJeu extends ChangeNotifier {
 
   /// La charge part : celle de la semaine d'abord, sinon une charge d'audace.
   Future<void> _consommerPouvoir() async {
+    await _depenserCharge();
+    await _prefs.setBool('pouvoir_arme', false);
+  }
+
+  Future<void> _depenserCharge() async {
     final maintenant = DateTime.now();
     final usages = _usagesPouvoir;
     final audace = !Pouvoirs.chargeDeLaSemaine(maintenant: maintenant, usages: usages);
     final gardes = usages.where((u) => maintenant.difference(u.date).inDays < 62);
     await _prefs.setStringList('pouvoir_usages', [UsagePouvoir(maintenant, audace: audace).versTexte(), for (final u in gardes) u.versTexte()]);
-    await _prefs.setBool('pouvoir_arme', false);
   }
 
   /// Au tirage de Ce soir : si le pouvoir armé agit au tirage (Boussole,
@@ -700,7 +718,123 @@ class EtatJeu extends ChangeNotifier {
   /// L'audace du mois : la somme des points d'audace des billets du mois.
   int get audaceDuMois {
     final m = moisDe(DateTime.now());
-    return billets.where((b) => b.niveau != null && moisDe(b.date) == m).fold(0, (s, b) => s + Niveau.audace(b.niveau!));
+    final total = billets.where((b) => b.niveau != null && moisDe(b.date) == m).fold(0, (s, b) => s + Niveau.audace(b.niveau!));
+    return max(0, total + (_prefs.getInt('audace_$m') ?? 0));
+  }
+
+  // Coups du sort et crasses (R40).
+
+  /// Le coup du sort qui attend une décision, s'il y en a un ce mois-ci.
+  ({CoupDuSort coup, int numero})? get coupEnAttente {
+    final t = (_prefs.getString('coup_en_attente') ?? '').split('|');
+    if (t.length != 2 || t.first != moisDe(DateTime.now())) return null;
+    final n = int.tryParse(t.last);
+    if (n == null) return null;
+    return (coup: CoupsDuSort.pour(DateTime.now(), n), numero: n);
+  }
+
+  /// Parer coûte une charge de pouvoir (sans toucher à celle déjà armée).
+  bool get peutParerAvecCharge => chargesPouvoir > (pouvoirArme ? 1 : 0);
+
+  /// Régler le coup du sort : l'encaisser, ou le parer avec une charge de
+  /// pouvoir ou le Bouclier du mois. Renvoie faux si la parade est impossible.
+  Future<bool> resoudreCoup({String? parade}) async {
+    final c = coupEnAttente;
+    if (c == null) return false;
+    final pop = positionDePop;
+    final tort = CoupsDuSort.faitDuTort(c.coup, joueur: position, pop: pop);
+    if (parade != null) {
+      if (!tort) return false;
+      if (parade == 'charge' && peutParerAvecCharge) {
+        await _depenserCharge();
+      } else if (parade == 'bouclier' && bouclierDispo) {
+        await poserBouclier();
+      } else {
+        return false;
+      }
+      _direPop(['Paré ! ${c.coup.nom} ne t\'a rien fait. Je note, je note.']);
+    } else {
+      final d = CoupsDuSort.deplacement(c.coup, joueur: position, pop: pop);
+      position = (position + d.joueur).clamp(1, Regles.taillePlateau);
+      await _prefs.setInt('position', position);
+      final cle = 'pop_decalage_${moisDe(DateTime.now())}';
+      if (d.pop != 0) await _prefs.setInt(cle, (_prefs.getInt(cle) ?? 0) + d.pop);
+      _direPop(['${c.coup.nom} : ${c.coup.effet}']);
+    }
+    final mois = moisDe(DateTime.now());
+    await _prefs.setStringList('coups_$mois', [...?_prefs.getStringList('coups_$mois'), '${c.numero}']);
+    await _prefs.remove('coup_en_attente');
+    notifyListeners();
+    return true;
+  }
+
+  /// Crasse « Niveau imposé » : le niveau du prochain tirage, s'il y en a un.
+  int? get niveauImpose => _prefs.getInt('niveau_impose');
+
+  /// Le tirage a eu lieu : le niveau imposé est consommé.
+  Future<void> oublierNiveauImpose() => _prefs.remove('niveau_impose');
+
+  List<DateTime> _dates(String cle) => [for (final t in _prefs.getStringList(cle) ?? const <String>[]) if (DateTime.tryParse(t) != null) DateTime.parse(t)];
+
+  /// Une crasse par semaine.
+  bool get peutFaireUneCrasse => Crasses.peutEnvoyer(DateTime.now(), _dates('crasses_envoyees'));
+
+  /// Un renvoi à l'expéditeur par mois.
+  bool get peutRenvoyerUneCrasse => Crasses.peutRenvoyer(DateTime.now(), _dates('crasses_renvois'));
+
+  Future<void> noterCrasseEnvoyee() async =>
+      _prefs.setStringList('crasses_envoyees', [DateTime.now().toIso8601String(), ...?_prefs.getStringList('crasses_envoyees')].take(10).toList());
+
+  /// Répondre à une crasse reçue. Encaissée : son effet s'applique ici.
+  /// Parée : une charge de pouvoir. Renvoyée : une fois par mois. Renvoie
+  /// faux si la parade demandée est impossible.
+  Future<bool> repondreCrasse(Crasse c, Reponse r) async {
+    switch (r) {
+      case Reponse.paree:
+        if (!peutParerAvecCharge) return false;
+        await _depenserCharge();
+        _direPop(['Crasse parée. Ton ami va être déçu, et moi aussi un peu.']);
+      case Reponse.renvoyee:
+        if (!peutRenvoyerUneCrasse) return false;
+        await _prefs.setStringList('crasses_renvois', [DateTime.now().toIso8601String(), ...?_prefs.getStringList('crasses_renvois')].take(10).toList());
+        _direPop(['Retour à l\'envoyeur ! J\'adore quand ça se retourne.']);
+      case Reponse.encaissee:
+        switch (c) {
+          case Crasse.niveauImpose:
+            await _prefs.setInt('niveau_impose', Crasses.niveauImpose);
+          case Crasse.popcorn:
+            await _prefs.setInt('malus_cases', 1);
+          case Crasse.volDAudace:
+            await _ajouterAudace(-Crasses.audaceVolee);
+          case Crasse.fauxSpoiler:
+            break;
+        }
+        _direPop(['${c.nom} : ${c.effet}']);
+    }
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> _ajouterAudace(int n) async {
+    final cle = 'audace_${moisDe(DateTime.now())}';
+    await _prefs.setInt(cle, (_prefs.getInt(cle) ?? 0) + n);
+  }
+
+  /// Côté expéditeur : un Vol d'audace encaissé par l'ami rapporte ses 5
+  /// points, une seule fois par crasse.
+  Future<int> encaisserGains(List<CrasseRecue> envoyees) async {
+    final comptees = {...?_prefs.getStringList('crasses_comptees')};
+    final m = moisDe(DateTime.now());
+    var gagne = 0;
+    for (final c in envoyees) {
+      if (c.crasse == Crasse.volDAudace && c.reponse == Reponse.encaissee && moisDe(c.date) == m && comptees.add(c.id)) gagne += Crasses.audaceVolee;
+    }
+    if (gagne > 0) {
+      await _ajouterAudace(gagne);
+      await _prefs.setStringList('crasses_comptees', comptees.toList());
+      notifyListeners();
+    }
+    return gagne;
   }
 
   /// Demande à Jellyfin si les films en attente ont été vus. Ceux qui l'ont

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app.dart';
 import '../models/modeles.dart';
 import '../services/carte_genres.dart';
+import '../services/coups.dart';
 import '../services/etat.dart';
 import '../services/pop.dart';
 import '../services/tirage.dart';
@@ -110,6 +111,10 @@ class PlateauEcran extends StatelessWidget {
               PopQuiParle(texte: etat.motDePop ?? Pop.surPlateau(joueur: etat.position, pop: pop, jour: maintenant), taille: 70),
               const SizedBox(height: 16),
               _Circuit(joueur: etat.profil, positionJoueur: etat.position, positionPop: pop, saute: _consommerSaut(etat)),
+              if (etat.coupEnAttente != null) ...[
+                const SizedBox(height: 14),
+                _CoupDeTheatre(etat: etat, pop: pop),
+              ],
               const SizedBox(height: 14),
               Wrap(
                 spacing: 12,
@@ -431,6 +436,39 @@ class _Region extends StatelessWidget {
           Proprio.pop => const Figurine.pop(hauteur: 26),
           Proprio.libre => Text(visee ? 'VISÉE' : 'libre', style: visee ? AuraTexte.titre(13) : AuraTexte.corps(12, couleur: AuraCouleurs.texteDoux)),
         },
+      ]),
+    );
+  }
+}
+
+/// Case Coup de théâtre (R40) : le coup du sort, et sa parade s'il fait du tort.
+class _CoupDeTheatre extends StatelessWidget {
+  const _CoupDeTheatre({required this.etat, required this.pop});
+
+  final EtatJeu etat;
+  final int pop;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = etat.coupEnAttente!;
+    final tort = CoupsDuSort.faitDuTort(c.coup, joueur: etat.position, pop: pop);
+    return Panneau(
+      couleur: AuraCouleurs.jaune,
+      inclinaison: 0.012,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('COUP DE THÉÂTRE, CASE ${c.numero} : ${c.coup.nom.toUpperCase()}', style: AuraTexte.titre(16)),
+        const SizedBox(height: 6),
+        Text(c.coup.effet, style: AuraTexte.corps(15, poids: FontWeight.w900)),
+        if (tort) ...[
+          const SizedBox(height: 4),
+          Text('Ça ne t\'arrange pas ? Tu peux le parer.', style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
+        ],
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          Pastille(libelle: tort ? 'Encaisser' : 'D\'accord !', choisie: false, autofocus: true, onTap: () => etat.resoudreCoup()),
+          if (tort && etat.peutParerAvecCharge) Pastille(libelle: 'Parer (1 charge de pouvoir)', choisie: false, onTap: () => etat.resoudreCoup(parade: 'charge')),
+          if (tort && etat.bouclierDispo) Pastille(libelle: 'Parer avec le Bouclier du mois', choisie: false, onTap: () => etat.resoudreCoup(parade: 'bouclier')),
+        ]),
       ]),
     );
   }

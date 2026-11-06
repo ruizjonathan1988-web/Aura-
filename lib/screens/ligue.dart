@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../app.dart';
 import '../models/modeles.dart';
+import '../services/coups.dart';
 import '../services/etat.dart';
 import '../services/ligues.dart';
 import '../theme/aura_theme.dart';
@@ -88,6 +89,8 @@ class _LigueEcranState extends State<LigueEcran> {
       _Classement(key: ValueKey(ligue.id), service: service, ligue: ligue, positionLocale: etat.position),
       const SizedBox(height: 16),
       _FilDeLaLigue(key: ValueKey('fil${ligue.id}${etat.billets.length}'), service: service, ligue: ligue),
+      const SizedBox(height: 20),
+      _Crasses(key: ValueKey('crasses${ligue.id}'), etat: etat, service: service, ligue: ligue),
       const SizedBox(height: 16),
       CadeauxVue(key: ValueKey('cadeaux${ligue.id}'), service: service, ligue: ligue),
       const SizedBox(height: 16),
@@ -491,6 +494,134 @@ class _FilDeLaLigueState extends State<_FilDeLaLigue> {
                   ]),
                 ),
               ),
+        ]);
+      },
+    );
+  }
+}
+
+/// Les crasses entre amis (R40) : celles qu'on a reçues, à régler, et la
+/// crasse de la semaine à faire à quelqu'un.
+class _Crasses extends StatefulWidget {
+  const _Crasses({super.key, required this.etat, required this.service, required this.ligue});
+  final EtatJeu etat;
+  final ServiceLigues service;
+  final Ligue ligue;
+
+  @override
+  State<_Crasses> createState() => _CrassesState();
+}
+
+class _CrassesState extends State<_Crasses> {
+  late Future<(List<Classe>, List<CrasseRecue>)> _donnees = _charger();
+  Crasse _choix = Crasse.popcorn;
+  String? _cible;
+  bool _occupe = false;
+
+  Future<(List<Classe>, List<CrasseRecue>)> _charger() async {
+    final classement = await widget.service.classement(widget.ligue);
+    final crasses = await widget.service.crasses(widget.ligue);
+    await widget.etat.encaisserGains([for (final c in crasses) if (c.de == widget.service.monId) c]);
+    return (classement, crasses);
+  }
+
+  Future<void> _agir(Future<void> Function() action) async {
+    setState(() => _occupe = true);
+    try {
+      await action();
+    } on ErreurLigue catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _occupe = false;
+          _donnees = _charger();
+        });
+      }
+    }
+  }
+
+  Future<void> _repondre(CrasseRecue c, Reponse r) => _agir(() async {
+        final etat = widget.etat;
+        if (r == Reponse.paree && !etat.peutParerAvecCharge) return;
+        if (r == Reponse.renvoyee && !etat.peutRenvoyerUneCrasse) return;
+        // Le serveur d'abord : si ça échoue, rien ne s'applique deux fois.
+        await widget.service.repondreCrasse(c, r);
+        await etat.repondreCrasse(c.crasse, r);
+      });
+
+  Future<void> _envoyer() => _agir(() async {
+        final cible = _cible;
+        if (cible == null || !widget.etat.peutFaireUneCrasse) return;
+        await widget.service.faireUneCrasse(widget.ligue, pour: cible, crasse: _choix);
+        await widget.etat.noterCrasseEnvoyee();
+        _cible = null;
+      });
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<(List<Classe>, List<CrasseRecue>)>(
+      future: _donnees,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done || snap.hasError || snap.data == null) return const SizedBox.shrink();
+        final (classement, crasses) = snap.data!;
+        final moi = widget.service.monId;
+        String nom(String id) => classement.where((c) => c.joueurId == id).map((c) => c.pseudo).firstOrNull ?? 'Un ami';
+        final recues = [for (final c in crasses) if (c.pour == moi && c.reponse == null) c];
+        final amis = [for (final c in classement) if (c.joueurId != moi) c];
+        final etat = widget.etat;
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const TitreCartoon('Les crasses', taille: 26, inclinaison: 0),
+          const SizedBox(height: 10),
+          for (final c in recues)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Panneau(
+                couleur: AuraCouleurs.jaune,
+                inclinaison: -0.01,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${nom(c.de).toUpperCase()} T\'A FAIT UNE CRASSE : ${c.crasse.nom.toUpperCase()}${c.renvoi ? ' (RENVOYÉE !)' : ''}', style: AuraTexte.titre(15)),
+                  const SizedBox(height: 4),
+                  Text(c.crasse.effet, style: AuraTexte.corps(14, poids: FontWeight.w900)),
+                  const SizedBox(height: 8),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    Pastille(libelle: 'Encaisser', choisie: false, onTap: _occupe ? null : () => _repondre(c, Reponse.encaissee)),
+                    if (etat.peutParerAvecCharge)
+                      Pastille(libelle: 'Parer (1 charge de pouvoir)', choisie: false, onTap: _occupe ? null : () => _repondre(c, Reponse.paree)),
+                    if (etat.peutRenvoyerUneCrasse && !c.renvoi)
+                      Pastille(libelle: 'Renvoyer à l\'envoyeur (1 par mois)', choisie: false, onTap: _occupe ? null : () => _repondre(c, Reponse.renvoyee)),
+                  ]),
+                ]),
+              ),
+            ),
+          if (amis.isEmpty)
+            const PopQuiParle(texte: 'Pas encore d\'ami à embêter dans cette ligue. Invite quelqu\'un, j\'ai des idées.', taille: 60)
+          else if (!etat.peutFaireUneCrasse)
+            const PopQuiParle(texte: 'Ta crasse de la semaine est partie. Patience jusqu\'à lundi, petit malin.', taille: 60)
+          else
+            Panneau(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('TA CRASSE DE LA SEMAINE', style: AuraTexte.titre(16)),
+                const SizedBox(height: 4),
+                Text('Une par semaine. Ton ami peut l\'encaisser, la parer ou te la renvoyer.', style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
+                const SizedBox(height: 10),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final c in Crasse.values) Pastille(libelle: c.nom, choisie: c == _choix, onTap: () => setState(() => _choix = c)),
+                ]),
+                const SizedBox(height: 6),
+                Text(_choix.promesse, style: AuraTexte.corps(13)),
+                const SizedBox(height: 10),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final a in amis) Pastille(libelle: a.pseudo, choisie: a.joueurId == _cible, onTap: () => setState(() => _cible = a.joueurId)),
+                ]),
+                const SizedBox(height: 12),
+                AuraBouton(
+                  libelle: _cible == null ? 'Choisis ta victime' : 'Envoyer la crasse',
+                  principal: false,
+                  onPressed: _cible == null || _occupe ? null : _envoyer,
+                ),
+              ]),
+            ),
         ]);
       },
     );
