@@ -6,6 +6,7 @@ import '../services/carte_genres.dart';
 import '../services/coups.dart';
 import '../services/etat.dart';
 import '../services/pop.dart';
+import '../services/retournements.dart';
 import '../services/tirage.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/animations.dart';
@@ -111,6 +112,34 @@ class PlateauEcran extends StatelessWidget {
               PopQuiParle(texte: etat.motDePop ?? Pop.surPlateau(joueur: etat.position, pop: pop, jour: maintenant), taille: 70),
               const SizedBox(height: 16),
               _Circuit(joueur: etat.profil, positionJoueur: etat.position, positionPop: pop, saute: _consommerSaut(etat)),
+              if (etat.sisypheProposable) ...[
+                const SizedBox(height: 14),
+                Panneau(
+                  couleur: AuraCouleurs.jaune,
+                  inclinaison: -0.012,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('LE PARI DE SISYPHE', style: AuraTexte.titre(16)),
+                    const SizedBox(height: 6),
+                    Text('${Retournements.avanceSisyphe} cases d\'avance tout de suite. Mais si tu abandonnes un seul film ce mois-ci, retour à la case 1.',
+                        style: AuraTexte.corps(14, poids: FontWeight.w900)),
+                    const SizedBox(height: 4),
+                    Text('Proposé la première semaine du mois seulement.', style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
+                    const SizedBox(height: 10),
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      Pastille(libelle: 'Je tente !', choisie: false, onTap: etat.accepterSisyphe),
+                      Pastille(libelle: 'Non merci', choisie: false, onTap: etat.refuserSisyphe),
+                    ]),
+                  ]),
+                ),
+              ],
+              if (etat.sisypheActif) ...[
+                const SizedBox(height: 10),
+                Panneau(
+                  couleur: AuraCouleurs.rose,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  child: Text('Pari de Sisyphe en cours : n\'abandonne aucun film ce mois-ci.', style: AuraTexte.corps(14, poids: FontWeight.w900)),
+                ),
+              ],
               if (etat.coupEnAttente != null) ...[
                 const SizedBox(height: 14),
                 _CoupDeTheatre(etat: etat, pop: pop),
@@ -161,6 +190,26 @@ class PlateauEcran extends StatelessWidget {
                   icone: Icons.shield_rounded,
                   principal: false,
                   onPressed: etat.poserBouclier,
+                ),
+              ],
+              if (etat.volteFaceDispo) ...[
+                const SizedBox(height: 10),
+                AuraBouton(
+                  libelle: 'Joker Volte-face : prendre la place de Pop (1 par mois)',
+                  icone: Icons.swap_horiz_rounded,
+                  principal: false,
+                  onPressed: etat.volteFace,
+                ),
+              ],
+              if (etat.journal.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const TitreCartoon('Le journal du plateau', taille: 24, inclinaison: 0),
+                const SizedBox(height: 10),
+                Panneau(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    for (final l in etat.journal.take(8))
+                      Padding(padding: const EdgeInsets.only(bottom: 4), child: Text('• $l', style: AuraTexte.corps(14))),
+                  ]),
                 ),
               ],
               const SizedBox(height: 16),
