@@ -2363,7 +2363,8 @@ void main() {
       expect(e.cases, 1, reason: 'deux atouts à une case : une seule case');
       expect(e.audace, 2);
       final rien = Deck.effets(['critique'], {'critique': 1}, ContexteAtout(billet: billet(note: 2)));
-      expect((rien.cases, rien.audace, rien.declenches), (0, 0, isEmpty));
+      expect((rien.cases, rien.audace), (0, 0));
+      expect(rien.declenches, isEmpty);
     });
 
     test('R49 les doubles font monter le niveau : 3 exemplaires niveau 2, 6 niveau 3, une d\'audace de plus par niveau', () {
