@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
 import 'package:aura/services/apres_seance.dart';
+import 'package:aura/services/bingo.dart';
 import 'package:aura/services/deck.dart';
 import 'package:aura/services/festival.dart';
 import 'package:aura/services/partage.dart';
@@ -2665,6 +2666,67 @@ void main() {
       expect(e.avisAmis, isTrue);
       await e.changerAvisAmis(false);
       expect((await _etatDepuis(e)).avisAmis, isFalse);
+    });
+  });
+
+  group('R55 Le Bingo du film', () {
+    test('R55 une grille de 16 cases selon le genre, dont une case absurde de Pop', () {
+      final g = Bingo.grille(const ['Horror'], Random(1));
+      expect(g, hasLength(16));
+      expect(g.toSet(), hasLength(16));
+      expect(g.where(Bingo.pieges.contains), hasLength(1));
+      expect(g.where(Bingo.parGenre['horreur']!.contains), hasLength(6));
+      expect(Bingo.familleDe(const ['Comedy', 'Romance']), 'comedie');
+      expect(Bingo.familleDe(const []), 'drame');
+    });
+
+    test('R55 +1 par case acceptée, −1 par case contestée par la majorité des autres, +3 par ligne', () {
+      expect(Bingo.lignes({0, 1, 2, 3}), 1);
+      expect(Bingo.lignes({0, 4, 8, 12, 1, 2, 3}), 2);
+      expect(Bingo.points(cochees: {0, 1, 2, 3, 9}, rejetees: {9}), 4 - 1 + 3);
+      expect(Bingo.points(cochees: {0, 1, 2, 3}, rejetees: {2}), 3 - 1);
+      expect(Bingo.rejetee(2, 3), isTrue);
+      expect(Bingo.rejetee(1, 2), isFalse, reason: 'il faut la majorité stricte');
+    });
+
+    test('R55 dans la Soirée : chacun sa grille (public compris), on coche, on conteste, on compte', () {
+      var e = PartieSoiree.distribuer(
+        [
+          {'id': 'jon', 'pseudo': 'Jon', 'profil': 'fidele'},
+          {'id': 'lea', 'pseudo': 'Léa', 'profil': 'critique'},
+        ],
+        [
+          [for (var i = 0; i < 3; i++) _carte('a$i')],
+          [for (var i = 0; i < 3; i++) _carte('b$i')],
+        ],
+        Quiz.tirer(PartieSoiree.nbQuestions, Random(2)),
+        Random(2),
+        public: [{'id': 'mamie', 'pseudo': 'Mamie'}],
+      );
+      e = BingoSoiree.demarrer(e, const ['Action'], Random(3));
+      expect(((e['bingo'] as Map)['grilles'] as Map).keys, ['jon', 'lea', 'mamie']);
+      for (final k in [0, 1, 2, 3, 7]) {
+        e = PartieSoiree.appliquer(e, 'jon', {'type': 'cocher', 'case': k})!;
+      }
+      e = PartieSoiree.appliquer(e, 'jon', {'type': 'cocher', 'case': 7})!;
+      e = PartieSoiree.appliquer(e, 'jon', {'type': 'cocher', 'case': 9})!;
+      expect(BingoSoiree.cocheesDe(e, 'jon'), {0, 1, 2, 3, 9}, reason: 'cocher deux fois décoche');
+      expect(PartieSoiree.appliquer(e, 'inconnu', {'type': 'cocher', 'case': 1}), isNull);
+      expect(PartieSoiree.appliquer(e, 'lea', {'type': 'contester', 'qui': 'jon', 'case': 9}), isNull, reason: 'pas avant le générique');
+      e = PartieSoiree.suivante(e);
+      e = PartieSoiree.appliquer(e, 'lea', {'type': 'contester', 'qui': 'jon', 'case': 9})!;
+      e = PartieSoiree.appliquer(e, 'mamie', {'type': 'contester', 'qui': 'jon', 'case': 9})!;
+      expect(PartieSoiree.appliquer(e, 'jon', {'type': 'contester', 'qui': 'jon', 'case': 9}), isNull, reason: 'on ne se conteste pas soi-même');
+      expect(PartieSoiree.appliquer(e, 'lea', {'type': 'contester', 'qui': 'jon', 'case': 9}), isNull, reason: 'une fois chacun');
+      e = PartieSoiree.suivante(e);
+      expect(((e['bingo'] as Map)['points'] as Map)['jon'], 4 - 1 + 3);
+    });
+
+    test('R55 les points deviennent de l\'audace, 5 au plus, une fois par soirée', () async {
+      final e = await _etat(_devantPop);
+      await e.gagnerAudaceBingo('ABCD', 9);
+      await e.gagnerAudaceBingo('ABCD', 9);
+      expect(e.audaceDuMois, 5);
     });
   });
 }
