@@ -87,6 +87,7 @@ class Film {
     this.realisateur,
     this.synopsis,
     this.autresTitres = const [],
+    this.tmdbId,
     this.dejaVu = false,
     this.serveurId,
     this.source = SourceFilm.demo,
@@ -110,6 +111,9 @@ class Film {
   /// Titre original et titres connus ailleurs (pour reconnaître le film dans
   /// un historique Letterboxd, souvent en anglais).
   final List<String> autresTitres;
+
+  /// Identifiant TMDB, quand la source le connaît (Jellyfin le donne).
+  final int? tmdbId;
   final bool dejaVu;
 
   /// Le même film, marqué comme déjà vu.
@@ -125,6 +129,7 @@ class Film {
         realisateur: realisateur,
         synopsis: synopsis,
         autresTitres: autresTitres,
+        tmdbId: tmdbId,
         dejaVu: true,
         serveurId: serveurId,
         source: source,

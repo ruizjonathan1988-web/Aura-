@@ -9,6 +9,7 @@ import '../services/tirage.dart';
 import '../services/vjod_lien.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
+import '../widgets/ou_le_voir.dart';
 
 enum _Phase { joueurs, envie, table, quiz, verdict }
 
@@ -376,6 +377,8 @@ class _DuelEcranState extends State<DuelEcran> {
             if (f.synopsis != null) ...[const SizedBox(height: 6), Text(f.synopsis!, style: AuraTexte.corps(14))],
           ]),
         ),
+        const SizedBox(height: 12),
+        OuLeVoir(film: f),
         const SizedBox(height: 18),
         AuraBouton(
           libelle: VjodLien.disponible(f) ? 'Lancer dans VJOD' : 'C\'est parti, on le regarde',

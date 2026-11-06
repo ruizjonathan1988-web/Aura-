@@ -48,7 +48,7 @@ class SourceJellyfin implements SourceFilms {
       'MinCommunityRating': '6',
       'SortBy': auHasard ? 'Random' : 'SortName',
       'Limit': auHasard ? '120' : '400',
-      'Fields': 'Genres,ProductionLocations,People,ProductionYear,RunTimeTicks,CommunityRating,UserData,Overview,OriginalTitle',
+      'Fields': 'Genres,ProductionLocations,People,ProductionYear,RunTimeTicks,CommunityRating,UserData,Overview,OriginalTitle,ProviderIds',
       if (emotion != null) 'Genres': emotion.genres.join('|'),
     });
     final rep = await _client.get(uri, headers: {
@@ -108,6 +108,7 @@ class SourceJellyfin implements SourceFilms {
       realisateur: realisateur,
       synopsis: j['Overview'] as String?,
       autresTitres: [if (j['OriginalTitle'] is String && j['OriginalTitle'] != j['Name']) j['OriginalTitle'] as String],
+      tmdbId: int.tryParse('${(j['ProviderIds'] as Map?)?['Tmdb'] ?? ''}'),
       dejaVu: (userData?['Played'] as bool?) ?? false,
       serveurId: j['ServerId'] as String?,
       source: SourceFilm.jellyfin,

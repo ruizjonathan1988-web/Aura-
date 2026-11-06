@@ -13,6 +13,7 @@ import '../services/vjod_lien.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
+import '../widgets/ou_le_voir.dart';
 
 CarteDefi _carteDepuis(Map<String, dynamic> c) => CarteDefi(
       type: TypeCarte.values.firstWhere((t) => t.name == c['type'], orElse: () => TypeCarte.envie),
@@ -313,6 +314,8 @@ class _SoireeTeleEcranState extends State<SoireeTeleEcran> {
           if (film.synopsis != null) Text(film.synopsis!, style: AuraTexte.corps(18)),
         ]),
       ),
+      const SizedBox(height: 12),
+      OuLeVoir(film: film),
       const SizedBox(height: 18),
       AuraBouton(
         libelle: VjodLien.disponible(film) ? 'Lancer dans VJOD' : 'C\'est parti, on le regarde',

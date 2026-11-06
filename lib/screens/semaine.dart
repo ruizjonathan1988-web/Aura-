@@ -10,6 +10,7 @@ import '../services/premier_soir.dart';
 import '../services/vjod_lien.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
+import '../widgets/ou_le_voir.dart';
 import 'revelation.dart';
 import 'semaine_ligue.dart';
 
@@ -190,6 +191,8 @@ class _SemaineEcranState extends State<SemaineEcran> {
             Text('${a.film.infos}. Choisi par Pop, Programmateur de la semaine.', style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
           ]),
         ),
+        const SizedBox(height: 12),
+        OuLeVoir(key: ValueKey(a.film.id), film: a.film),
         const SizedBox(height: 16),
         Row(children: [
           for (final (i, e) in etapes.indexed) ...[

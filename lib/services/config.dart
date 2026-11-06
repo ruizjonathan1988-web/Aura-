@@ -22,5 +22,11 @@ abstract final class Config {
   static const _serveurCompile = String.fromEnvironment('VJOD_SERVEUR');
   static const serveurVjod = _serveurCompile != '' ? _serveurCompile : 'https://ava88.zen.usbx.me/jellyfin';
 
+  /// Clé d'API TMDB (v3) de Jon, pour savoir où voir chaque film en France
+  /// (données JustWatch). Comme toute clé embarquée dans une appli, elle est
+  /// lisible dans l'APK ; TMDB demande un accord pour un usage commercial.
+  static const _tmdbCompilee = String.fromEnvironment('TMDB_CLE');
+  static const tmdbCle = _tmdbCompilee != '' ? _tmdbCompilee : '023cad9ee7899502258706fa4e93c19d';
+
   static bool get serveur => supabaseUrl.isNotEmpty && supabaseCle.isNotEmpty;
 }
