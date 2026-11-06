@@ -187,17 +187,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GeneriqueEcran(mois: generique))),
         ),
       _CourseEtSerie(etat: etat),
-      if (etat.festivalDe(DateTime.now()) case final festival?)
-        Panneau(
-          couleur: AuraCouleurs.rose,
-          inclinaison: 0.01,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('FESTIVAL DE LA SEMAINE · ${festival.nom.toUpperCase()}', style: AuraTexte.titre(16)),
-            const SizedBox(height: 4),
-            Text(festival.regle, style: AuraTexte.corps(15, poids: FontWeight.w900)),
-            Text('Pop : « ${festival.annonce} »', style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
-          ]),
-        ),
+      _LaSemaine(etat: etat),
       if (etat.billets.isNotEmpty && etat.boostersDispo() > 0)
         ChoixLarge(
           libelle: 'TON BOOSTER D\'ATOUTS T\'ATTEND · Trois cartes à collectionner pour ton deck.',
@@ -1027,6 +1017,40 @@ class _DefiApresVueState extends State<_DefiApresVue> {
           Expanded(child: Text('1 point d\'audace par bonne réponse, 2 de plus pour un sans-faute.', style: AuraTexte.corps(12, couleur: AuraCouleurs.texteDoux))),
           Pastille(libelle: 'Passer', choisie: false, onTap: widget.etat.passerDefiApres),
         ]),
+      ]),
+    );
+  }
+}
+
+
+/// Le Festival (R50) et le Défi de la semaine (R52), le même pour tous.
+class _LaSemaine extends StatelessWidget {
+  const _LaSemaine({required this.etat});
+  final EtatJeu etat;
+
+  @override
+  Widget build(BuildContext context) {
+    final maintenant = DateTime.now();
+    final festival = etat.festivalDe(maintenant);
+    final defi = etat.defiSemaineDe(maintenant);
+    if (festival == null && defi == null) return const SizedBox.shrink();
+    final fait = etat.defiSemaineReussi(maintenant);
+    return Panneau(
+      couleur: AuraCouleurs.rose,
+      inclinaison: 0.01,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (festival != null) ...[
+          Text('FESTIVAL DE LA SEMAINE · ${festival.nom.toUpperCase()}', style: AuraTexte.titre(16)),
+          const SizedBox(height: 4),
+          Text(festival.regle, style: AuraTexte.corps(15, poids: FontWeight.w900)),
+          Text('Pop : « ${festival.annonce} »', style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
+        ],
+        if (festival != null && defi != null) const SizedBox(height: 8),
+        if (defi != null)
+          Text(
+            fait ? 'DÉFI DE LA SEMAINE RÉUSSI ✓ · ${defi.texte}' : 'DÉFI DE LA SEMAINE · ${defi.texte} +3 d\'audace et un booster.',
+            style: AuraTexte.corps(14, poids: FontWeight.w900),
+          ),
       ]),
     );
   }

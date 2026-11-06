@@ -16,6 +16,7 @@ import '../widgets/aura_widgets.dart';
 import 'generique.dart';
 import 'deck.dart';
 import '../services/sons.dart';
+import 'package:share_plus/share_plus.dart';
 
 enum TypeCase {
   depart('Départ', AuraCouleurs.caseBleu),
@@ -246,6 +247,15 @@ class PlateauEcran extends StatelessWidget {
                 principal: false,
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GeneriqueEcran(mois: DateTime(maintenant.year, maintenant.month)))),
               ),
+              if (!estTele(context) && etat.derniereSoiree != null) ...[
+                const SizedBox(height: 10),
+                AuraBouton(
+                  libelle: 'Partager ma soirée',
+                  icone: Icons.share_rounded,
+                  principal: false,
+                  onPressed: () => Share.share(etat.derniereSoiree!.texte()),
+                ),
+              ],
               const SizedBox(height: 10),
               AuraBouton(
                 libelle: etat.boostersDispo() > 0 ? 'Mon deck · un booster t\'attend !' : 'Mon deck d\'atouts',

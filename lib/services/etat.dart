@@ -30,6 +30,7 @@ import 'source_tmdb.dart';
 import 'sources.dart';
 import 'deck.dart';
 import 'festival.dart';
+import 'partage.dart';
 import 'sons.dart';
 import 'tirage.dart';
 
@@ -489,10 +490,12 @@ class EtatJeu extends ChangeNotifier {
       date: DateTime.now(),
       film: carte.film,
       niveau: carte.niveau,
+      defi: carte.defi,
     );
   }
 
   Future<int> _ajouterBillet({
+    String defi = '',
     required String titre,
     required String type,
     required int demandees,
@@ -595,6 +598,15 @@ class EtatJeu extends ChangeNotifier {
     final vent = ceMois && ouvert(Etape.niveaux) && position < popAvant;
     if (vent) await _ajouterAudace(Retournements.ventDansLeDos);
     if (audaceDeck > 0) await _ajouterAudace(audaceDeck);
+    // Le Défi de la semaine (R52) : une fois par semaine, 3 d'audace et un booster.
+    final defiSemaine = defiSemaineDe(date);
+    final defiReussi = ceMois && defiSemaine != null && !defiSemaineReussi(date) && defiSemaine.condition(contexte);
+    if (defiReussi) {
+      await _prefs.setBool('defi_fait_${DefisSemaine.cle(date)}', true);
+      await _ajouterAudace(DefisSemaine.audace);
+      await _prefs.setInt('booster_reserve', min(boostersDispo(maintenant) + 1, Deck.reserveMax));
+      await _prefs.setString('booster_don', jourDe(maintenant));
+    }
     final popRecule = enFete && festival.effet == EffetFestival.popRecule;
     if (popRecule) {
       final m = moisDe(maintenant);
@@ -619,6 +631,7 @@ class EtatJeu extends ChangeNotifier {
       if (effetDeck.declenches.isNotEmpty)
         'Atouts : ${effetDeck.declenches.map((a) => a.nom).join(', ')}${effetDeck.cases > 0 ? ' (+1 case)' : ''}${audaceDeck > 0 ? ', +$audaceDeck d\'audace' : ''}.',
       if (enFete) '${festival.nom} : ${festival.regle}',
+      if (defiReussi) 'Défi de la semaine réussi : +${DefisSemaine.audace} d\'audace et un booster.',
       if (vent) 'Vent dans le dos : +${Retournements.ventDansLeDos} points d\'audace (tu étais derrière Pop).',
       if (pariGagne) 'Pari de Pop relevé : il recule de ${Pop.recul} cases.',
       if (coup) 'Case $position : Coup de théâtre !',
@@ -636,6 +649,21 @@ class EtatJeu extends ChangeNotifier {
       for (final id in nouveaux) 'Nouvel exploit pour ta collection : ${Collection.nomDe(id)} !',
     ]);
     await _prefs.setInt('position', position);
+    await _prefs.setString(
+      'derniere_soiree',
+      jsonEncode(SoireePartagee(
+        date: date,
+        defi: defi.isNotEmpty ? defi : type,
+        pronostic: pronostic,
+        note: note,
+        cases: cases,
+        position: position,
+        pop: positionDePop,
+        atouts: [for (final a in effetDeck.declenches) a.nom],
+        defiSemaine: defiReussi || defiSemaineReussi(date),
+        festival: enFete ? festival.nom : null,
+      ).versJson()),
+    );
     await _sauverBillets();
     await _prefs.setInt('stat_billets', (_prefs.getInt('stat_billets') ?? 0) + 1);
     _mesurer('billet', {'auto': auto, 'cases': cases, 'type': type});
@@ -1418,6 +1446,28 @@ class EtatJeu extends ChangeNotifier {
   Set<String> get collection => {...?_prefs.getStringList('collection')};
 
   int get bluffsGagnes => _prefs.getKeys().where((k) => k.startsWith('bluff_') && (_prefs.getBool(k) ?? false)).length;
+
+  /// Le Défi de la semaine (R52). « defi_semaine » le force (« aucun » le
+  /// coupe), pour les tests.
+  DefiSemaine? defiSemaineDe(DateTime d) {
+    final force = _prefs.getString('defi_semaine');
+    if (force == 'aucun') return null;
+    if (force != null) return DefisSemaine.parId(force);
+    return DefisSemaine.de(d);
+  }
+
+  bool defiSemaineReussi(DateTime d) => _prefs.getBool('defi_fait_${DefisSemaine.cle(d)}') ?? false;
+
+  /// La dernière soirée, pour la partager sans dire le titre.
+  SoireePartagee? get derniereSoiree {
+    final brut = _prefs.getString('derniere_soiree');
+    if (brut == null) return null;
+    try {
+      return SoireePartagee.depuisJson(jsonDecode(brut));
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Le Festival de la semaine (R50), une fois les niveaux ouverts (R42).
   /// La préférence « festival » le force (« aucun » le coupe), pour les tests.

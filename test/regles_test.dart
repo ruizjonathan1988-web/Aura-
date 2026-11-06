@@ -11,6 +11,7 @@ import 'package:aura/services/affiche.dart';
 import 'package:aura/services/apres_seance.dart';
 import 'package:aura/services/deck.dart';
 import 'package:aura/services/festival.dart';
+import 'package:aura/services/partage.dart';
 import 'package:aura/services/sons.dart';
 import 'package:aura/services/aura.dart';
 import 'package:aura/services/avis_du_jeu.dart';
@@ -80,7 +81,7 @@ final Map<String, Object> _devantPop = {'pop_decalage_${EtatJeu.moisDe(DateTime.
 /// Par défaut, toutes les règles sont ouvertes (R42) : chaque test vérifie
 /// sa règle, pas le déblocage, qui a ses propres tests.
 Future<EtatJeu> _etat([Map<String, Object> valeurs = const {}]) async {
-  SharedPreferences.setMockInitialValues({'tout_ouvert': true, 'festival': 'aucun', ...valeurs});
+  SharedPreferences.setMockInitialValues({'tout_ouvert': true, 'festival': 'aucun', 'defi_semaine': 'aucun', ...valeurs});
   return EtatJeu(await SharedPreferences.getInstance());
 }
 
@@ -2497,6 +2498,48 @@ void main() {
       await e.changerSons(false);
       final f = await _etatDepuis(e);
       expect((f.popInsolent, f.sonsActifs, Sons.actifs), (false, false, false));
+    });
+  });
+
+  group('R52 Le Défi de la semaine et la soirée à partager', () {
+    CarteDefi carte(String id, {int annee = 2010}) => CarteDefi(
+          type: TypeCarte.envie,
+          defi: 'Un film pour rire',
+          indice: '',
+          cases: 2,
+          joker: '',
+          film: Film(id: id, titre: 'Titre secret $id', note: 7.5, annee: annee, dureeMinutes: 100, genres: const ['Comedy'], pays: const ['France']),
+          bulleDePop: '',
+        );
+
+    test('R52 un défi par semaine, le même pour tous ; les huit passent en huit semaines', () {
+      final lundi = DateTime(2026, 11, 2, 8);
+      expect(DefisSemaine.de(lundi).id, DefisSemaine.de(DateTime(2026, 11, 8, 23)).id);
+      expect({for (var i = 0; i < 8; i++) DefisSemaine.de(lundi.add(Duration(days: 7 * i))).id}, hasLength(8));
+      expect(DefisSemaine.numeroDeSemaine(DateTime(2026, 11, 6)), 45);
+    });
+
+    test('R52 réussi une fois par semaine : 3 d\'audace et un booster', () async {
+      final e = await _etat({'defi_semaine': 'avant1970', ..._devantPop});
+      await e.ouvrirBooster();
+      await e.validerSeance(carte('a', annee: 1950), pronostic: 3);
+      expect(e.defiSemaineReussi(DateTime.now()), isTrue);
+      expect(e.audaceDuMois, 3);
+      expect(e.boostersDispo(), 1);
+      await e.validerSeance(carte('b', annee: 1955), pronostic: 3);
+      expect(e.audaceDuMois, 3, reason: 'une seule fois par semaine');
+    });
+
+    test('R52 la soirée partagée montre le parcours, jamais le titre', () async {
+      final e = await _etat({'defi_semaine': 'avant1970', ..._devantPop});
+      await e.validerSeance(carte('a', annee: 1950), pronostic: 4, note: 4);
+      final t = e.derniereSoiree!.texte();
+      expect(t, isNot(contains('Titre secret')));
+      expect(t, contains('Un film pour rire'));
+      expect(t, contains('★★★★☆ → ★★★★☆ pile !'));
+      expect(t, contains('🟨🟨 +2 cases'));
+      expect(t, contains('Défi de la semaine réussi'));
+      expect(t, contains('aura.apk'));
     });
   });
 }
