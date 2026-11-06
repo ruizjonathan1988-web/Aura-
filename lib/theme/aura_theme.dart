@@ -76,5 +76,34 @@ ThemeData construireTheme() {
     ),
     focusColor: AuraCouleurs.jaune,
     splashFactory: NoSplash.splashFactory,
+    // Les écrans arrivent en glissant un peu vers le haut et en fondu.
+    pageTransitionsTheme: const PageTransitionsTheme(builders: {
+      TargetPlatform.android: TransitionAura(),
+      TargetPlatform.iOS: TransitionAura(),
+      TargetPlatform.linux: TransitionAura(),
+      TargetPlatform.macOS: TransitionAura(),
+      TargetPlatform.windows: TransitionAura(),
+      TargetPlatform.fuchsia: TransitionAura(),
+    }),
   );
+}
+
+/// La transition d'Aura : l'écran qui arrive monte de quelques pixels en
+/// fondu, celui qui part recule à peine. Rien si les animations sont réduites.
+class TransitionAura extends PageTransitionsBuilder {
+  const TransitionAura();
+
+  @override
+  Widget buildTransitions<T>(PageRoute<T> route, BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) return child;
+    final entree = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+    final recul = CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeOutCubic);
+    return FadeTransition(
+      opacity: entree,
+      child: SlideTransition(
+        position: Tween(begin: const Offset(0, .045), end: Offset.zero).animate(entree),
+        child: ScaleTransition(scale: Tween(begin: 1.0, end: .97).animate(recul), child: child),
+      ),
+    );
+  }
 }
