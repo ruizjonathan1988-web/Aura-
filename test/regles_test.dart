@@ -28,6 +28,7 @@ import 'package:aura/services/niveau.dart';
 import 'package:aura/services/plan_du_jour.dart';
 import 'package:aura/services/plateformes.dart';
 import 'package:aura/services/pop.dart';
+import 'package:aura/services/pouvoirs.dart';
 import 'package:aura/services/premier_soir.dart';
 import 'package:aura/services/rappels.dart';
 import 'package:aura/services/semaine_ligue.dart';
@@ -1636,6 +1637,119 @@ void main() {
       expect(e.audaceDuMois, 25);
       expect(Niveau.risque(5), 'Aucun risque.');
       expect(Niveau.risque(10), contains('deux cases'));
+    });
+  });
+
+  group('R39 Les pouvoirs des pions', () {
+    CarteDefi carte(String id, {int cases = 1, int duree = 100, int? niveau}) => CarteDefi(
+        type: TypeCarte.envie, defi: 'Défi', indice: '', cases: cases, joker: '', film: _film(id, duree: duree), bulleDePop: '', niveau: niveau);
+
+    test('R39 une charge par semaine, plus une par tranche de 20 points d\'audace du mois', () {
+      final m = DateTime(2026, 11, 18); // un mercredi
+      expect(Pouvoirs.charges(maintenant: m, usages: const [], audaceDuMois: 0), 1);
+      expect(Pouvoirs.charges(maintenant: m, usages: const [], audaceDuMois: 45), 3);
+      expect(Pouvoirs.charges(maintenant: m, usages: [UsagePouvoir(DateTime(2026, 11, 16))], audaceDuMois: 45), 2, reason: 'la charge de la semaine a servi lundi');
+      expect(Pouvoirs.charges(maintenant: m, usages: [UsagePouvoir(DateTime(2026, 11, 15))], audaceDuMois: 0), 1, reason: 'dimanche, c\'était la semaine d\'avant');
+      expect(Pouvoirs.charges(maintenant: m, usages: [UsagePouvoir(DateTime(2026, 11, 2), audace: true)], audaceDuMois: 20), 1);
+      expect(Pouvoirs.charges(maintenant: m, usages: [UsagePouvoir(DateTime(2026, 10, 30), audace: true)], audaceDuMois: 20), 2, reason: 'une charge d\'audace d\'octobre ne compte pas en novembre');
+      expect(UsagePouvoir.depuisTexte(UsagePouvoir(m, audace: true).versTexte())!.audace, isTrue);
+    });
+
+    test('R39 chaque pouvoir vaut une case, et seulement si sa condition est remplie', () {
+      expect(Pouvoirs.bonus(Profil.degustateur, pronostic: 3, note: 2), 1);
+      expect(Pouvoirs.bonus(Profil.degustateur, pronostic: 3), 0);
+      expect(Pouvoirs.bonus(Profil.critique, pronostic: 4, note: 4), 1);
+      expect(Pouvoirs.bonus(Profil.critique, pronostic: 4, note: 3), 0);
+      expect(Pouvoirs.bonus(Profil.presse, pronostic: 3, dureeMinutes: 85), 1);
+      expect(Pouvoirs.bonus(Profil.presse, pronostic: 3, dureeMinutes: 90), 0);
+      expect(Pouvoirs.bonus(Profil.hote, pronostic: 3, aPlusieurs: true), 1);
+      expect(Pouvoirs.bonus(Profil.hote, pronostic: 3), 0);
+      expect(Pouvoirs.bonus(Profil.supporter, pronostic: 3, derrierePop: true), 1);
+      expect(Pouvoirs.bonus(Profil.supporter, pronostic: 3), 0);
+      expect(Pouvoirs.bonus(Profil.devoreur, pronostic: 3, note: 3), 0, reason: 'le Marathon relève le plafond, il n\'ajoute rien');
+      expect(Pouvoirs.plafond(Profil.devoreur, 3), 4);
+      expect(Pouvoirs.plafond(Profil.devoreur, 4), 4);
+      expect(Pouvoirs.plafond(Profil.critique, 3), 3);
+      expect(Pouvoirs.cartesAuTirage(Profil.explorateur), 4);
+      expect(Pouvoirs.revoir(Profil.fidele), isTrue);
+      expect(Profil.supporter.pouvoir, 'Remontada');
+      expect(Profil.values.map((p) => p.effet).every((t) => t.startsWith('Une fois armé')), isTrue);
+    });
+
+    test('R39 armé, le pouvoir agit au billet suivant puis la charge part', () async {
+      final e = await _etat({'profil': 'degustateur'});
+      expect(e.chargesPouvoir, 1);
+      expect(await e.armerPouvoir(), isTrue);
+      expect(await e.armerPouvoir(), isFalse);
+      expect(await e.validerSeance(carte('a'), pronostic: 3, note: 4), 2);
+      expect(e.pouvoirArme, isFalse);
+      expect(e.chargesPouvoir, 0);
+      expect(await e.armerPouvoir(), isFalse);
+      // Sans pouvoir armé, rien de plus.
+      expect(await e.validerSeance(carte('b'), pronostic: 3, note: 4), 1);
+    });
+
+    test('R39 la charge part même si la condition n\'est pas remplie ; désarmer la garde', () async {
+      final e = await _etat({'profil': 'critique'});
+      await e.armerPouvoir();
+      await e.desarmerPouvoir();
+      expect(e.chargesPouvoir, 1, reason: 'désarmé avant d\'agir : rien n\'est perdu');
+      await e.armerPouvoir();
+      expect(await e.validerSeance(carte('a'), pronostic: 4, note: 2), 1);
+      expect(e.chargesPouvoir, 0);
+      expect(e.motDePop, contains('Plume'));
+    });
+
+    test('R39 l\'audace recharge : un 10 réussi donne une charge de plus', () async {
+      final e = await _etat({'profil': 'degustateur'});
+      await e.validerSeance(carte('a', cases: Niveau.cases(10), niveau: 10), pronostic: 3);
+      expect(e.audaceDuMois, 20);
+      expect(e.chargesPouvoir, 2);
+    });
+
+    test('R39 Marathon : plafond à 4 pour ce billet seulement ; les bonus restent sous le plafond', () async {
+      final e = await _etat({'profil': 'devoreur'});
+      expect(await e.validerSeance(carte('a', cases: 3), pronostic: 3), 3);
+      await e.armerPouvoir();
+      expect(await e.validerSeance(carte('b', cases: 2), pronostic: 3), 1);
+      expect(await e.validerSeance(carte('c', cases: 2), pronostic: 3), 0);
+      final f = await _etat({'profil': 'degustateur'});
+      expect(await f.validerSeance(carte('a', cases: 3), pronostic: 3), 3);
+      await f.armerPouvoir();
+      expect(await f.validerSeance(carte('b'), pronostic: 3, note: 5), 0, reason: 'Slow ne perce pas le plafond de 3');
+    });
+
+    test('R39 Court-métrage et Projectionniste suivent la séance en cours', () async {
+      final e = await _etat({'profil': 'hote'});
+      await e.armerPouvoir();
+      await e.commencerSeance(carte('a', duree: 80), pronostic: 3, aPlusieurs: true);
+      final s = SeanceEnCours.depuisJson(e.enCours.single.versJson());
+      expect(s.aPlusieurs, isTrue);
+      expect(s.dureeMinutes, 80);
+      expect(await e.validerEnCours(s, note: 3), 2);
+      final f = await _etat({'profil': 'presse'});
+      await f.armerPouvoir();
+      await f.commencerSeance(carte('b', duree: 80), pronostic: 3);
+      expect(await f.validerEnCours(f.enCours.single), 2);
+    });
+
+    test('R39 Boussole et Madeleine agissent au tirage', () async {
+      final catalogue = [for (var i = 0; i < 12; i++) _film('t$i')];
+      final quatre = Tirage(hasard: Random(1)).tirer(catalogue: catalogue, emotion: Emotion.frissonner, duree: Duree.soiree, profil: Profil.explorateur, nombre: 4);
+      expect(quatre, hasLength(4));
+      expect(quatre.map((c) => c.film.id).toSet(), hasLength(4));
+      final vus = [for (var i = 0; i < 6; i++) _film('v$i', vu: true)];
+      expect(Tirage(hasard: Random(1)).tirer(catalogue: vus, emotion: Emotion.frissonner, duree: Duree.soiree, profil: Profil.fidele), isEmpty);
+      expect(Tirage(hasard: Random(1)).tirer(catalogue: vus, emotion: Emotion.frissonner, duree: Duree.soiree, profil: Profil.fidele, revoir: true), hasLength(3));
+      final e = await _etat({'profil': 'explorateur'});
+      expect(await e.pouvoirAuTirage(), (nombre: 3, revoir: false), reason: 'pas armé : rien');
+      await e.armerPouvoir();
+      expect(await e.pouvoirAuTirage(), (nombre: 4, revoir: false));
+      expect(e.chargesPouvoir, 0);
+      final f = await _etat({'profil': 'degustateur'});
+      await f.armerPouvoir();
+      expect(await f.pouvoirAuTirage(), (nombre: 3, revoir: false));
+      expect(f.pouvoirArme, isTrue, reason: 'Slow attend le billet');
     });
   });
 }

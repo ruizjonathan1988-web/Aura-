@@ -17,6 +17,7 @@ import 'mesures.dart';
 import 'niveau.dart';
 import 'plan_du_jour.dart';
 import 'pop.dart';
+import 'pouvoirs.dart';
 import 'rappels.dart';
 import 'source_tmdb.dart';
 import 'sources.dart';
@@ -135,9 +136,18 @@ class SeanceEnCours {
     this.annee,
     this.pays = const [],
     this.niveau,
+    this.dureeMinutes,
+    this.aPlusieurs = false,
   });
 
   final int? niveau;
+
+  /// La durée du film, pour le pouvoir Court-métrage du Pressé.
+  final int? dureeMinutes;
+
+  /// Vrai si la séance a commencé à plusieurs (Duel, Soirée jeu) : pouvoir
+  /// Projectionniste de l'Hôte.
+  final bool aPlusieurs;
 
   final String titre;
   final String filmId;
@@ -165,6 +175,8 @@ class SeanceEnCours {
         if (annee != null) 'annee': annee,
         if (pays.isNotEmpty) 'pays': pays,
         if (niveau != null) 'niveau': niveau,
+        if (dureeMinutes != null) 'duree': dureeMinutes,
+        if (aPlusieurs) 'plusieurs': true,
       };
 
   static SeanceEnCours depuisJson(Map<String, dynamic> j) => SeanceEnCours(
@@ -179,6 +191,8 @@ class SeanceEnCours {
         annee: j['annee'] as int?,
         pays: (j['pays'] as List? ?? const []).cast<String>(),
         niveau: j['niveau'] as int?,
+        dureeMinutes: j['duree'] as int?,
+        aPlusieurs: (j['plusieurs'] as bool?) ?? false,
       );
 }
 
@@ -477,6 +491,8 @@ class EtatJeu extends ChangeNotifier {
     int? annee,
     List<String> pays = const [],
     int? niveau,
+    int? dureeMinutes,
+    bool aPlusieurs = false,
   }) async {
     _nouveauMois();
     // Une réussite efface les abandons : Aura repart de ce qui marche.
@@ -485,10 +501,27 @@ class EtatJeu extends ChangeNotifier {
     final ceMois = moisDe(date) == moisDe(maintenant);
     final joker = jokerBluff && ceMois;
     final rattrapage = carteRattrapage && ceMois;
-    final bonus = (joker ? 1 : 0) + (rattrapage ? Fidelite.rattrapage : 0);
-    final cases = ceMois
-        ? Regles.casesAccordees(demandees: demandees + bonus, dejaGagneesAujourdhui: casesLe(date), plafond: Niveau.plafond(niveau))
+    // Pouvoir armé « au billet » (R39) : il agit maintenant, la charge part
+    // même si la condition n'est pas remplie.
+    final pouvoir = pouvoirArme && Pouvoirs.moment(profil) == MomentPouvoir.billet;
+    final bonusPouvoir = pouvoir
+        ? Pouvoirs.bonus(
+            profil,
+            pronostic: pronostic,
+            note: note,
+            dureeMinutes: film?.dureeMinutes ?? dureeMinutes,
+            aPlusieurs: aPlusieurs,
+            derrierePop: position < positionDePop,
+          )
         : 0;
+    if (pouvoir) await _consommerPouvoir();
+    final plafond = pouvoir ? Pouvoirs.plafond(profil, Niveau.plafond(niveau)) : Niveau.plafond(niveau);
+    final bonus = (joker ? 1 : 0) + (rattrapage ? Fidelite.rattrapage : 0) + bonusPouvoir;
+    final deja = casesLe(date);
+    final cases = ceMois ? Regles.casesAccordees(demandees: demandees + bonus, dejaGagneesAujourdhui: deja, plafond: plafond) : 0;
+    // Le pouvoir n'a « agi » que s'il a vraiment fait passer une case de plus.
+    final pouvoirAgi = pouvoir &&
+        cases > (ceMois ? Regles.casesAccordees(demandees: demandees + bonus - bonusPouvoir, dejaGagneesAujourdhui: deja, plafond: Niveau.plafond(niveau)) : 0);
     if (joker) await _prefs.setBool('joker_bluff', false);
     if (rattrapage) await _prefs.setBool('carte_rattrapage', false);
     final pariAvant = Pop.parisPerdus(maintenant, billets);
@@ -514,6 +547,7 @@ class EtatJeu extends ChangeNotifier {
     position = (position + cases).clamp(1, Regles.taillePlateau);
     final nouveaux = await _majCollection();
     _direPop([
+      if (pouvoir) Pouvoirs.phrase(profil, agi: pouvoirAgi),
       if (note != null) Pop.surPronostic(pronostic: pronostic, note: note, graine: billets.length),
       if (pariGagne) 'Zut, j\'ai perdu mon pari : je recule de ${Pop.recul} cases. Mais je reviendrai.',
       for (final id in nouveaux) 'Nouvel exploit pour ta collection : ${Collection.nomDe(id)} !',
@@ -536,7 +570,7 @@ class EtatJeu extends ChangeNotifier {
   // crée dès qu'on sait que le film a été vu.
 
   /// La carte est jouée : on la garde jusqu'à ce que le film soit vu.
-  Future<void> commencerSeance(CarteDefi carte, {required int pronostic}) async {
+  Future<void> commencerSeance(CarteDefi carte, {required int pronostic, bool aPlusieurs = false}) async {
     if (enCours.any((s) => s.filmId == carte.film.id)) return;
     enCours = [
       SeanceEnCours(
@@ -551,6 +585,8 @@ class EtatJeu extends ChangeNotifier {
         annee: carte.film.annee,
         pays: carte.film.pays,
         niveau: carte.niveau,
+        dureeMinutes: carte.film.dureeMinutes,
+        aPlusieurs: aPlusieurs,
       ),
       ...enCours,
     ].take(5).toList();
@@ -577,6 +613,8 @@ class EtatJeu extends ChangeNotifier {
       annee: s.annee,
       pays: s.pays,
       niveau: s.niveau,
+      dureeMinutes: s.dureeMinutes,
+      aPlusieurs: s.aPlusieurs,
     );
   }
 
@@ -609,6 +647,54 @@ class EtatJeu extends ChangeNotifier {
     }
     notifyListeners();
     return perdues;
+  }
+
+  // Les pouvoirs des pions (R39).
+
+  List<UsagePouvoir> get _usagesPouvoir => [
+        for (final t in _prefs.getStringList('pouvoir_usages') ?? const <String>[])
+          if (UsagePouvoir.depuisTexte(t) != null) UsagePouvoir.depuisTexte(t)!,
+      ];
+
+  /// Les charges de pouvoir qui restent : une par semaine, plus une par
+  /// tranche de 20 points d'audace du mois.
+  int get chargesPouvoir => Pouvoirs.charges(maintenant: DateTime.now(), usages: _usagesPouvoir, audaceDuMois: audaceDuMois);
+
+  /// Vrai quand le pouvoir est armé : il agira au prochain tirage ou billet.
+  bool get pouvoirArme => _prefs.getBool('pouvoir_arme') ?? false;
+
+  /// Armer son pouvoir, s'il reste une charge. Renvoie vrai si c'est fait.
+  Future<bool> armerPouvoir() async {
+    if (pouvoirArme || chargesPouvoir <= 0) return false;
+    await _prefs.setBool('pouvoir_arme', true);
+    notifyListeners();
+    return true;
+  }
+
+  /// Désarmer avant qu'il agisse : la charge n'est pas perdue.
+  Future<void> desarmerPouvoir() async {
+    await _prefs.setBool('pouvoir_arme', false);
+    notifyListeners();
+  }
+
+  /// La charge part : celle de la semaine d'abord, sinon une charge d'audace.
+  Future<void> _consommerPouvoir() async {
+    final maintenant = DateTime.now();
+    final usages = _usagesPouvoir;
+    final audace = !Pouvoirs.chargeDeLaSemaine(maintenant: maintenant, usages: usages);
+    final gardes = usages.where((u) => maintenant.difference(u.date).inDays < 62);
+    await _prefs.setStringList('pouvoir_usages', [UsagePouvoir(maintenant, audace: audace).versTexte(), for (final u in gardes) u.versTexte()]);
+    await _prefs.setBool('pouvoir_arme', false);
+  }
+
+  /// Au tirage de Ce soir : si le pouvoir armé agit au tirage (Boussole,
+  /// Madeleine), il est consommé et ses réglages sont renvoyés.
+  Future<({int nombre, bool revoir})> pouvoirAuTirage() async {
+    if (!pouvoirArme || Pouvoirs.moment(profil) != MomentPouvoir.tirage) return (nombre: 3, revoir: false);
+    await _consommerPouvoir();
+    _direPop([Pouvoirs.phrase(profil, agi: true)]);
+    notifyListeners();
+    return (nombre: Pouvoirs.cartesAuTirage(profil), revoir: Pouvoirs.revoir(profil));
   }
 
   /// L'audace du mois : la somme des points d'audace des billets du mois.

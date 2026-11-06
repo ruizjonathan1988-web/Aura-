@@ -6,6 +6,7 @@ import '../services/etat.dart';
 import '../services/ligues.dart';
 import '../services/niveau.dart';
 import '../services/plan_du_jour.dart';
+import '../services/pouvoirs.dart';
 import '../services/sources.dart';
 import '../services/tirage.dart';
 import '../services/vjod_lien.dart';
@@ -69,6 +70,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     try {
       final catalogue = await etat.source.catalogue(emotion: _emotion, duree: _duree);
       final paysVus = {for (final b in etat.billets) ...b.pays};
+      final pouvoir = await etat.pouvoirAuTirage();
       final tirage = _tirage.tirerSansImpasse(
         catalogue: catalogue,
         emotion: _emotion,
@@ -76,6 +78,8 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         profil: etat.profil,
         paysVus: paysVus,
         niveau: _niveau ?? etat.niveauPropose,
+        nombre: pouvoir.nombre,
+        revoir: pouvoir.revoir,
       );
       setState(() {
         _cartes = tirage.cartes;
@@ -237,13 +241,17 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           ),
           const SizedBox(height: 18),
           _combien(etat),
+          const SizedBox(height: 14),
+          _pouvoir(etat),
           if (_message != null) ...[
             const SizedBox(height: 14),
             Panneau(couleur: AuraCouleurs.jaune, child: Text(_message!, style: AuraTexte.corps(14, poids: FontWeight.w900))),
           ],
           const SizedBox(height: 20),
           AuraBouton(
-            libelle: _chargement ? 'Pop mélange les cartes…' : 'Tirer mes 3 cartes',
+            libelle: _chargement
+                ? 'Pop mélange les cartes…'
+                : 'Tirer mes ${etat.pouvoirArme && Pouvoirs.moment(etat.profil) == MomentPouvoir.tirage ? Pouvoirs.cartesAuTirage(etat.profil) : 3} cartes',
             onPressed: _chargement ? null : () => _tirer(etat),
           ),
           const SizedBox(height: 12),
@@ -322,6 +330,36 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           ' Audace du mois : ${etat.audaceDuMois}.',
           style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux),
         ),
+      ]),
+    );
+  }
+
+  /// Le pouvoir du pion (R39) : ses charges, et le bouton pour l'armer.
+  Widget _pouvoir(EtatJeu etat) {
+    final p = etat.profil;
+    final charges = etat.chargesPouvoir;
+    final arme = etat.pouvoirArme;
+    final reste = Pouvoirs.audaceParCharge - etat.audaceDuMois % Pouvoirs.audaceParCharge;
+    return Panneau(
+      couleur: arme ? AuraCouleurs.jaune : AuraCouleurs.creme,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('TON POUVOIR : ${p.pouvoir.toUpperCase()}', style: AuraTexte.titre(16)),
+        const SizedBox(height: 6),
+        Text(p.effet, style: AuraTexte.corps(14)),
+        const SizedBox(height: 6),
+        Text(
+          arme
+              ? 'Armé : il agira ${Pouvoirs.quand(p)}. La charge part à ce moment-là, même si ça ne marche pas.'
+              : '${charges == 0 ? 'Aucune charge' : charges == 1 ? '1 charge' : '$charges charges'}. Une par semaine, et une de plus tous les ${Pouvoirs.audaceParCharge} points d\'audace (encore $reste).',
+          style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux),
+        ),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          if (arme)
+            Pastille(libelle: 'Désarmer', choisie: false, onTap: etat.desarmerPouvoir)
+          else
+            Pastille(libelle: charges > 0 ? 'Armer mon pouvoir' : 'Plus de charge', choisie: false, onTap: charges > 0 ? etat.armerPouvoir : null),
+        ]),
       ]),
     );
   }
