@@ -181,9 +181,9 @@ abstract final class Deck {
   /// Les boosters disponibles aujourd'hui : un de plus par jour écoulé
   /// depuis le dernier don, sans dépasser la réserve. Le premier jour, un.
   static int disponibles({required int reserve, required DateTime? dernierDon, required DateTime aujourdhui}) {
-    if (dernierDon == null) return max(reserve, 1).clamp(0, reserveMax);
+    if (dernierDon == null) return min(max(reserve, 1), reserveMax);
     final jours = DateTime(aujourdhui.year, aujourdhui.month, aujourdhui.day).difference(DateTime(dernierDon.year, dernierDon.month, dernierDon.day)).inDays;
-    return (reserve + max(0, jours)).clamp(0, reserveMax);
+    return min(reserve + max(0, jours), reserveMax);
   }
 
   /// Ce que Pop dit quand des atouts se déclenchent.
