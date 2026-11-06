@@ -13,6 +13,7 @@ import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
 import '../widgets/ou_le_voir.dart';
 import '../services/collection.dart';
+import 'campagnes.dart';
 import 'duel.dart';
 import 'generique.dart';
 import 'plan_du_jour.dart';
@@ -243,6 +244,11 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     ];
     final bas = <Widget>[
       _PendantCeTemps(etat: etat),
+      ChoixLarge(
+        libelle: 'LES CAMPAGNES · Des listes de films à voir absolument, à terminer film après film.',
+        couleur: AuraCouleurs.violet,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CampagnesEcran())),
+      ),
       if (etat.ligues != null) AccesSoiree(ligues: etat.ligues!),
       ChoixLarge(
         libelle: 'LE DUEL DU CANAPÉ · À deux sur la télé : chacun pose ses cartes, on élimine à tour de rôle, et le quiz désigne qui choisit le film.',

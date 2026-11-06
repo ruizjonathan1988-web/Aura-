@@ -676,6 +676,16 @@ class EtatJeu extends ChangeNotifier {
 
   int get bluffsGagnes => _prefs.getKeys().where((k) => k.startsWith('bluff_') && (_prefs.getBool(k) ?? false)).length;
 
+  /// Ajoute un exploit gagné hors du plateau (campagne bouclée, cadeau
+  /// réussi). Renvoie vrai s'il est nouveau.
+  Future<bool> ajouterExploit(String id) async {
+    final deja = collection;
+    if (deja.contains(id)) return false;
+    await _prefs.setStringList('collection', [...deja, id]);
+    notifyListeners();
+    return true;
+  }
+
   /// Ajoute à la collection ce qui vient d'être mérité ; renvoie les nouveautés.
   Future<List<String>> _majCollection() async {
     final deja = collection;

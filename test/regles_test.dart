@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
+import 'package:aura/services/campagnes.dart';
 import 'package:aura/services/carte_genres.dart';
 import 'package:aura/services/collection.dart';
 import 'package:aura/services/config.dart';
@@ -1057,6 +1058,41 @@ void main() {
       expect(l, contains('Meilleur Verdict : « Froid et parfait »'));
       expect(l.any((x) => x.startsWith('Champion de la saison')), isTrue);
       expect(Generique.partage(l), isNot(contains('\n\n')));
+    });
+  });
+
+  group('R28 Les campagnes', () {
+    test('R28 chaque campagne garde les cinq films les mieux notés de son thème', () async {
+      final demo = await SourceDemo().catalogue();
+      for (final c in Campagnes.liste) {
+        final films = Campagnes.films(c, demo);
+        expect(films.length, lessThanOrEqualTo(Campagnes.taille));
+        expect(films.every(c.garde), isTrue);
+        for (var i = 1; i < films.length; i++) {
+          expect(films[i - 1].note!, greaterThanOrEqualTo(films[i].note!));
+        }
+      }
+      final monde = Campagnes.films(Campagnes.liste.firstWhere((c) => c.id == 'monde'), demo);
+      expect(monde.map((f) => f.pays.first).toSet(), hasLength(monde.length), reason: 'un film par pays');
+    });
+
+    test('R28 la campagne avance avec les billets, et se boucle', () async {
+      final demo = await SourceDemo().catalogue();
+      final c = Campagnes.liste.firstWhere((c) => c.id == 'classiques');
+      final films = Campagnes.films(c, demo);
+      final billets = [for (final f in films.take(2)) Billet(titre: f.titre, type: 'Campagne', pronostic: 3, cases: 2, date: maintenant)];
+      expect(Campagnes.avancee(films, billets), 2);
+      expect(Campagnes.terminee(films, billets), isFalse);
+      final tous = [for (final f in films) Billet(titre: f.titre, type: 'Campagne', pronostic: 3, cases: 2, date: maintenant)];
+      expect(Campagnes.terminee(films, tous), isTrue);
+      expect(Campagnes.carte(c, films.first).cases, 2);
+    });
+
+    test('R28 boucler une campagne rapporte l\'exploit une seule fois', () async {
+      final e = await _etat();
+      expect(await e.ajouterExploit('campagne'), isTrue);
+      expect(await e.ajouterExploit('campagne'), isFalse);
+      expect(e.collection, contains('campagne'));
     });
   });
 }
