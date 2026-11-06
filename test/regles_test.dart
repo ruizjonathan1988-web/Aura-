@@ -10,6 +10,7 @@ import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
 import 'package:aura/services/apres_seance.dart';
 import 'package:aura/services/bingo.dart';
+import 'package:aura/services/casse.dart';
 import 'package:aura/services/deck.dart';
 import 'package:aura/services/festival.dart';
 import 'package:aura/services/partage.dart';
@@ -2727,6 +2728,74 @@ void main() {
       await e.gagnerAudaceBingo('ABCD', 9);
       await e.gagnerAudaceBingo('ABCD', 9);
       expect(e.audaceDuMois, 5);
+    });
+  });
+
+  group('R56 Le Casse de la Cinémathèque', () {
+    test('R56 la dernière semaine du mois, à la place du Défi ; révélation le dernier soir à 18 h', () async {
+      expect(Casse.enCours(DateTime(2026, 11, 23)), isFalse);
+      expect(Casse.enCours(DateTime(2026, 11, 24)), isTrue);
+      expect(Casse.jourDuCasse(DateTime(2026, 11, 30)), 7);
+      expect(Casse.revelation(DateTime(2026, 11, 30, 17)), isFalse);
+      expect(Casse.revelation(DateTime(2026, 11, 30, 18)), isTrue);
+      expect(Casse.enCours(DateTime(2027, 2, 22)), isTrue, reason: 'février aussi : les 7 derniers jours');
+      SharedPreferences.setMockInitialValues({});
+      final e = EtatJeu(await SharedPreferences.getInstance());
+      expect(e.defiSemaineDe(DateTime(2026, 11, 26)), isNull);
+      expect(e.defiSemaineDe(DateTime(2026, 11, 10)), isNotNull);
+    });
+
+    test('R56 quatre serrures différentes, la première est dure (celle du Perceur)', () {
+      for (var m = 1; m <= 12; m++) {
+        final s = Casse.serrures(DateTime(2026, m, 25));
+        expect(s, hasLength(4));
+        expect(s.map((x) => x.id).toSet(), hasLength(4));
+        expect(s.first.dure, isTrue);
+      }
+    });
+
+    test('R56 les rôles : le Perceur a la serrure 0, toutes les serrures ont un maître, une Taupe dès trois (jamais le Perceur)', () {
+      for (var g = 0; g < 40; g++) {
+        for (final equipe in [
+          ['a', 'b'],
+          ['a', 'b', 'c'],
+          ['d', 'c', 'b', 'a', 'e'],
+        ]) {
+          final r = Casse.roles(equipe, g);
+          expect(r.values.expand((x) => x.serrures).toList()..sort(), [0, 1, 2, 3]);
+          expect(r.values.where((x) => x.perceur).single.serrures, contains(0));
+          final taupes = r.values.where((x) => x.taupe).toList();
+          expect(taupes, hasLength(equipe.length >= 3 ? 1 : 0));
+          expect(taupes.any((x) => x.perceur), isFalse);
+          expect(Casse.roles(equipe.reversed.toList(), g).keys.toSet(), r.keys.toSet(), reason: 'le même calcul pour chacun');
+        }
+      }
+    });
+
+    test('R56 l\'issue : quatre serrures vraies ; une fausse fait rater, sauf si la majorité démasque la Taupe', () {
+      final toutes = {0: true, 1: true, 2: true, 3: true};
+      expect(Casse.issue(ouvertures: toutes, taupe: 'c', votes: const {}, equipe: 3).reussi, isTrue);
+      final fausse = {0: true, 1: true, 2: false, 3: true};
+      expect(Casse.issue(ouvertures: fausse, taupe: 'c', votes: const {'a': 'b'}, equipe: 3).reussi, isFalse);
+      final demasquee = Casse.issue(ouvertures: fausse, taupe: 'c', votes: const {'a': 'c', 'b': 'c'}, equipe: 3);
+      expect((demasquee.reussi, demasquee.taupeDemasquee), (true, true));
+      expect(Casse.issue(ouvertures: {0: true, 1: true, 2: true}, taupe: null, votes: const {}, equipe: 2).reussi, isFalse);
+    });
+
+    test('R56 en solo, avec Bobine et Pellicule : leurs serrures s\'ouvrent à leur jour, la Taupe pour de faux ; récompenses une fois', () async {
+      final fin = DateTime(2026, 11, 30, 20);
+      final e = await _etat({'casse_ok_2026-11': ['0', '3'], ..._devantPop});
+      final roles = Casse.roles(['moi', ...Casse.robots], Casse.graine(fin), forcePerceur: 'moi');
+      expect(roles['moi']!.serrures, [0, 3]);
+      final ouv = e.ouverturesSolo(fin);
+      expect(ouv.keys.toSet(), {0, 1, 2, 3});
+      expect(ouv.values.where((v) => !v), hasLength(1), reason: 'la serrure de la Taupe est fausse');
+      final pop = e.positionDePop;
+      await e.terminerCasse(DateTime.now(), reussi: true, taupeDemasquee: true);
+      await e.terminerCasse(DateTime.now(), reussi: true, taupeDemasquee: true);
+      expect(e.audaceDuMois, Casse.audaceReussite);
+      expect(e.positionDePop, lessThanOrEqualTo(pop));
+      expect(e.collection, contains('casse'));
     });
   });
 }

@@ -27,6 +27,8 @@ import 'reglages.dart';
 import 'soiree.dart';
 import 'deck.dart';
 import '../services/pop.dart';
+import '../services/casse.dart';
+import 'casse.dart';
 
 enum _Etape { envie, cartes, pronostic, billet }
 
@@ -188,6 +190,12 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         ),
       _CourseEtSerie(etat: etat),
       _LaSemaine(etat: etat),
+      if (Casse.enCours(DateTime.now()))
+        ChoixLarge(
+          libelle: 'LE CASSE DE LA CINÉMATHÈQUE · Quatre serrures, le trophée de Pop, et peut-être une Taupe parmi vous. Fin le ${Casse.dernierJour(DateTime.now())} à 18 h.',
+          couleur: AuraCouleurs.jaune,
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CasseEcran())),
+        ),
       if (etat.billets.isNotEmpty && etat.boostersDispo() > 0)
         ChoixLarge(
           libelle: 'TON BOOSTER D\'ATOUTS T\'ATTEND · Trois cartes à collectionner pour ton deck.',
