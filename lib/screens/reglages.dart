@@ -38,6 +38,7 @@ class _ReglagesEcranState extends State<ReglagesEcran> {
   bool _vjod = false;
   _Methode _methode = _Methode.quickConnect;
   bool _enCours = false;
+  String? _messageMaj;
   String? _message;
   String? _code;
   Timer? _attente;
@@ -149,10 +150,10 @@ class _ReglagesEcranState extends State<ReglagesEcran> {
   }
 
   Future<void> _chercherMiseAJour() async {
-    setState(() => _message = 'Je regarde s\'il y a une nouvelle version…');
+    setState(() => _messageMaj = 'Je regarde s\'il y a une nouvelle version…');
     final v = await MiseAJour.verifier(forcer: true);
     if (!mounted) return;
-    setState(() => _message = v == null ? 'Pas de nouvelle version : Aura est à jour (ou GitHub ne répond pas).' : null);
+    setState(() => _messageMaj = v == null ? 'Aura est à jour (ou GitHub ne répond pas).' : null);
     if (v != null) await proposerMiseAJour(context, v);
   }
 
@@ -224,6 +225,10 @@ class _ReglagesEcranState extends State<ReglagesEcran> {
                     if (MiseAJour.possible) ...[
                       const SizedBox(height: 16),
                       AuraBouton(libelle: 'Chercher une mise à jour', icone: Icons.system_update_rounded, principal: false, onPressed: _chercherMiseAJour),
+                      if (_messageMaj != null) ...[
+                        const SizedBox(height: 8),
+                        Panneau(couleur: AuraCouleurs.jaune, child: Text(_messageMaj!, style: AuraTexte.corps(14, poids: FontWeight.w900))),
+                      ],
                     ],
                     const SizedBox(height: 16),
                     Text(

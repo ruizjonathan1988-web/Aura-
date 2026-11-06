@@ -95,6 +95,10 @@ class Coquille extends StatefulWidget {
 class _CoquilleState extends State<Coquille> with WidgetsBindingObserver {
   Onglet _onglet = Onglet.ceSoir;
 
+  /// La nouvelle version trouvée : tant qu'elle n'est pas installée, un
+  /// bouton « Mise à jour » reste dans l'en-tête, même après « Plus tard ».
+  NouvelleVersion? _nouvelle;
+
   @override
   void initState() {
     super.initState();
@@ -105,7 +109,10 @@ class _CoquilleState extends State<Coquille> with WidgetsBindingObserver {
   /// Une nouvelle version d'Aura ? On la propose (au plus une fois par heure).
   Future<void> _miseAJour() async {
     final v = await MiseAJour.verifier();
-    if (v != null && mounted) await proposerMiseAJour(context, v);
+    if (v == null || !mounted) return;
+    final deja = _nouvelle?.publieeLe == v.publieeLe;
+    setState(() => _nouvelle = v);
+    if (!deja) await proposerMiseAJour(context, v);
   }
 
   @override
@@ -153,6 +160,7 @@ class _CoquilleState extends State<Coquille> with WidgetsBindingObserver {
                     position: etat.position,
                     onProfil: () => _aller(Onglet.profil),
                     onLigue: () => _aller(Onglet.ligue),
+                    onMiseAJour: _nouvelle == null ? null : () => proposerMiseAJour(context, _nouvelle!),
                     onglets: tele ? _Onglets(actif: _onglet, onChoisir: _aller, compact: true) : null,
                   ),
                   Expanded(child: KeyedSubtree(key: ValueKey(_onglet), child: ecran)),
@@ -168,11 +176,12 @@ class _CoquilleState extends State<Coquille> with WidgetsBindingObserver {
 }
 
 class _EnTete extends StatelessWidget {
-  const _EnTete({required this.position, required this.onProfil, required this.onLigue, this.onglets});
+  const _EnTete({required this.position, required this.onProfil, required this.onLigue, this.onMiseAJour, this.onglets});
 
   final int position;
   final VoidCallback onProfil;
   final VoidCallback onLigue;
+  final VoidCallback? onMiseAJour;
   final Widget? onglets;
 
   static List<BoxShadow> _ombres(bool focus, bool appui) => [
@@ -223,6 +232,25 @@ class _EnTete extends StatelessWidget {
               ]),
             ),
           ),
+          if (onMiseAJour != null) ...[
+            const SizedBox(width: 8),
+            Touchable(
+              etiquette: 'Une nouvelle version d\'Aura est prête : mettre à jour',
+              onTap: onMiseAJour!,
+              builder: (context, focus, appui) => Container(
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AuraCouleurs.jaune,
+                  shape: BoxShape.circle,
+                  border: Border.all(width: 3),
+                  boxShadow: _ombres(focus, appui),
+                ),
+                child: const Icon(Icons.system_update_rounded, color: AuraCouleurs.noir),
+              ),
+            ),
+          ],
           const SizedBox(width: 8),
           ListenableBuilder(
             listenable: ligues ?? etat,
