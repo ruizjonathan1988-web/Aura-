@@ -35,6 +35,39 @@ class Classe {
       );
 }
 
+/// Une nouvelle du fil de la ligue : la séance d'un ami.
+class Nouvelle {
+  const Nouvelle({required this.pseudo, required this.profil, required this.titre, required this.quand, this.note, this.verdict, this.moi = false});
+
+  final String pseudo;
+  final Profil profil;
+  final String titre;
+  final DateTime quand;
+  final int? note;
+  final String? verdict;
+  final bool moi;
+
+  /// « Léa a vu « Le Samouraï » et lui donne 4 sur 5. »
+  String get phrase {
+    final qui = moi ? 'Tu as vu' : '$pseudo a vu';
+    final n = note == null ? '' : ' et lui donne $note sur 5';
+    return '$qui « $titre »$n.';
+  }
+
+  static Nouvelle depuisJson(Map<String, dynamic> j, String? monId) {
+    final joueur = j['joueurs'] as Map<String, dynamic>?;
+    return Nouvelle(
+      pseudo: (joueur?['pseudo'] as String?) ?? 'Un ami',
+      profil: Profil.depuisNom(joueur?['profil'] as String?),
+      titre: j['titre'] as String,
+      quand: DateTime.parse(j['vu_le'] as String).toLocal(),
+      note: (j['note'] as num?)?.toInt(),
+      verdict: j['verdict'] as String?,
+      moi: j['joueur_id'] == monId,
+    );
+  }
+}
+
 /// Le jeu partagé : compte, ligues par code d'invitation, séances envoyées
 /// au serveur. Le compte est anonyme : un pseudo suffit, pas d'e-mail.
 /// N'existe que si les clés Supabase ont été fournies à la compilation.
@@ -119,6 +152,31 @@ class ServiceLigues extends ChangeNotifier {
         final rep = (await _client.rpc('classement', params: {'ligue': l.id})) as List;
         return rep.cast<Map<String, dynamic>>().map(Classe.depuisJson).toList();
       });
+
+  /// Les dernières séances des membres de la ligue, des plus récentes aux
+  /// plus anciennes.
+  Future<List<Nouvelle>> fil(Ligue l) => _proteger<List<Nouvelle>>(() async {
+        final membres = (await classement(l)).map((c) => c.joueurId).toList();
+        if (membres.isEmpty) return <Nouvelle>[];
+        final rep = await _client
+            .from('seances')
+            .select('titre, note, verdict, vu_le, joueur_id, joueurs(pseudo, profil)')
+            .inFilter('joueur_id', membres)
+            .order('vu_le', ascending: false)
+            .limit(20);
+        return rep.map((j) => Nouvelle.depuisJson(j, monId)).toList();
+      });
+
+  /// Vrai si le joueur a gagné la figurine dorée en invitant ou en étant invité.
+  Future<bool> figurineDoree() async {
+    if (!inscrit) return false;
+    try {
+      final rep = await _client.from('figurines').select('figurine').eq('joueur_id', monId!).eq('variante', 'doree');
+      return rep.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
 
   /// Envoie une séance au serveur. Le plafond de 3 cases par jour y est
   /// appliqué une seconde fois. Renvoie vrai si la séance est bien partie.
