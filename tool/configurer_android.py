@@ -71,6 +71,11 @@ recepteurs = """
             </intent-filter>
         </receiver>
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"/>
+        <receiver android:exported="false" android:name=".Relance">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
 """
 if "ScheduledNotificationReceiver" not in xml:
     xml = xml.replace("</application>", recepteurs + "    </application>", 1)
@@ -105,7 +110,7 @@ if activites:
     dossier.mkdir(parents=True, exist_ok=True)
     if activite.suffix == ".java":
         activite.unlink()
-    for nom in ("MainActivity.kt", "MiseAJour.kt"):
+    for nom in ("MainActivity.kt", "MiseAJour.kt", "Relance.kt"):
         texte = (sources / nom).read_text(encoding="utf-8").replace("package PAQUET", f"package {paquet}", 1)
         (dossier / nom).write_text(texte, encoding="utf-8")
     print(f"Mise à jour automatique branchée : {dossier}")

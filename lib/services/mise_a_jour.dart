@@ -89,6 +89,30 @@ abstract final class MiseAJour {
     }
   }
 
+  /// La dernière installation ratée, dite en clair (Android renvoie un
+  /// statut quand il refuse une mise à jour).
+  static final echec = ValueNotifier<String?>(null);
+
+  static void ecouter() {
+    if (!possible) return;
+    _canal.setMethodCallHandler((appel) async {
+      if (appel.method != 'echec') return;
+      final a = (appel.arguments as Map?) ?? const {};
+      echec.value = raisonEnClair((a['statut'] as num?)?.toInt() ?? 1, '${a['raison'] ?? ''}');
+    });
+  }
+
+  /// Les statuts de PackageInstaller, en français.
+  static String raisonEnClair(int statut, String raison) => switch (statut) {
+        2 => 'Android a bloqué la mise à jour. Vérifie que les applis inconnues sont autorisées pour Aura.',
+        3 => 'La mise à jour a été annulée. Tu pourras la relancer depuis le bouton jaune ou les Réglages.',
+        4 => 'Le fichier téléchargé est abîmé. Réessaie : je le retélécharge.',
+        5 => 'La version installée n\'a pas la même signature que la nouvelle. Désinstalle Aura une fois, puis installe-la depuis le lien : ensuite, les mises à jour passeront toutes seules.',
+        6 => 'Pas assez de place sur l\'appareil pour installer la mise à jour.',
+        7 => 'Cette version n\'est pas compatible avec cet appareil.',
+        _ => 'La mise à jour n\'a pas pu s\'installer${raison.isNotEmpty ? ' ($raison)' : ''}.',
+      };
+
   /// Si Android laisse Aura installer ses mises à jour (« sources inconnues »).
   static Future<bool> peutInstaller() async {
     try {

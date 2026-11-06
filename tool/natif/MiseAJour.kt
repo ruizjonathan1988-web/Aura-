@@ -18,8 +18,12 @@ object MiseAJour {
     private const val CANAL = "fr.vjod.aura/mise_a_jour"
     private const val ETAT = "fr.vjod.aura.MISE_A_JOUR"
 
+    private var canal: MethodChannel? = null
+
     fun brancher(activite: Activity, moteur: FlutterEngine) {
-        MethodChannel(moteur.dartExecutor.binaryMessenger, CANAL).setMethodCallHandler { appel, resultat ->
+        val c = MethodChannel(moteur.dartExecutor.binaryMessenger, CANAL)
+        canal = c
+        c.setMethodCallHandler { appel, resultat ->
             when (appel.method) {
                 "installeeLe" -> resultat.success(installeeLe(activite))
                 "dossier" -> resultat.success(activite.cacheDir.absolutePath)
@@ -115,6 +119,14 @@ object MiseAJour {
     fun reponse(activite: Activity, intent: Intent?): Boolean {
         if (intent?.action != ETAT) return false
         val statut = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+        if (statut != PackageInstaller.STATUS_PENDING_USER_ACTION && statut != PackageInstaller.STATUS_SUCCESS) {
+            // L'installation a échoué : on le dit à l'appli, avec la raison d'Android.
+            val raison = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: ""
+            try {
+                canal?.invokeMethod("echec", mapOf("statut" to statut, "raison" to raison))
+            } catch (e: Exception) {
+            }
+        }
         if (statut == PackageInstaller.STATUS_PENDING_USER_ACTION) {
             val confirmer: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
