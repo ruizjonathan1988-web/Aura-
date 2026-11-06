@@ -17,6 +17,7 @@ import '../services/collection.dart';
 import 'campagnes.dart';
 import 'duel.dart';
 import 'generique.dart';
+import 'juste_un_film.dart';
 import 'plan_du_jour.dart';
 import 'reglages.dart';
 import 'soiree.dart';
@@ -42,6 +43,9 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
   int? _note;
   bool _chargement = false;
   String? _message;
+
+  /// Ce que Pop a changé pour éviter l'impasse (durée allongée…).
+  String? _avisDePop;
   final _verdict = TextEditingController();
   final _tirage = Tirage();
 
@@ -61,12 +65,13 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     try {
       final catalogue = await etat.source.catalogue(emotion: _emotion);
       final paysVus = {for (final b in etat.billets) ...b.pays};
-      final cartes = _tirage.tirer(catalogue: catalogue, emotion: _emotion, duree: _duree, profil: etat.profil, paysVus: paysVus);
+      final tirage = _tirage.tirerSansImpasse(catalogue: catalogue, emotion: _emotion, duree: _duree, profil: etat.profil, paysVus: paysVus);
       setState(() {
-        _cartes = cartes;
+        _cartes = tirage.cartes;
         _choisie = 0;
-        if (cartes.isEmpty) {
-          _message = 'Aucun film à 3 étoiles ou plus ne correspond à cette envie et à cette durée. Change d\'envie ou accorde-toi plus de temps.';
+        _avisDePop = tirage.message;
+        if (tirage.cartes.isEmpty) {
+          _message = tirage.message;
         } else {
           _etape = _Etape.cartes;
         }
@@ -228,6 +233,11 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
             libelle: _chargement ? 'Pop mélange les cartes…' : 'Tirer mes 3 cartes',
             onPressed: _chargement ? null : () => _tirer(etat),
           ),
+          const SizedBox(height: 12),
+          ChoixLarge(
+            libelle: 'PAS ENVIE DE JOUER ? · Juste un film : trois idées, à changer autant que tu veux, sans compter pour le plateau.',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const JusteUnFilmEcran())),
+          ),
       ]),
       if (etat.carteRattrapage)
         Panneau(
@@ -285,12 +295,15 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         Text('${_emotion.libelle} · ${_duree.libelle}. Flèches gauche et droite pour choisir, OK pour jouer.',
             style: AuraTexte.corps(15)),
         const SizedBox(height: 10),
-        PopQuiParle(texte: _carte.bulleDePop, taille: 76),
+        PopQuiParle(texte: _avisDePop ?? _carte.bulleDePop, taille: 76),
         const SizedBox(height: 6),
         MainDeCartes(
           cartes: _cartes,
           choisie: _choisie,
-          onChoisir: (i) => setState(() => _choisie = i),
+          onChoisir: (i) => setState(() {
+            _choisie = i;
+            _avisDePop = null;
+          }),
           onJouer: () => setState(() => _etape = _Etape.pronostic),
         ),
         Panneau(child: Text('${_carte.joker} Tous les films proposés sont notés 3 étoiles ou plus.', style: AuraTexte.corps(14))),

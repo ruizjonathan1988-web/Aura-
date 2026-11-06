@@ -208,10 +208,27 @@ class AfficheIllustree extends StatelessWidget {
                     child: Text(etoiles.toStringAsFixed(1).replaceAll('.', ','), style: AuraTexte.titre(20)),
                   ),
               ]),
-              const Spacer(),
-              TitreCartoon(film.titre, taille: film.titre.length > 24 ? 26 : 36, inclinaison: -0.03),
-              const SizedBox(height: 6),
-              Text(film.infos, style: AuraTexte.corps(13, poids: FontWeight.w900)),
+              // Titre et infos rétrécissent au besoin : un titre long ou trois
+              // réalisateurs ne doivent jamais faire déborder l'affiche.
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, box) => Align(
+                    alignment: Alignment.bottomLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.bottomLeft,
+                      child: SizedBox(
+                        width: box.maxWidth,
+                        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          TitreCartoon(film.titre, taille: film.titre.length > 24 ? 26 : 36, inclinaison: -0.03),
+                          const SizedBox(height: 6),
+                          Text(film.infos, maxLines: 2, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(13, poids: FontWeight.w900)),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ]),
           ),
         ]),

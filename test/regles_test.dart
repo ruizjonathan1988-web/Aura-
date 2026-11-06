@@ -19,6 +19,7 @@ import 'package:aura/services/etat.dart';
 import 'package:aura/services/fidelite.dart';
 import 'package:aura/services/generique.dart';
 import 'package:aura/services/historique.dart';
+import 'package:aura/services/juste_un_film.dart';
 import 'package:aura/services/ligues.dart';
 import 'package:aura/services/mesures.dart';
 import 'package:aura/services/plan_du_jour.dart';
@@ -1172,6 +1173,109 @@ void main() {
       final catalogue = [_film('a', note: 7, annee: 2000, pays: const ['France'], genres: const ['Comedy'])];
       final cartes = Tirage(hasard: Random(1)).tirer(catalogue: catalogue, emotion: Emotion.rire, duree: Duree.soiree, profil: Profil.fidele, paysVus: {'France'});
       expect(cartes.any((c) => c.type == TypeCarte.voyage), isFalse);
+    });
+  });
+
+  group('R31 Juste un film', () {
+    final catalogue = [
+      for (var i = 0; i < 12; i++) _film('ok$i', note: 7 + i / 10, annee: 1950 + i * 6, genres: const ['Comedy']),
+      _film('navet', note: 5.5, genres: const ['Comedy']),
+      _film('vu', vu: true, genres: const ['Comedy']),
+    ];
+
+    test('R31 trois idées, jamais de navet ni de film déjà vu, même sans envie', () {
+      final choix = JusteUnFilm(hasard: Random(1));
+      for (var tour = 0; tour < 10; tour++) {
+        final idees = choix.proposer(catalogue, duree: Duree.soiree);
+        expect(idees, hasLength(3));
+        expect(idees.map((f) => f.id).toSet(), hasLength(3));
+        expect(idees.any((f) => f.id == 'navet' || f.id == 'vu'), isFalse);
+      }
+    });
+
+    test('R31 on change autant qu\'on veut : rien ne revient avant d\'avoir tout vu', () {
+      final choix = JusteUnFilm(hasard: Random(2));
+      final vus = <String>{};
+      for (var tour = 0; tour < 4; tour++) {
+        final idees = choix.proposer(catalogue, duree: Duree.soiree);
+        expect(idees.any((f) => vus.contains(f.id)), isFalse, reason: 'tour $tour');
+        vus.addAll(idees.map((f) => f.id));
+      }
+      expect(vus, hasLength(12));
+      // Le cinquième tour recommence la boucle au lieu de s'arrêter.
+      expect(choix.proposer(catalogue, duree: Duree.soiree), hasLength(3));
+    });
+
+    test('R31 « Une autre idée » ne change que la carte touchée', () {
+      final choix = JusteUnFilm(hasard: Random(3));
+      final avant = choix.proposer(catalogue, duree: Duree.soiree);
+      final apres = choix.remplacer(catalogue, avant, 1, duree: Duree.soiree);
+      expect(apres[0].id, avant[0].id);
+      expect(apres[2].id, avant[2].id);
+      expect(apres[1].id, isNot(avant[1].id));
+      expect(apres.map((f) => f.id).toSet(), hasLength(3));
+    });
+
+    test('R31 l\'époque et la durée filtrent', () {
+      final idees = JusteUnFilm(hasard: Random(4)).proposer(catalogue, duree: Duree.soiree, epoque: Epoque.classique);
+      expect(idees, isNotEmpty);
+      expect(idees.every((f) => f.annee! < 1980), isTrue);
+      final courts = JusteUnFilm().proposer([_film('long', duree: 200, genres: const ['Comedy'])], duree: Duree.courte);
+      expect(courts, isEmpty);
+    });
+
+    test('R31 hors du jeu : rien ne bouge sur le plateau', () async {
+      SharedPreferences.setMockInitialValues({});
+      final etat = EtatJeu(await SharedPreferences.getInstance());
+      JusteUnFilm().proposer(await SourceDemo().catalogue(), duree: Duree.soiree);
+      expect(etat.billets, isEmpty);
+      expect(etat.enCours, isEmpty);
+      expect(etat.position, 1);
+    });
+  });
+
+  group('R32 Jamais d\'impasse, des envies cohérentes', () {
+    test('R32 une comédie de guerre ne fait pas « réfléchir », un dessin animé familial ne fait pas « frissonner »', () {
+      final vadrouille = _film('v', genres: const ['Comedy', 'War']);
+      final toy = _film('t', genres: const ['Animation', 'Comedy', 'Family']);
+      final bachir = _film('b', genres: const ['Animation', 'Documentary', 'War']);
+      expect(Tirage.correspond(vadrouille, Emotion.reflechir, Duree.soiree), isFalse);
+      expect(Tirage.correspond(vadrouille, Emotion.rire, Duree.soiree), isTrue);
+      expect(Tirage.correspond(toy, Emotion.frissonner, Duree.soiree), isFalse);
+      expect(Tirage.correspond(toy, Emotion.evader, Duree.soiree), isTrue);
+      expect(Tirage.correspond(bachir, Emotion.reflechir, Duree.soiree), isTrue);
+      expect(Tirage.correspond(bachir, Emotion.evader, Duree.soiree), isFalse);
+    });
+
+    test('R32 la sélection de démonstration a trois cartes pour chaque envie et chaque durée', () async {
+      final catalogue = await SourceDemo().catalogue();
+      for (final e in Emotion.values) {
+        for (final d in Duree.values) {
+          final cartes = Tirage(hasard: Random(1)).tirer(catalogue: catalogue, emotion: e, duree: d, profil: Profil.fidele);
+          expect(cartes, hasLength(3), reason: '${e.name} / ${d.name}');
+        }
+      }
+    });
+
+    test('R32 trop court : Pop allonge la durée et le dit', () {
+      final catalogue = [for (var i = 0; i < 4; i++) _film('doc$i', duree: 110, annee: 1990 + i, pays: ['P$i'], genres: const ['Documentary'])];
+      final t = Tirage(hasard: Random(1)).tirerSansImpasse(catalogue: catalogue, emotion: Emotion.reflechir, duree: Duree.courte, profil: Profil.fidele);
+      expect(t.cartes, hasLength(3));
+      expect(t.message, contains('plus longs'));
+    });
+
+    test('R32 aucune envie possible : de vraies cartes quand même, jamais de navet', () {
+      final catalogue = [for (var i = 0; i < 4; i++) _film('rire$i', duree: 85, pays: ['P$i'], genres: const ['Comedy']), _film('navet', note: 4, genres: const ['Documentary'])];
+      final t = Tirage(hasard: Random(1)).tirerSansImpasse(catalogue: catalogue, emotion: Emotion.reflechir, duree: Duree.courte, profil: Profil.fidele);
+      expect(t.cartes, isNotEmpty);
+      expect(t.cartes.every((c) => c.film.id.startsWith('rire')), isTrue);
+      expect(t.message, isNotNull);
+    });
+
+    test('R32 tout va bien : pas de message', () async {
+      final t = Tirage(hasard: Random(1)).tirerSansImpasse(catalogue: await SourceDemo().catalogue(), emotion: Emotion.rire, duree: Duree.moyenne, profil: Profil.fidele);
+      expect(t.cartes, hasLength(3));
+      expect(t.message, isNull);
     });
   });
 }

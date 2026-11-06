@@ -124,6 +124,27 @@ void main() {
         expect(find.text('ouvrir'), findsOneWidget);
       });
 
+      testWidgets('Juste un film : trois idées, on en change une puis toutes', (t) async {
+        _taille(t, taille, densite);
+        final etat = await _etat({'accueil_fait': true});
+        await t.pumpWidget(AuraApp(etat: etat));
+        await _patienter(t);
+        await _toucher(t, find.text('ENTRER DANS LA SALLE'));
+        await _toucher(t, find.textContaining('PAS ENVIE DE JOUER'));
+        await _patienter(t, 2);
+        expect(find.text('JUSTE UN FILM'), findsWidgets);
+        expect(find.text('UNE AUTRE IDÉE'), findsNWidgets(3));
+        await _toucher(t, find.text('UNE AUTRE IDÉE'));
+        await _toucher(t, find.text('Réfléchir'));
+        await _toucher(t, find.text('TROIS AUTRES IDÉES'));
+        expect(find.text('UNE AUTRE IDÉE'), findsNWidgets(3));
+        expect(etat.enCours, isEmpty);
+        expect(etat.billets, isEmpty);
+        expect(t.takeException(), isNull);
+        t.state<NavigatorState>(find.byType(Navigator).first).pop();
+        await _patienter(t, 2);
+      });
+
       testWidgets('Plan du jour, Duel et Réglages s\'ouvrent sans souci', (t) async {
         _taille(t, taille, densite);
         final etat = await _etat({'accueil_fait': true});

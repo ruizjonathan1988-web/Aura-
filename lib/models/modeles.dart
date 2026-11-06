@@ -5,18 +5,28 @@ import '../theme/aura_theme.dart';
 /// Ce que le joueur veut ressentir ce soir, et les genres qui y mènent
 /// (noms de genres tels que Jellyfin et TMDB les rangent).
 enum Emotion {
-  frissonner('Frissonner', 'Un film qui fait frissonner', ['Thriller', 'Horror', 'Mystery', 'Crime', 'Horreur', 'Mystère', 'Policier']),
-  rire('Rire', 'Un film pour rire', ['Comedy', 'Comédie']),
-  bouleverse('Être ému', 'Un film qui émeut', ['Drama', 'Romance', 'Drame']),
-  evader('S\'évader', 'Un film pour s\'évader', ['Adventure', 'Fantasy', 'Science Fiction', 'Animation', 'Aventure', 'Fantastique']),
-  reflechir('Réfléchir', 'Un film qui fait réfléchir', ['Documentary', 'History', 'War', 'Documentaire', 'Histoire', 'Guerre']);
+  frissonner('Frissonner', 'Un film qui fait frissonner',
+      ['Thriller', 'Horror', 'Mystery', 'Crime', 'Horreur', 'Mystère', 'Policier'],
+      ['Comedy', 'Comédie', 'Family', 'Familial', 'Animation']),
+  rire('Rire', 'Un film pour rire', ['Comedy', 'Comédie'], ['Horror', 'Horreur']),
+  bouleverse('Être ému', 'Un film qui émeut', ['Drama', 'Romance', 'Drame'], ['Horror', 'Horreur']),
+  evader('S\'évader', 'Un film pour s\'évader',
+      ['Adventure', 'Fantasy', 'Science Fiction', 'Animation', 'Aventure', 'Fantastique', 'Science-Fiction', 'Action', 'Western', 'Family', 'Familial'],
+      ['Horror', 'Horreur', 'Documentary', 'Documentaire', 'War', 'Guerre']),
+  reflechir('Réfléchir', 'Un film qui fait réfléchir',
+      ['Documentary', 'History', 'War', 'Documentaire', 'Histoire', 'Guerre'],
+      ['Comedy', 'Comédie', 'Family', 'Familial']);
 
-  const Emotion(this.libelle, this.phrase, this.genres);
+  const Emotion(this.libelle, this.phrase, this.genres, [this.exclus = const []]);
   final String libelle;
 
   /// La même envie, en toutes lettres (défi de la carte Envie).
   final String phrase;
   final List<String> genres;
+
+  /// Les genres qui contredisent l'envie : une comédie de guerre ne fait pas
+  /// « réfléchir », un film d'animation familial ne fait pas « frissonner ».
+  final List<String> exclus;
 }
 
 enum Duree {

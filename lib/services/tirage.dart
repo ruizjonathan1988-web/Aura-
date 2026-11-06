@@ -36,6 +36,7 @@ class Tirage {
     if (f.dureeMinutes != null && f.dureeMinutes! > d.minutesMax) return false;
     if (f.genres.isEmpty) return true;
     final g = f.genres.map((x) => x.toLowerCase()).toSet();
+    if (e.exclus.any((x) => g.contains(x.toLowerCase()))) return false;
     return e.genres.any((x) => g.contains(x.toLowerCase()));
   }
 
@@ -121,6 +122,41 @@ class Tirage {
       ));
     }
     return cartes.take(3).toList();
+  }
+
+  /// Jamais d'impasse : si l'envie et la durée ne donnent pas trois cartes,
+  /// Pop allonge la durée d'un cran, puis va jusqu'à « toute la soirée ».
+  /// S'il n'y a vraiment rien pour cette envie, il garde la durée et prend
+  /// les meilleurs films de la sélection. Le message dit ce qu'il a changé
+  /// (null si rien).
+  ({List<CarteDefi> cartes, String? message}) tirerSansImpasse({
+    required List<Film> catalogue,
+    required Emotion emotion,
+    required Duree duree,
+    required Profil profil,
+    Set<String> paysVus = const {},
+  }) {
+    final cartes = tirer(catalogue: catalogue, emotion: emotion, duree: duree, profil: profil, paysVus: paysVus);
+    if (cartes.length >= 3) return (cartes: cartes, message: null);
+    for (final plusLong in Duree.values.where((d) => d.minutesMax > duree.minutesMax)) {
+      final autres = tirer(catalogue: catalogue, emotion: emotion, duree: plusLong, profil: profil, paysVus: paysVus);
+      if (autres.length > cartes.length) {
+        return (
+          cartes: autres,
+          message: 'Pas assez de films ${_suite(emotion)} de cette durée : j\'ai pris des films un peu plus longs (${plusLong.libelle.toLowerCase()}).',
+        );
+      }
+    }
+    if (cartes.isNotEmpty) return (cartes: cartes, message: null);
+    // Rien pour cette envie : les meilleurs films qui tiennent dans la durée.
+    final secours = Emotion.values
+        .where((e) => e != emotion)
+        .map((e) => tirer(catalogue: catalogue, emotion: e, duree: duree, profil: profil, paysVus: paysVus))
+        .fold<List<CarteDefi>>([], (a, b) => b.length > a.length ? b : a);
+    if (secours.isNotEmpty) {
+      return (cartes: secours, message: 'Je n\'ai aucun film ${_suite(emotion)} pour l\'instant : voici mes meilleures cartes pour une autre envie.');
+    }
+    return (cartes: const [], message: 'Ta bibliothèque n\'a encore aucun film noté 3 étoiles ou plus que tu n\'aies pas vu. Ajoute des films, ou passe en sélection de démonstration dans les réglages.');
   }
 
   /// L'envie dans le défi, pour que chaque envie donne d'autres cartes.
