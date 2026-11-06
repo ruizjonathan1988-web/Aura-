@@ -429,7 +429,9 @@ class CarteDefiVue extends StatelessWidget {
                 children: [
                   Text(carte.defi, maxLines: 2, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(15, poids: FontWeight.w900).copyWith(height: 1.15)),
                   const SizedBox(height: 3),
-                  Text(carte.indice, maxLines: 3, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(11.5, poids: FontWeight.w700, couleur: AuraCouleurs.texteDoux)),
+                  Expanded(
+                    child: Text(carte.indice, maxLines: 3, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(11.5, poids: FontWeight.w700, couleur: AuraCouleurs.texteDoux)),
+                  ),
                 ],
               ),
             ),
