@@ -14,6 +14,7 @@ import '../theme/aura_theme.dart';
 import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
 import '../widgets/ou_le_voir.dart';
+import '../services/apres_seance.dart';
 import '../services/cadeaux.dart';
 import '../services/collection.dart';
 import '../services/deblocage.dart';
@@ -175,6 +176,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     final generique = etat.generiqueAVoir;
     final haut = <Widget>[
       _PourToi(etat: etat),
+      if (etat.defiApres != null) _DefiApresVue(key: ValueKey(etat.defiApres!.date), etat: etat, billet: etat.defiApres!),
       if (generique != null)
         ChoixLarge(
           libelle: 'LE GÉNÉRIQUE DE ${Collection.mois[generique.month - 1].toUpperCase()} EST PRÊT · Revois ta saison et le résultat contre Pop.',
@@ -934,6 +936,76 @@ class _PourToi extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 3),
             child: Text(l, style: AuraTexte.corps(14, poids: i == 0 ? FontWeight.w900 : FontWeight.w400, couleur: i == lignes.length - 1 && i > 0 ? AuraCouleurs.texteDoux : AuraCouleurs.noir)),
           ),
+      ]),
+    );
+  }
+}
+
+/// Le défi d'après-séance (R44) : trois questions sur le film vu, une à la fois.
+class _DefiApresVue extends StatefulWidget {
+  const _DefiApresVue({super.key, required this.etat, required this.billet});
+
+  final EtatJeu etat;
+  final Billet billet;
+
+  @override
+  State<_DefiApresVue> createState() => _DefiApresVueState();
+}
+
+class _DefiApresVueState extends State<_DefiApresVue> {
+  late final List<QuestionApres> _questions = DefiApres.questions(
+    titre: widget.billet.titre,
+    annee: widget.billet.annee,
+    pays: widget.billet.pays,
+    genres: widget.billet.genres,
+    graine: widget.billet.date.millisecondsSinceEpoch,
+  );
+  int _i = 0;
+  int _justes = 0;
+  int? _reponse;
+
+  Future<void> _choisir(int r) async {
+    if (_reponse != null) return;
+    setState(() => _reponse = r);
+    if (r == _questions[_i].bonne) _justes++;
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+    if (_i + 1 < _questions.length) {
+      setState(() {
+        _i++;
+        _reponse = null;
+      });
+    } else {
+      await widget.etat.repondreDefiApres(justes: _justes, total: _questions.length);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_questions.isEmpty) return const SizedBox.shrink();
+    final q = _questions[_i];
+    return Panneau(
+      couleur: AuraCouleurs.vert,
+      inclinaison: 0.01,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('DÉFI D\'APRÈS-SÉANCE · ${_i + 1}/${_questions.length}', style: AuraTexte.titre(16)),
+        const SizedBox(height: 6),
+        Text(q.texte, style: AuraTexte.corps(15, poids: FontWeight.w900)),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final (i, r) in q.reponses.indexed)
+            Pastille(
+              libelle: _reponse == null ? r : (i == q.bonne ? '$r ✓' : (i == _reponse ? '$r ✗' : r)),
+              choisie: _reponse != null && i == q.bonne,
+              autofocus: i == 0,
+              onTap: () => _choisir(i),
+            ),
+        ]),
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(child: Text('1 point d\'audace par bonne réponse, 2 de plus pour un sans-faute.', style: AuraTexte.corps(12, couleur: AuraCouleurs.texteDoux))),
+          Pastille(libelle: 'Passer', choisie: false, onTap: widget.etat.passerDefiApres),
+        ]),
       ]),
     );
   }

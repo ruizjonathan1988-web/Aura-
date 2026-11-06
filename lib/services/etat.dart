@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/modeles.dart';
 import 'affiche.dart';
+import 'apres_seance.dart';
 import 'carte_genres.dart';
 import 'collection.dart';
 import 'config.dart';
@@ -556,6 +557,11 @@ class EtatJeu extends ChangeNotifier {
       ...billets,
     ]..sort((a, b) => b.date.compareTo(a.date));
     final pariGagne = Pop.parisPerdus(maintenant, billets) > pariAvant;
+    // Défi d'après-séance (R44) : trois questions sur ce film, à la prochaine ouverture de Ce soir.
+    final nouveau = billets.firstWhere((b) => b.date == date && b.titre == titre);
+    if (ceMois && ouvert(Etape.niveaux) && (nouveau.annee != null || nouveau.pays.isNotEmpty || nouveau.genres.isNotEmpty)) {
+      await _prefs.setString('defi_apres', jsonEncode(nouveau.versJson()));
+    }
     // Vent dans le dos (R41) : une séance vue derrière Pop rapporte de l'audace.
     final vent = ceMois && ouvert(Etape.niveaux) && position < popAvant;
     if (vent) await _ajouterAudace(Retournements.ventDansLeDos);
@@ -786,6 +792,50 @@ class EtatJeu extends ChangeNotifier {
         niveauImpose: niveauImpose,
         sisyphe: sisypheActif,
       );
+
+  // Défi d'après-séance et Pop-cartes (R44).
+
+  /// Le billet dont le défi d'après-séance attend, s'il y en a un.
+  Billet? get defiApres {
+    final t = _prefs.getString('defi_apres');
+    if (t == null) return null;
+    try {
+      return Billet.depuisJson(jsonDecode(t) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Le défi est joué : l'audace gagnée, et la Pop-carte brille si sans-faute.
+  Future<int> repondreDefiApres({required int justes, required int total}) async {
+    final b = defiApres;
+    if (b == null) return 0;
+    await _prefs.remove('defi_apres');
+    final gagne = DefiApres.audace(justes, total);
+    if (gagne > 0) await _ajouterAudace(gagne);
+    if (total > 0 && justes == total) {
+      await _prefs.setStringList('cartes_brillantes', {...?_prefs.getStringList('cartes_brillantes'), b.date.toIso8601String()}.take(200).toList());
+    }
+    _direPop([
+      total > 0 && justes == total
+          ? 'Sans-faute sur « ${b.titre} » ! Ta Pop-carte brille. +$gagne points d\'audace.'
+          : '$justes sur $total. +$gagne point${gagne > 1 ? 's' : ''} d\'audace. Tu regardais ton téléphone, avoue.',
+    ]);
+    await _noter(['Défi d\'après-séance « ${b.titre} » : $justes sur $total, +$gagne d\'audace.']);
+    notifyListeners();
+    return gagne;
+  }
+
+  Future<void> passerDefiApres() async {
+    await _prefs.remove('defi_apres');
+    notifyListeners();
+  }
+
+  /// Vrai si la Pop-carte de ce billet brille (défi d'après-séance sans faute).
+  bool brillante(Billet b) => (_prefs.getStringList('cartes_brillantes') ?? const []).contains(b.date.toIso8601String());
+
+  /// L'album du mois : une Pop-carte par billet, la plus ancienne d'abord.
+  List<Billet> get albumDuMois => billets.where((b) => moisDe(b.date) == moisDe(DateTime.now())).toList().reversed.toList();
 
   // Rivaux robots et figurine du mois (R43).
 
