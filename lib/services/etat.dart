@@ -20,6 +20,7 @@ import 'ma_tv.dart';
 import 'mesures.dart';
 import 'niveau.dart';
 import 'plan_du_jour.dart';
+import 'pont_vjod.dart';
 import 'pop.dart';
 import 'pouvoirs.dart';
 import 'rappels.dart';
@@ -609,7 +610,7 @@ class EtatJeu extends ChangeNotifier {
   // crée dès qu'on sait que le film a été vu.
 
   /// La carte est jouée : on la garde jusqu'à ce que le film soit vu.
-  Future<void> commencerSeance(CarteDefi carte, {required int pronostic, bool aPlusieurs = false}) async {
+  Future<void> commencerSeance(CarteDefi carte, {required int pronostic, bool aPlusieurs = false, DateTime? debut}) async {
     if (enCours.any((s) => s.filmId == carte.film.id)) return;
     enCours = [
       SeanceEnCours(
@@ -619,7 +620,7 @@ class EtatJeu extends ChangeNotifier {
         type: carte.type.libelle,
         cases: carte.cases,
         pronostic: pronostic,
-        debut: DateTime.now(),
+        debut: debut ?? DateTime.now(),
         genres: carte.film.genres,
         annee: carte.film.annee,
         pays: carte.film.pays,
@@ -1147,7 +1148,113 @@ class EtatJeu extends ChangeNotifier {
     } finally {
       _verification = false;
     }
+    await synchroniserVjod();
     return crees;
+  }
+
+  // Le pont avec VJOD (R46).
+
+  /// Les cartes publiées pour VJOD, par soir (« 2026-11-06 » → 3 cartes en JSON).
+  Map<String, List<Map<String, dynamic>>> get cartesPourVjod {
+    try {
+      final j = jsonDecode(_prefs.getString('pont_cartes') ?? '{}') as Map<String, dynamic>;
+      return {for (final e in j.entries) e.key: [for (final c in e.value as List) Map<String, dynamic>.from(c as Map)]};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Tire les cartes des soirs qui n'en ont pas encore (7 soirs d'avance),
+  /// et oublie les soirs passés. [catalogue] donne les films d'une envie.
+  Future<void> preparerCartesVjod(Future<List<Film>> Function(Emotion) catalogue, {DateTime? maintenant}) async {
+    final m = maintenant ?? DateTime.now();
+    final aujourdhui = DateTime(m.year, m.month, m.day);
+    final cartes = {...cartesPourVjod}..removeWhere((jour, _) => jour.compareTo(PontVjod.jourDe(aujourdhui)) < 0);
+    final films = <Emotion, List<Film>>{};
+    final paysVus = {for (final b in billets) ...b.pays};
+    for (var i = 0; i < PontVjod.jours; i++) {
+      final jour = aujourdhui.add(Duration(days: i));
+      final cle = PontVjod.jourDe(jour);
+      if (cartes.containsKey(cle)) continue;
+      final envie = PontVjod.envieDuJour(jour);
+      final liste = films[envie] ??= await catalogue(envie);
+      final tirage = Tirage(hasard: Random(PontVjod.graineDuJour(jour))).tirerSansImpasse(
+        catalogue: liste,
+        emotion: envie,
+        duree: Duree.soiree,
+        profil: profil,
+        paysVus: paysVus,
+        niveau: ouvert(Etape.niveaux) ? niveauPropose : null,
+      );
+      cartes[cle] = [for (final c in tirage.cartes) PontVjod.carteVersJson(c)];
+    }
+    await _prefs.setString('pont_cartes', jsonEncode(cartes));
+  }
+
+  /// Ce que VJOD a écrit : une carte jouée devient une séance en cours (depuis
+  /// l'heure où elle a été jouée), une note de fin de film valide la séance.
+  /// Renvoie vrai si quelque chose a changé.
+  Future<bool> appliquerDepuisVjod({String? joue, String? note}) async {
+    var change = false;
+    final j = PontVjod.lireJoue(joue);
+    if (j != null) {
+      final liste = cartesPourVjod[j.jour] ?? const [];
+      final carte = j.index >= 0 && j.index < liste.length ? PontVjod.carteDepuisJson(liste[j.index]) : null;
+      if (carte != null && !enCours.any((s) => s.filmId == carte.film.id)) {
+        await commencerSeance(carte, pronostic: 3, debut: j.quand);
+        await _noter(['Carte jouée depuis VJOD : « ${carte.film.titre} ».']);
+        change = true;
+      }
+    }
+    final n = PontVjod.lireNote(note);
+    if (n != null) {
+      final s = enCours.where((x) => x.filmId == n.filmId).firstOrNull;
+      if (s != null) {
+        await validerEnCours(s, note: n.note, vuLe: n.quand);
+        change = true;
+      }
+    }
+    return change;
+  }
+
+  /// L'état publié pour VJOD.
+  Map<String, dynamic> get etatPourVjod {
+    final s = enCours.firstOrNull;
+    return PontVjod.etat(
+      maj: DateTime.now(),
+      position: position,
+      pop: positionDePop,
+      niveau: ouvert(Etape.niveaux) ? niveauPropose : null,
+      pouvoir: profilDuPouvoir?.pouvoir,
+      charge: profilDuPouvoir != null && chargesPouvoir > 0,
+      cartes: cartesPourVjod,
+      seance: s == null ? null : (filmId: s.filmId, titre: s.titre, cases: s.cases),
+    );
+  }
+
+  bool _pont = false;
+
+  /// À chaque ouverture : lit ce que VJOD a écrit, l'applique, prépare les
+  /// cartes et publie l'état. En édition VJOD seulement ; sans serveur, rien.
+  Future<void> synchroniserVjod({ServicePontVjod? service, Future<List<Film>> Function(Emotion)? catalogue}) async {
+    if (mode != ModeJeu.vjod || !connexion.complete || _pont) return;
+    _pont = true;
+    try {
+      final pont = service ?? ServicePontVjod(connexion);
+      final tout = await pont.lire();
+      final prefs = ServicePontVjod.prefsDe(tout);
+      await appliquerDepuisVjod(joue: prefs[PontVjod.cleJoue], note: prefs[PontVjod.cleNote]);
+      final src = source;
+      await preparerCartesVjod(catalogue ?? (e) => src.catalogue(emotion: e, duree: Duree.soiree));
+      await pont.ecrire(tout, {
+        ...prefs..remove(PontVjod.cleJoue)..remove(PontVjod.cleNote),
+        PontVjod.cleEtat: jsonEncode(etatPourVjod),
+      });
+    } catch (_) {
+      // Serveur injoignable : on réessaiera à la prochaine ouverture.
+    } finally {
+      _pont = false;
+    }
   }
 
   bool _verification = false;
