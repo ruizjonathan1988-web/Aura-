@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:aura/models/modeles.dart';
 import 'package:aura/services/affiche.dart';
 import 'package:aura/services/apres_seance.dart';
+import 'package:aura/services/avis_du_jeu.dart';
 import 'package:aura/services/cadeaux.dart';
 import 'package:aura/services/campagnes.dart';
 import 'package:aura/services/carte_genres.dart';
@@ -1672,7 +1673,8 @@ void main() {
       expect(Pouvoirs.bonus(Profil.degustateur, pronostic: 3, note: 2), 1);
       expect(Pouvoirs.bonus(Profil.degustateur, pronostic: 3), 0);
       expect(Pouvoirs.bonus(Profil.critique, pronostic: 4, note: 4), 1);
-      expect(Pouvoirs.bonus(Profil.critique, pronostic: 4, note: 3), 0);
+      expect(Pouvoirs.bonus(Profil.critique, pronostic: 4, note: 3), 1, reason: 'équilibrage R45 : à un cran près');
+      expect(Pouvoirs.bonus(Profil.critique, pronostic: 4, note: 2), 0);
       expect(Pouvoirs.bonus(Profil.presse, pronostic: 3, dureeMinutes: 85), 1);
       expect(Pouvoirs.bonus(Profil.presse, pronostic: 3, dureeMinutes: 90), 0);
       expect(Pouvoirs.bonus(Profil.hote, pronostic: 3, aPlusieurs: true), 1);
@@ -2123,6 +2125,69 @@ void main() {
 
     test('R44 la rareté d\'une Pop-carte vient du niveau visé', () {
       expect([null, 2, 5, 8, 10].map((n) => Rarete.de(niveau: n)), [Rarete.commune, Rarete.commune, Rarete.rare, Rarete.epique, Rarete.legendaire]);
+    });
+  });
+
+  group('R45 Notifications utiles et équilibrage', () {
+    test('R45 au plus deux avis par semaine, à 18 h 30, jamais le jour du rappel, coupables', () {
+      final mardi = DateTime(2026, 11, 10, 9);
+      final avis = AvisDuJeu.prevus(maintenant: mardi, pouvoirs: true, crasses: true);
+      expect(avis.length, inInclusiveRange(1, 2));
+      expect(avis.every((a) => a.moment.hour == 18 && a.moment.minute == 30), isTrue);
+      expect(avis.where((a) => a.moment.weekday == DateTime.monday).single.texte, contains('charge de pouvoir'));
+      expect({for (final a in avis) DateTime(a.moment.year, a.moment.month, a.moment.day)}, hasLength(avis.length), reason: 'un par jour au plus');
+      final lundi = DateTime(2026, 11, 16, 12, 30);
+      expect(AvisDuJeu.prevus(maintenant: mardi, pouvoirs: true, crasses: false, rappelAlorsCeFilm: lundi), isEmpty, reason: 'le lundi est pris par le rappel');
+      expect(AvisDuJeu.prevus(maintenant: mardi, pouvoirs: true, crasses: true, actifs: false), isEmpty);
+      expect(AvisDuJeu.prevus(maintenant: mardi, pouvoirs: false, crasses: false), isEmpty, reason: 'rien tant que les règles ne sont pas ouvertes');
+      final rival = AvisDuJeu.prevus(maintenant: DateTime(2026, 11, 2, 0, 1), pouvoirs: false, crasses: true);
+      final c = Rivaux.crasseDeLaSemaine(DateTime(2026, 11, 6, 20))!;
+      expect(rival.single.titre, '${c.rival.nom} t\'a fait une crasse');
+      expect(Rivaux.crasseDeLaSemaine(rival.single.moment), c);
+      if (rival.single.moment.weekday != DateTime.monday) {
+        expect(Rivaux.crasseDeLaSemaine(rival.single.moment.subtract(const Duration(days: 1))), isNull, reason: 'le jour même où elle arrive');
+      }
+    });
+
+    test('R45 simulateur : armés au bon moment, les pouvoirs « au billet » se valent (aucun plus de 2,5 fois un autre)', () {
+      final r = Random(42);
+      int tirer(List<int> poids) {
+        var x = r.nextInt(poids.reduce((a, b) => a + b));
+        for (final (i, p) in poids.indexed) {
+          if (x < p) return i;
+          x -= p;
+        }
+        return poids.length - 1;
+      }
+
+      final gains = <Profil, double>{};
+      for (final p in [Profil.degustateur, Profil.critique, Profil.presse, Profil.hote, Profil.supporter, Profil.devoreur]) {
+        var total = 0;
+        const n = 4000;
+        for (var i = 0; i < n; i++) {
+          final demandees = 1 + tirer([4, 4, 2]);
+          final deja = p == Profil.devoreur ? 2 + tirer([4, 6]) : tirer([6, 2, 1, 1]);
+          final pronostic = 2 + r.nextInt(3);
+          final note = r.nextInt(10) < 9 ? (pronostic + tirer([1, 2, 4, 2, 1]) - 2).clamp(1, 5) : null;
+          final bonus = Pouvoirs.bonus(
+            p,
+            pronostic: pronostic,
+            note: note,
+            dureeMinutes: r.nextInt(100) < 85 ? 85 : 110,
+            aPlusieurs: r.nextInt(100) < 85,
+            derrierePop: r.nextInt(100) < 90,
+          );
+          final sans = Regles.casesAccordees(demandees: demandees, dejaGagneesAujourdhui: deja);
+          final avec = Regles.casesAccordees(demandees: demandees + bonus, dejaGagneesAujourdhui: deja, plafond: Pouvoirs.plafond(p, 3));
+          total += avec - sans;
+        }
+        gains[p] = total / n;
+      }
+      final valeurs = gains.values;
+      final mini = valeurs.reduce(min), maxi = valeurs.reduce(max);
+      expect(mini, greaterThan(0.3), reason: '$gains');
+      expect(maxi, lessThanOrEqualTo(1.0), reason: '$gains');
+      expect(maxi / mini, lessThanOrEqualTo(2.5), reason: '$gains');
     });
   });
 }

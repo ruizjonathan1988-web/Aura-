@@ -3,6 +3,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_donnees;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'avis_du_jeu.dart';
+
 /// Le rappel du lendemain : une seule notification, « Alors, Le Samouraï ? »,
 /// avec trois notes directement dedans. Un geste, et le pion avance.
 /// Jamais de culpabilisation : un seul rappel par carte jouée, et il
@@ -88,6 +90,35 @@ abstract final class Rappels {
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       );
+    } catch (_) {}
+  }
+
+  /// Les notifications de jeu (R45), identifiants 10 à 16 : on efface les
+  /// anciennes et on prévoit les nouvelles.
+  static Future<void> planifierAvis(List<AvisPrevu> avis) async {
+    if (!_pret) return;
+    try {
+      for (var id = 10; id <= 16; id++) {
+        await _plugin.cancel(id);
+      }
+      for (final (i, a) in avis.take(7).indexed) {
+        await _plugin.zonedSchedule(
+          10 + i,
+          a.titre,
+          a.texte,
+          tz.TZDateTime.from(a.moment, tz.local),
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'avis_du_jeu',
+              'Nouvelles du jeu',
+              channelDescription: 'Au plus deux par semaine : ta charge de pouvoir revenue, la crasse d\'un rival.',
+              importance: Importance.low,
+            ),
+          ),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        );
+      }
     } catch (_) {}
   }
 

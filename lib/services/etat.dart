@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/modeles.dart';
 import 'affiche.dart';
 import 'apres_seance.dart';
+import 'avis_du_jeu.dart';
 import 'carte_genres.dart';
 import 'collection.dart';
 import 'config.dart';
@@ -631,6 +632,7 @@ class EtatJeu extends ChangeNotifier {
     await _sauverEnCours();
     await _prefs.setInt('stat_cartes', (_prefs.getInt('stat_cartes') ?? 0) + 1);
     Rappels.alorsCeFilm(filmId: carte.film.id, titre: carte.film.titre, carteJouee: DateTime.now());
+    planifierAvis();
     _mesurer('carte_jouee', {'type': carte.type.libelle, 'source': carte.film.source.name});
     notifyListeners();
   }
@@ -792,6 +794,28 @@ class EtatJeu extends ChangeNotifier {
         niveauImpose: niveauImpose,
         sisyphe: sisypheActif,
       );
+
+  // Notifications de jeu (R45).
+
+  /// Les notifications de jeu sont actives (Réglages), par défaut oui.
+  bool get avisActifs => _prefs.getBool('avis_jeu') ?? true;
+
+  Future<void> changerAvis(bool v) async {
+    await _prefs.setBool('avis_jeu', v);
+    await planifierAvis();
+    notifyListeners();
+  }
+
+  /// Les avis des sept prochains jours, jamais le jour du rappel « Alors, ce film ? ».
+  List<AvisPrevu> get avisPrevus => AvisDuJeu.prevus(
+        maintenant: DateTime.now(),
+        pouvoirs: ouvert(Etape.pouvoirs),
+        crasses: ouvert(Etape.crasses),
+        rappelAlorsCeFilm: enCours.isEmpty ? null : Rappels.moment(enCours.first.debut),
+        actifs: avisActifs,
+      );
+
+  Future<void> planifierAvis() => Rappels.planifierAvis(avisPrevus);
 
   // Défi d'après-séance et Pop-cartes (R44).
 

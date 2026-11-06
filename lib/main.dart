@@ -33,5 +33,6 @@ Future<void> main() async {
   if (client != null) {
     etat.mesures = ServiceMesures(client, await SharedPreferences.getInstance())..ouverture();
   }
+  etat.planifierAvis();
   runApp(AuraApp(etat: etat));
 }
