@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/modeles.dart';
 import 'affiche.dart';
+import 'collection.dart';
 import 'fidelite.dart';
 import 'ligues.dart';
 import 'mesures.dart';
@@ -373,12 +374,14 @@ class EtatJeu extends ChangeNotifier {
       ...billets,
     ]..sort((a, b) => b.date.compareTo(a.date));
     final pariGagne = Pop.parisPerdus(maintenant, billets) > pariAvant;
+    if (cases > 0) pionVientDAvancer = true;
+    position = (position + cases).clamp(1, Regles.taillePlateau);
+    final nouveaux = await _majCollection();
     _direPop([
       if (note != null) Pop.surPronostic(pronostic: pronostic, note: note, graine: billets.length),
       if (pariGagne) 'Zut, j\'ai perdu mon pari : je recule de ${Pop.recul} cases. Mais je reviendrai.',
+      for (final id in nouveaux) 'Nouvel exploit pour ta collection : ${Collection.nomDe(id)} !',
     ]);
-    if (cases > 0) pionVientDAvancer = true;
-    position = (position + cases).clamp(1, Regles.taillePlateau);
     await _prefs.setInt('position', position);
     await _sauverBillets();
     await _prefs.setInt('stat_billets', (_prefs.getInt('stat_billets') ?? 0) + 1);
@@ -573,7 +576,29 @@ class EtatJeu extends ChangeNotifier {
     await _prefs.setBool('bluff_$semaine', trouve);
     if (trouve) await _prefs.setBool('joker_bluff', true);
     _mesurer('bluff', {'trouve': trouve});
+    await _majCollection();
     notifyListeners();
+  }
+
+  // La collection : exploits et figurines de saison, gardés pour toujours.
+
+  Set<String> get collection => {...?_prefs.getStringList('collection')};
+
+  int get bluffsGagnes => _prefs.getKeys().where((k) => k.startsWith('bluff_') && (_prefs.getBool(k) ?? false)).length;
+
+  /// Ajoute à la collection ce qui vient d'être mérité ; renvoie les nouveautés.
+  Future<List<String>> _majCollection() async {
+    final deja = collection;
+    final merites = Collection.merites(Bilan(
+      billets: billets,
+      position: position,
+      positionDePop: positionDePop,
+      bluffsGagnes: bluffsGagnes,
+      maintenant: DateTime.now(),
+    ));
+    final nouveaux = merites.difference(deja).toList();
+    if (nouveaux.isNotEmpty) await _prefs.setStringList('collection', [...deja, ...nouveaux]);
+    return nouveaux;
   }
 
   // La Révélation du dimanche : une fois par semaine.

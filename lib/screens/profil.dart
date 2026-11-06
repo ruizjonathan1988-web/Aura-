@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app.dart';
 import '../models/modeles.dart';
+import '../services/collection.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
 import 'premier_soir.dart';
@@ -90,6 +91,8 @@ class ProfilEcran extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 22),
+              _Collection(collection: etat.collection, position: etat.position),
+              const SizedBox(height: 22),
               const TitreCartoon('Les figurines', taille: 26, inclinaison: 0),
               const SizedBox(height: 12),
               LayoutBuilder(builder: (context, c) {
@@ -162,5 +165,63 @@ class ProfilEcran extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// La collection : les exploits (gardés pour toujours) et les figurines de
+/// saison, qui ne reviennent jamais.
+class _Collection extends StatelessWidget {
+  const _Collection({required this.collection, required this.position});
+  final Set<String> collection;
+  final int position;
+
+  @override
+  Widget build(BuildContext context) {
+    final maintenant = DateTime.now();
+    final saisonDuMois = Collection.saison(maintenant);
+    final saisons = collection.where((c) => c.startsWith('saison_')).toList()..sort();
+    final obtenus = Collection.exploits.where((e) => collection.contains(e.id)).length;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      TitreCartoon('Ta collection : $obtenus / ${Collection.exploits.length}', taille: 26, inclinaison: 0),
+      const SizedBox(height: 10),
+      Panneau(
+        couleur: collection.contains(saisonDuMois) ? AuraCouleurs.ambre : AuraCouleurs.creme,
+        inclinaison: -0.012,
+        child: Text(
+          collection.contains(saisonDuMois)
+              ? '${Collection.nomDeSaison(saisonDuMois)} : gagnée ! Elle ne reviendra jamais.'
+              : 'Atteins la case ${Collection.caseDeSaison} en ${Collection.mois[maintenant.month - 1]} pour gagner la figurine de saison. Elle ne reviendra jamais. (Tu es case $position.)',
+          style: AuraTexte.corps(14, poids: FontWeight.w900),
+        ),
+      ),
+      if (saisons.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        Text('Tes figurines de saison : ${saisons.map((s) => Collection.nomDeSaison(s).replaceFirst('Figurine de saison, ', '')).join(', ')}.',
+            style: AuraTexte.corps(13, poids: FontWeight.w900, couleur: AuraCouleurs.creme)),
+      ],
+      const SizedBox(height: 12),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final e in Collection.exploits)
+          Tooltip(
+            message: e.description,
+            child: Container(
+              width: 160,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: collection.contains(e.id) ? AuraCouleurs.jaune : const Color(0xFFD8D0C3),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(width: 2.5),
+                boxShadow: collection.contains(e.id) ? AuraTrait.ombre(3) : null,
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Icon(collection.contains(e.id) ? e.icone : Icons.lock_rounded, color: AuraCouleurs.noir),
+                const SizedBox(height: 4),
+                Text(e.nom, style: AuraTexte.corps(14, poids: FontWeight.w900)),
+                Text(e.description, style: AuraTexte.corps(12, couleur: AuraCouleurs.texteDoux)),
+              ]),
+            ),
+          ),
+      ]),
+    ]);
   }
 }
