@@ -40,6 +40,19 @@ jobs:
       - name: Tests
         run: flutter test
 
+      # Les écrans dessinés avec les vraies polices, pour relire l'interface
+      # sans appareil. Ne fait jamais échouer la construction.
+      - name: Captures d'écran
+        continue-on-error: true
+        run: flutter test captures/captures_test.dart --update-goldens
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: captures
+          path: captures/sorties/
+          if-no-files-found: ignore
+
       - name: APK (télé et téléphone)
         run: |
           # Toujours la même signature, pour que chaque version s'installe par-dessus la précédente.
