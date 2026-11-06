@@ -34,6 +34,7 @@ abstract final class PartieSoiree {
         if (f.realisateur != null) 'realisateur': f.realisateur,
         if (f.synopsis != null) 'synopsis': f.synopsis,
         if (f.serveurId != null) 'serveur': f.serveurId,
+        if (f.tmdbId != null) 'tmdb': f.tmdbId,
         'source': f.source.name,
       };
 
@@ -46,7 +47,8 @@ abstract final class PartieSoiree {
         realisateur: j['realisateur'] as String?,
         synopsis: j['synopsis'] as String?,
         serveurId: j['serveur'] as String?,
-        source: j['source'] == 'jellyfin' ? SourceFilm.jellyfin : SourceFilm.demo,
+        tmdbId: j['tmdb'] as int?,
+        source: SourceFilm.values.firstWhere((s) => s.name == j['source'], orElse: () => SourceFilm.demo),
       );
 
   static const minJoueurs = 2;

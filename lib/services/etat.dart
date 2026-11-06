@@ -8,6 +8,7 @@ import '../models/modeles.dart';
 import 'affiche.dart';
 import 'carte_genres.dart';
 import 'collection.dart';
+import 'config.dart';
 import 'fidelite.dart';
 import 'historique.dart';
 import 'ligues.dart';
@@ -15,6 +16,7 @@ import 'mesures.dart';
 import 'plan_du_jour.dart';
 import 'pop.dart';
 import 'rappels.dart';
+import 'source_tmdb.dart';
 import 'sources.dart';
 import 'tirage.dart';
 
@@ -323,7 +325,10 @@ class EtatJeu extends ChangeNotifier {
   }
 
   SourceFilms get source {
-    final base = mode == ModeJeu.vjod && connexion.complete ? SourceJellyfin(connexion) : SourceDemo();
+    final SourceFilms base = mode == ModeJeu.vjod && connexion.complete
+        // L'édition VJOD : ta bibliothèque, puis tout ce que VJOD peut lancer en VOD ou demander.
+        ? (Config.tmdbCle.isEmpty ? SourceJellyfin(connexion) : SourceToutVjod(SourceJellyfin(connexion), SourceTmdb(Config.tmdbCle)))
+        : SourceDemo();
     final vus = historique;
     return vus.isEmpty ? base : SourceAvecHistorique(base, vus);
   }

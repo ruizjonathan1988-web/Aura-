@@ -30,6 +30,7 @@ class _OuLeVoirState extends State<OuLeVoir> {
         final p = snap.data;
         final lignes = [
           if (vjod) 'Dans ta bibliothèque VJOD',
+          if (widget.film.source == SourceFilm.catalogueVjod) 'Dans VJOD : en VOD tout de suite, ou à demander',
           if (p != null && !p.vide) p.resume,
         ];
         if (lignes.isEmpty) return const SizedBox.shrink();

@@ -63,7 +63,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
       _message = null;
     });
     try {
-      final catalogue = await etat.source.catalogue(emotion: _emotion);
+      final catalogue = await etat.source.catalogue(emotion: _emotion, duree: _duree);
       final paysVus = {for (final b in etat.billets) ...b.pays};
       final tirage = _tirage.tirerSansImpasse(catalogue: catalogue, emotion: _emotion, duree: _duree, profil: etat.profil, paysVus: paysVus);
       setState(() {

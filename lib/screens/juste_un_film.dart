@@ -23,7 +23,7 @@ class JusteUnFilmEcran extends StatefulWidget {
 
 class _JusteUnFilmEcranState extends State<JusteUnFilmEcran> {
   final _choix = JusteUnFilm();
-  final Map<Emotion?, List<Film>> _catalogues = {};
+  final Map<String, List<Film>> _catalogues = {};
 
   Emotion? _emotion;
   Duree _duree = Duree.soiree;
@@ -45,7 +45,7 @@ class _JusteUnFilmEcranState extends State<JusteUnFilmEcran> {
   }
 
   Future<List<Film>> _catalogue(EtatJeu etat) async =>
-      _catalogues[_emotion] ??= await etat.source.catalogue(emotion: _emotion);
+      _catalogues['${_emotion?.name}|${_duree.name}'] ??= await etat.source.catalogue(emotion: _emotion, duree: _duree);
 
   Future<void> _renouveler() async {
     final etat = PorteeEtat.of(context);

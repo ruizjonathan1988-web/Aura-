@@ -10,7 +10,11 @@ import '../models/modeles.dart';
 ///   moonfin://play?id=<itemId>&serverId=<serverId>   lance la lecture
 ///   moonfin://item?id=<itemId>&serverId=<serverId>   ouvre la fiche
 abstract final class VjodLien {
-  static Uri pour(Film film, {bool lecture = true}) => Uri(
+  static Uri pour(Film film, {bool lecture = true}) => film.source == SourceFilm.catalogueVjod
+      // Hors du serveur : la fiche VJOD du titre, qui sait s'il est en VOD
+      // chez le fournisseur IPTV ou s'il faut le demander (VJOD 4.36).
+      ? Uri(scheme: 'moonfin', host: 'tmdb', queryParameters: {'id': '${film.tmdbId}', 'type': 'movie', 'title': film.titre})
+      : Uri(
         scheme: 'moonfin',
         host: lecture ? 'play' : 'item',
         queryParameters: {
@@ -21,12 +25,12 @@ abstract final class VjodLien {
 
   /// Vrai si le titre peut partir dans VJOD depuis cet appareil.
   static bool disponible(Film film) =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android && film.source == SourceFilm.jellyfin;
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android && (film.source == SourceFilm.jellyfin || (film.source == SourceFilm.catalogueVjod && film.tmdbId != null));
 
   /// Renvoie null si VJOD a été ouvert, sinon le message à afficher.
   static Future<String?> ouvrir(Film film, {bool lecture = true}) async {
     if (!disponible(film)) {
-      return 'Le lancement dans VJOD fonctionne sur Android, pour les films de ta bibliothèque Jellyfin.';
+      return 'Le lancement dans VJOD fonctionne sur Android, en édition VJOD.';
     }
     try {
       final ok = await launchUrl(pour(film, lecture: lecture), mode: LaunchMode.externalApplication);
