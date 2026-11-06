@@ -77,6 +77,8 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R28 Campagnes | Chaque campagne garde les 5 films les mieux notés de son thème (un par pays pour le Tour du monde) ; elle avance avec les billets et se boucle ; l'exploit n'est donné qu'une fois | `Campagnes` |
 | R29 Cadeau cacheté et Flair | Scellé jusqu'au jour prévu ; dates proposées ce soir, demain, vendredi, samedi, dimanche sans doublon ; Flair = part des cadeaux notés 4 ou 5 (les non notés ne comptent pas) ; jouer un cadeau = carte à 2 cases | `Cadeau`, `Cadeaux` |
 | R30 Les cartes suivent l'envie | Le défi de chaque carte reprend l'envie choisie (« Un classique pour rire, avant 1980 ») et seuls ses genres sont tirés ; un pays déjà vu dans les billets ne donne pas de carte Voyage | `Tirage` |
+| R31 Juste un film | Hors du jeu : trois idées, sans envie obligatoire (« Peu importe »), filtres durée et époque ; jamais de navet ni de film déjà vu ; on change autant qu'on veut, rien ne revient avant que tout soit passé, puis la boucle recommence ; « Une autre idée » ne change que la carte touchée ; aucune carte, case, séance en cours ni rappel | `JusteUnFilm` |
+| R32 Jamais d'impasse | Chaque envie a des genres exclus (une comédie de guerre ne fait pas réfléchir, un dessin animé familial ne fait pas frissonner) ; la sélection de démonstration donne 3 cartes pour chaque envie et chaque durée ; trop peu de films : Pop allonge la durée et le dit, puis prend une autre envie, jamais un navet | `Emotion.exclus`, `Tirage.tirerSansImpasse` |
 
 Tests d'écrans (`test/ecrans_test.dart`) : l'appli est ouverte comme par un joueur, sur un téléphone (390 × 844) et sur une télé (960 × 540) ; ouverture, premier soir complet, tous les onglets, une soirée complète (tirage, carte, billet, plateau), Plan du jour, Duel. Un débordement ou un plantage fait échouer la CI. Possible parce que les polices sont embarquées (`assets/polices`, licence OFL) au lieu d'être téléchargées.
 
@@ -152,6 +154,8 @@ Fait :
 - Cadeau cacheté et Flair (`lib/screens/cadeaux.dart`, `lib/services/cadeaux.dart`, migration `0006_cadeaux.sql`, onglet Ligue) : offrir un film à un ami de sa ligue (choix parmi 4 films très bien notés), avec un mot, à ouvrir ce soir, demain ou le week-end ; le cadeau reste scellé jusqu'au jour prévu, s'annonce dans « Pendant ce temps, à la ligue », s'ouvre, se joue (carte Cadeau à 2 cases) et se note ; le Flair de chacun est la part de ses cadeaux notés 4 ou 5 ; un cadeau qui plaît donne l'exploit « Fin limier ».
 - Échange de doubles : volontairement pas fait. Aura ne distribue rien au hasard (pas de pochettes surprises), donc il n'y a pas de doubles à échanger.
 - Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
+- Juste un film (`lib/screens/juste_un_film.dart`, `lib/services/juste_un_film.dart`, accès « Pas envie de jouer ? » sous le tirage de Ce soir) : pour les soirs sans jeu, trois idées à changer une par une ou toutes d'un coup, filtres envie (dont « Peu importe »), durée et époque, « Où le voir » et « Lancer dans VJOD ». Rien ne compte pour le plateau.
+- Propositions revues : envies avec genres exclus, 23 films reconnus de plus dans la sélection de démonstration (65 au total, au moins 5 de moins d'une heure et demie par envie), et plus jamais « aucun film » : Pop allonge la durée ou change d'envie en le disant.
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
 ## Nuit du 6 novembre (travail autonome)
@@ -166,6 +170,7 @@ Jon a demandé une appli « finie, présentable, jouable, rigolote, avec une for
 4. Tester sur la box : flèches et OK partout, ouverture, Duel, Révélation (le dimanche), connexion par code Quick Connect.
 
 - 6 novembre : Jon trouvait que toutes les envies proposaient la même chose. Les films changeaient, mais les trois défis affichés (avant 1980, pays jamais vu, pépite) étaient toujours identiques et le pays « jamais vu » ignorait ses billets. Les défis reprennent maintenant l'envie (R30). Titre « Envie de quoi ce soir ? » réduit pour ne plus être coupé.
+- 6 novembre : capture de Jon, « Réfléchir » et « moins d'une heure et demie » donnaient « aucun film ». La démo n'avait que 3 films pour Réfléchir (dont La Grande Vadrouille, comptée à cause du genre guerre) et 1 ou 2 films courts par envie. Corrigé par R32 ; et « Juste un film » (R31) pour les soirs où il ne veut pas jouer.
 - 6 novembre : « la connexion VJOD ne marche pas ». Cause : le serveur de Jon est un Jellyfin récent, qui refuse les anciens en-têtes `X-Emby-Authorization` et `X-Emby-Token` seuls ; VJOD envoie `Authorization: MediaBrowser …`. Aura envoie désormais le même en-tête (connexion, bibliothèque, vérification « vu »), l'ancien à côté. À confirmer par Jon sur la box.
 - APK : la CI signait avec une clé neuve à chaque construction, d'où « Application non installée » sur une mise à jour. Corrigé : signature fixe (`tool/signature.keystore`, copiée par la CI comme clé de débogage). Jon désinstalle une dernière fois, ensuite les mises à jour s'installent par-dessus. Pour le Play Store, il faudra une vraie clé de publication, gardée hors du dépôt.
 
