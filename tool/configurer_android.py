@@ -7,7 +7,7 @@
 - notifications du lendemain (« Alors, ce film ? ») : permission, récepteurs de
   flutter_local_notifications, et désucrage Java dans build.gradle ;
 - mise à jour automatique, comme VJOD : droit d'installer des paquets, et
-  l'activité principale remplacée par celle de `tool/android/` (canal
+  l'activité principale remplacée par celle de `tool/natif/` (canal
   `fr.vjod.aura/mise_a_jour`).
 
 Le script peut être relancé : il ne modifie que ce qui manque.
@@ -96,7 +96,7 @@ for nom in ("build.gradle.kts", "build.gradle"):
 
 # Mise à jour automatique : l'activité principale et l'installeur, dans le
 # paquet que `flutter create` a choisi.
-sources = Path(__file__).resolve().parent / "android"
+sources = Path(__file__).resolve().parent / "natif"
 activites = [f for f in chemin.parent.rglob("MainActivity.*") if f.suffix in (".kt", ".java")]
 if activites:
     activite = activites[0]
