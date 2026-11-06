@@ -16,6 +16,7 @@ import '../widgets/aura_widgets.dart';
 import '../widgets/ou_le_voir.dart';
 import '../services/cadeaux.dart';
 import '../services/collection.dart';
+import '../services/deblocage.dart';
 import 'campagnes.dart';
 import 'duel.dart';
 import 'generique.dart';
@@ -77,7 +78,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         duree: _duree,
         profil: etat.profil,
         paysVus: paysVus,
-        niveau: etat.niveauImpose ?? _niveau ?? etat.niveauPropose,
+        niveau: etat.ouvert(Etape.niveaux) ? etat.niveauImpose ?? _niveau ?? etat.niveauPropose : null,
         nombre: pouvoir.nombre,
         revoir: pouvoir.revoir,
       );
@@ -173,6 +174,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     ];
     final generique = etat.generiqueAVoir;
     final haut = <Widget>[
+      _PourToi(etat: etat),
       if (generique != null)
         ChoixLarge(
           libelle: 'LE GÉNÉRIQUE DE ${Collection.mois[generique.month - 1].toUpperCase()} EST PRÊT · Revois ta saison et le résultat contre Pop.',
@@ -241,9 +243,11 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
             ),
           ),
           const SizedBox(height: 18),
-          _combien(etat),
-          const SizedBox(height: 14),
-          _pouvoir(etat),
+          if (etat.ouvert(Etape.niveaux)) _combien(etat),
+          if (etat.ouvert(Etape.pouvoirs)) ...[
+            const SizedBox(height: 14),
+            _pouvoir(etat),
+          ],
           if (_message != null) ...[
             const SizedBox(height: 14),
             Panneau(couleur: AuraCouleurs.jaune, child: Text(_message!, style: AuraTexte.corps(14, poids: FontWeight.w900))),
@@ -882,6 +886,44 @@ class _PendantCeTempsState extends State<_PendantCeTemps> {
             ),
         ]);
       },
+    );
+  }
+}
+
+/// « Ce soir pour toi » (R42) : la nouveauté que Pop présente, sinon deux
+/// lignes sur ce qui compte ce soir et la prochaine règle à débloquer.
+class _PourToi extends StatelessWidget {
+  const _PourToi({required this.etat});
+
+  final EtatJeu etat;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = etat.nouveaute;
+    if (n != null) {
+      return Panneau(
+        couleur: AuraCouleurs.jaune,
+        inclinaison: -0.01,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('NOUVEAU : ${n.titre.toUpperCase()}', style: AuraTexte.titre(17)),
+          const SizedBox(height: 6),
+          PopQuiParle(texte: n.explication, taille: 60),
+          const SizedBox(height: 8),
+          Pastille(libelle: 'Compris !', choisie: false, autofocus: true, onTap: () => etat.nouveauteVue(n)),
+        ]),
+      );
+    }
+    final lignes = CeSoirPourToi.lignes(etat.situation);
+    return Panneau(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('CE SOIR POUR TOI', style: AuraTexte.titre(16)),
+        const SizedBox(height: 6),
+        for (final (i, l) in lignes.indexed)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 3),
+            child: Text(l, style: AuraTexte.corps(14, poids: i == 0 ? FontWeight.w900 : FontWeight.w400, couleur: i == lignes.length - 1 && i > 0 ? AuraCouleurs.texteDoux : AuraCouleurs.noir)),
+          ),
+      ]),
     );
   }
 }

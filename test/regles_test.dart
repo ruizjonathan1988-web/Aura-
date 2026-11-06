@@ -15,6 +15,7 @@ import 'package:aura/services/collection.dart';
 import 'package:aura/services/config.dart';
 import 'package:aura/services/connexion_vjod.dart';
 import 'package:aura/services/coups.dart';
+import 'package:aura/services/deblocage.dart';
 import 'package:aura/services/duel.dart';
 import 'package:aura/services/etat.dart';
 import 'package:aura/services/fidelite.dart';
@@ -67,8 +68,10 @@ CarteDefi _carte(String id, {TypeCarte type = TypeCarte.retro, int cases = 3, in
 /// derrière Pop, donc pas de Vent dans le dos (R41).
 final Map<String, Object> _devantPop = {'pop_decalage_${EtatJeu.moisDe(DateTime.now())}': -60};
 
+/// Par défaut, toutes les règles sont ouvertes (R42) : chaque test vérifie
+/// sa règle, pas le déblocage, qui a ses propres tests.
 Future<EtatJeu> _etat([Map<String, Object> valeurs = const {}]) async {
-  SharedPreferences.setMockInitialValues(valeurs);
+  SharedPreferences.setMockInitialValues({'tout_ouvert': true, ...valeurs});
   return EtatJeu(await SharedPreferences.getInstance());
 }
 
@@ -1947,6 +1950,57 @@ void main() {
       await f.refuserSisyphe();
       expect(f.sisypheProposable, isFalse);
       expect(f.position, 1);
+    });
+  });
+
+  group('R42 Déblocage progressif et Ce soir pour toi', () {
+    CarteDefi carte(String id) => CarteDefi(type: TypeCarte.envie, defi: 'Défi', indice: '', cases: 1, joker: '', film: _film(id), bulleDePop: '');
+    final neuf = <String, Object>{'tout_ouvert': false};
+
+    test('R42 les règles s\'ouvrent à la 3e, 5e, 7e et 9e séance, une à la fois', () {
+      expect([for (final e in Etape.values) e.seances], [3, 5, 7, 9]);
+      expect(Deblocage.ouvert(Etape.niveaux, seances: 2), isFalse);
+      expect(Deblocage.ouvert(Etape.niveaux, seances: 3), isTrue);
+      expect(Deblocage.ouvert(Etape.crasses, seances: 0, toutOuvert: true), isTrue);
+      expect(Deblocage.prochaine(seances: 0), Etape.niveaux);
+      expect(Deblocage.prochaine(seances: 5), Etape.coups);
+      expect(Deblocage.prochaine(seances: 9), isNull);
+      expect(Deblocage.aAnnoncer(seances: 6, annoncees: {}), Etape.niveaux, reason: 'la plus ancienne d\'abord');
+      expect(Deblocage.aAnnoncer(seances: 6, annoncees: {'niveaux'}), Etape.pouvoirs);
+      expect(Deblocage.aAnnoncer(seances: 6, annoncees: {'niveaux', 'pouvoirs'}), isNull);
+      expect(Deblocage.aAnnoncer(seances: 9, annoncees: {}, toutOuvert: true), isNull);
+    });
+
+    test('R42 au début, pas de pouvoir ni de coup de théâtre ; Pop présente chaque règle quand elle arrive', () async {
+      final e = await _etat(neuf);
+      expect(e.ouvert(Etape.niveaux), isFalse);
+      expect(await e.armerPouvoir(), isFalse);
+      expect(e.volteFaceDispo, isFalse);
+      expect(e.nouveaute, isNull);
+      await e.validerSeance(carte('a'), pronostic: 3);
+      await e.validerSeance(carte('b'), pronostic: 3);
+      await e.validerSeance(carte('c'), pronostic: 3);
+      expect(e.position, 4);
+      expect(e.coupEnAttente, isNull, reason: 'les coups de théâtre ne sont pas encore ouverts');
+      expect(e.ouvert(Etape.niveaux), isTrue);
+      expect(e.nouveaute, Etape.niveaux);
+      await e.nouveauteVue(Etape.niveaux);
+      expect(e.nouveaute, isNull);
+      await e.changerToutOuvert(true);
+      expect(await e.armerPouvoir(), isTrue, reason: '« Je connais déjà le jeu » ouvre tout');
+    });
+
+    test('R42 Ce soir pour toi : deux lignes, la plus urgente d\'abord, puis la prochaine règle', () {
+      final debut = CeSoirPourToi.lignes(const Situation(seances: 1, position: 2, pop: 5, casesRestantes: 3));
+      expect(debut, ['Pop a 3 cases d\'avance : une séance ce soir te rapproche.', 'Encore 2 séances avant la prochaine règle : « Tu te mets combien ? ».']);
+      final chargee = CeSoirPourToi.lignes(const Situation(seances: 12, position: 9, pop: 5, casesRestantes: 3, coupEnAttente: 14, pouvoirCharge: true, nomPouvoir: 'Slow'));
+      expect(chargee, hasLength(2));
+      expect(chargee.first, contains('case 14'));
+      expect(chargee.last, contains('Slow est chargé'));
+      final cachee = CeSoirPourToi.lignes(const Situation(seances: 3, position: 5, pop: 5, casesRestantes: 0, pouvoirCharge: true, nomPouvoir: 'Slow'));
+      expect(cachee.first, contains('Plafond du jour'));
+      expect(cachee.any((l) => l.contains('Slow')), isFalse, reason: 'les pouvoirs ne sont pas encore ouverts');
+      expect(cachee.last, contains('Ton pouvoir'));
     });
   });
 }

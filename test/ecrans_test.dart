@@ -61,10 +61,11 @@ void main() {
 
       testWidgets('une soirée complète : tirage, carte, billet, plateau', (t) async {
         _taille(t, taille, densite);
-        final etat = await _etat({'accueil_fait': true});
+        final etat = await _etat({'accueil_fait': true, 'tout_ouvert': true});
         await t.pumpWidget(AuraApp(etat: etat));
         await _patienter(t);
         await _toucher(t, find.text('ENTRER DANS LA SALLE'));
+        expect(find.text('CE SOIR POUR TOI'), findsOneWidget);
         expect(find.text('TU TE METS COMBIEN ?'), findsOneWidget);
         await _toucher(t, find.descendant(of: find.byType(Pastille), matching: find.text('7')));
         await _toucher(t, find.text('TIRER MES 3 CARTES'));

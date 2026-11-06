@@ -196,6 +196,20 @@ class _ReglagesEcranState extends State<ReglagesEcran> {
                     ),
                     if (_vjod) ...[const SizedBox(height: 16), _connexion()],
                     const SizedBox(height: 16),
+                    Panneau(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('LES RÈGLES DU JEU', style: AuraTexte.titre(16)),
+                        const SizedBox(height: 10),
+                        Wrap(spacing: 8, runSpacing: 8, children: [
+                          Pastille(libelle: 'Au fil des séances', choisie: !etat.toutOuvert, onTap: () => etat.changerToutOuvert(false)),
+                          Pastille(libelle: 'Je connais déjà le jeu : tout ouvrir', choisie: etat.toutOuvert, onTap: () => etat.changerToutOuvert(true)),
+                        ]),
+                        const SizedBox(height: 10),
+                        Text('Au fil des séances, Pop présente une règle à la fois : les niveaux à la 3e séance, les pouvoirs à la 5e, les coups de théâtre à la 7e, les crasses à la 9e.',
+                            style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
+                      ]),
+                    ),
+                    const SizedBox(height: 16),
                     const _Historique(),
                     if (MiseAJour.possible) ...[
                       const SizedBox(height: 16),

@@ -9,6 +9,7 @@ import 'affiche.dart';
 import 'carte_genres.dart';
 import 'collection.dart';
 import 'config.dart';
+import 'deblocage.dart';
 import 'coups.dart';
 import 'fidelite.dart';
 import 'historique.dart';
@@ -510,7 +511,7 @@ class EtatJeu extends ChangeNotifier {
     // Pouvoir armé « au billet » (R39) : il agit maintenant, la charge part
     // même si la condition n'est pas remplie.
     final popAvant = positionDePop;
-    final pouvoir = pouvoirArme && Pouvoirs.moment(profil) == MomentPouvoir.billet;
+    final pouvoir = ouvert(Etape.pouvoirs) && pouvoirArme && Pouvoirs.moment(profil) == MomentPouvoir.billet;
     final bonusPouvoir = pouvoir
         ? Pouvoirs.bonus(
             profil,
@@ -554,13 +555,13 @@ class EtatJeu extends ChangeNotifier {
     ]..sort((a, b) => b.date.compareTo(a.date));
     final pariGagne = Pop.parisPerdus(maintenant, billets) > pariAvant;
     // Vent dans le dos (R41) : une séance vue derrière Pop rapporte de l'audace.
-    final vent = ceMois && position < popAvant;
+    final vent = ceMois && ouvert(Etape.niveaux) && position < popAvant;
     if (vent) await _ajouterAudace(Retournements.ventDansLeDos);
     if (cases > 0) pionVientDAvancer = true;
     position = (position + cases).clamp(1, Regles.taillePlateau);
     // Coup de théâtre : le pion s'arrête sur une case 4, 14 ou 24 pas encore jouée ce mois-ci.
     final mois = moisDe(maintenant);
-    final coup = cases > 0 && CoupsDuSort.estCaseCoup(position) && !(_prefs.getStringList('coups_$mois') ?? const []).contains('$position');
+    final coup = ouvert(Etape.coups) && cases > 0 && CoupsDuSort.estCaseCoup(position) && !(_prefs.getStringList('coups_$mois') ?? const []).contains('$position');
     if (coup) await _prefs.setString('coup_en_attente', '$mois|$position');
     await _noter([
       '« $titre » : ${cases == 0 ? 'aucune case (plafond du jour)' : '+$cases case${cases > 1 ? 's' : ''}'}, case $position.',
@@ -705,7 +706,7 @@ class EtatJeu extends ChangeNotifier {
 
   /// Armer son pouvoir, s'il reste une charge. Renvoie vrai si c'est fait.
   Future<bool> armerPouvoir() async {
-    if (pouvoirArme || chargesPouvoir <= 0) return false;
+    if (!ouvert(Etape.pouvoirs) || pouvoirArme || chargesPouvoir <= 0) return false;
     await _prefs.setBool('pouvoir_arme', true);
     notifyListeners();
     return true;
@@ -734,7 +735,7 @@ class EtatJeu extends ChangeNotifier {
   /// Au tirage de Ce soir : si le pouvoir armé agit au tirage (Boussole,
   /// Madeleine), il est consommé et ses réglages sont renvoyés.
   Future<({int nombre, bool revoir})> pouvoirAuTirage() async {
-    if (!pouvoirArme || Pouvoirs.moment(profil) != MomentPouvoir.tirage) return (nombre: 3, revoir: false);
+    if (!ouvert(Etape.pouvoirs) || !pouvoirArme || Pouvoirs.moment(profil) != MomentPouvoir.tirage) return (nombre: 3, revoir: false);
     await _consommerPouvoir();
     _direPop([Pouvoirs.phrase(profil, agi: true)]);
     notifyListeners();
@@ -748,6 +749,41 @@ class EtatJeu extends ChangeNotifier {
     return max(0, total + (_prefs.getInt('audace_$m') ?? 0));
   }
 
+  // Déblocage progressif (R42).
+
+  /// « Je connais déjà le jeu » : tout est ouvert d'emblée (Réglages).
+  bool get toutOuvert => _prefs.getBool('tout_ouvert') ?? false;
+
+  Future<void> changerToutOuvert(bool v) async {
+    await _prefs.setBool('tout_ouvert', v);
+    notifyListeners();
+  }
+
+  bool ouvert(Etape e) => Deblocage.ouvert(e, seances: billets.length, toutOuvert: toutOuvert);
+
+  /// La nouveauté que Pop doit présenter, s'il y en a une.
+  Etape? get nouveaute => Deblocage.aAnnoncer(seances: billets.length, annoncees: {...?_prefs.getStringList('etapes_annoncees')}, toutOuvert: toutOuvert);
+
+  Future<void> nouveauteVue(Etape e) async {
+    await _prefs.setStringList('etapes_annoncees', {...?_prefs.getStringList('etapes_annoncees'), e.name}.toList());
+    notifyListeners();
+  }
+
+  /// La situation du soir, pour la carte « Ce soir pour toi ».
+  Situation get situation => Situation(
+        seances: billets.length,
+        position: position,
+        pop: positionDePop,
+        casesRestantes: Regles.casesParJourMax - casesLe(DateTime.now()),
+        toutOuvert: toutOuvert,
+        coupEnAttente: coupEnAttente?.numero,
+        pouvoirCharge: chargesPouvoir > 0,
+        pouvoirArme: pouvoirArme,
+        nomPouvoir: profil.pouvoir,
+        niveauImpose: niveauImpose,
+        sisyphe: sisypheActif,
+      );
+
   // Retournements (R41) : journal du plateau, Volte-face, pari de Sisyphe.
 
   /// Le journal du plateau : ce qui est arrivé ce mois-ci, le plus récent d'abord.
@@ -760,7 +796,7 @@ class EtatJeu extends ChangeNotifier {
   }
 
   /// Volte-face : un Joker par mois, seulement quand on est derrière Pop.
-  bool get volteFaceDispo => !(_prefs.getBool('volte_face_${moisDe(DateTime.now())}') ?? false) && position < positionDePop;
+  bool get volteFaceDispo => ouvert(Etape.coups) && !(_prefs.getBool('volte_face_${moisDe(DateTime.now())}') ?? false) && position < positionDePop;
 
   /// Prendre la place de Pop, et lui donner la sienne. Renvoie faux si impossible.
   Future<bool> volteFace() async {
@@ -782,7 +818,7 @@ class EtatJeu extends ChangeNotifier {
   String? get _sisyphe => _prefs.getString('sisyphe_${moisDe(DateTime.now())}');
 
   /// Le pari de Sisyphe se propose pendant la première semaine du mois, une fois.
-  bool get sisypheProposable => _sisyphe == null && DateTime.now().day <= Retournements.joursSisyphe;
+  bool get sisypheProposable => ouvert(Etape.coups) && _sisyphe == null && DateTime.now().day <= Retournements.joursSisyphe;
 
   /// Vrai tant que le pari tient : un film abandonné renvoie à la case 1.
   bool get sisypheActif => _sisyphe == 'actif';
