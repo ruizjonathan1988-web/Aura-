@@ -12,6 +12,7 @@ import '../theme/aura_theme.dart';
 import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
 import '../widgets/ou_le_voir.dart';
+import '../services/cadeaux.dart';
 import '../services/collection.dart';
 import 'campagnes.dart';
 import 'duel.dart';
@@ -701,12 +702,17 @@ class _PendantCeTemps extends StatefulWidget {
 
 class _PendantCeTempsState extends State<_PendantCeTemps> {
   Future<List<Nouvelle>>? _fil;
+  Future<(List<Classe>, List<Cadeau>)>? _cadeaux;
 
   @override
   void initState() {
     super.initState();
     final l = widget.etat.ligues;
-    if (l != null && l.inscrit && l.ligues.isNotEmpty) _fil = l.fil(l.ligues.first);
+    if (l != null && l.inscrit && l.ligues.isNotEmpty) {
+      _fil = l.fil(l.ligues.first);
+      final ligue = l.ligues.first;
+      _cadeaux = (() async => (await l.classement(ligue), await l.cadeaux(ligue)))();
+    }
   }
 
   @override
@@ -730,6 +736,31 @@ class _PendantCeTempsState extends State<_PendantCeTemps> {
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           titre,
           const SizedBox(height: 8),
+          FutureBuilder<(List<Classe>, List<Cadeau>)>(
+            future: _cadeaux,
+            builder: (context, c) {
+              final donnees = c.data;
+              if (donnees == null) return const SizedBox.shrink();
+              final (membres, cadeaux) = donnees;
+              final moi = widget.etat.ligues?.monId;
+              final pourMoi = cadeaux.where((x) => x.pour == moi && !x.ouvert).toList();
+              if (pourMoi.isEmpty) return const SizedBox.shrink();
+              final x = pourMoi.first;
+              final de = membres.where((m) => m.joueurId == x.de).firstOrNull?.pseudo ?? 'Un ami';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Panneau(
+                  couleur: AuraCouleurs.rose,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(children: [
+                    const Icon(Icons.redeem_rounded, size: 32),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text('$de t\'a offert un film, ${Cadeaux.quand(x.ouvrirLe, DateTime.now())}. Il t\'attend dans l\'onglet Ligue.', style: AuraTexte.corps(13, poids: FontWeight.w900))),
+                  ]),
+                ),
+              );
+            },
+          ),
           for (final n in fil)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
