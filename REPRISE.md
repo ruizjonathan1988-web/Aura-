@@ -138,6 +138,17 @@ Fait :
 - Rien à taper sur la télé : `ChampAura` se remplace par un message en mode télé (Verdict, ligues).
 - Maquettes rangées dans `docs/maquettes/` (planche complète et sources lisibles).
 
+## Nuit du 6 novembre (travail autonome)
+
+Jon a demandé une appli « finie, présentable, jouable, rigolote, avec une forte rétention » au réveil, en suivant toutes les recommandations. Fait dans la nuit, chaque bloc en pull request fusionnée après CI verte : français relu et films reconnus ; connexion VJOD sans clé ; Duel du canapé ; retour après pause ; Bluff de la semaine ; mesures anonymes ; fil de la ligue et figurine dorée ; ouverture en salle de cinéma et animations ; polices embarquées et tests d'écrans ; rappel du lendemain ; Révélation du dimanche ; collection d'exploits ; Ce soir en deux colonnes sur la télé.
+
+**À faire par Jon :**
+
+1. Installer le dernier APK : https://github.com/ruizjonathan1988-web/Aura-/releases/download/derniere/aura.apk
+2. Dans Supabase, éditeur SQL : lancer `supabase/migrations/0003_mesures.sql` puis `0004_invitation.sql` (et vérifier que `0001`, `0002` et les connexions anonymes sont bien en place). Lire les chiffres avec `select * from public.mesures;`.
+3. Donner l'adresse de son serveur VJOD pour la pré-remplir chez ses utilisateurs (ajouter `--dart-define=VJOD_SERVEUR=…` dans `.github/workflows/construire.yml`).
+4. Tester sur la box : flèches et OK partout, ouverture, Duel, Révélation (le dimanche), connexion par code Quick Connect.
+
 ## Retours de Jon à traiter
 
 - **6 nov. : « tout est mal écrit, le français est vraiment approximatif. »** Relecture complète faite dans la nuit ; à vérifier par Jon à l'usage.
