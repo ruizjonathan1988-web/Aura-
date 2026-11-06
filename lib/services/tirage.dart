@@ -204,8 +204,8 @@ abstract final class Regles {
   static const casesParJourMax = 3;
   static const taillePlateau = 30;
 
-  static int casesAccordees({required int demandees, required int dejaGagneesAujourdhui}) {
-    final reste = casesParJourMax - dejaGagneesAujourdhui;
+  static int casesAccordees({required int demandees, required int dejaGagneesAujourdhui, int plafond = casesParJourMax}) {
+    final reste = plafond - dejaGagneesAujourdhui;
     if (reste <= 0) return 0;
     return demandees.clamp(0, reste);
   }
