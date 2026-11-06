@@ -104,6 +104,8 @@ class _CoquilleState extends State<Coquille> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _miseAJour());
+    MiseAJour.ecouter();
+    MiseAJour.echec.addListener(_echecMiseAJour);
   }
 
   /// Une nouvelle version d'Aura ? On la propose (au plus une fois par heure).
@@ -115,8 +117,23 @@ class _CoquilleState extends State<Coquille> with WidgetsBindingObserver {
     if (!deja) await proposerMiseAJour(context, v);
   }
 
+  void _echecMiseAJour() {
+    final m = MiseAJour.echec.value;
+    if (m == null || !mounted) return;
+    MiseAJour.echec.value = null;
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mise à jour pas installée'),
+        content: Text(m),
+        actions: [TextButton(autofocus: true, onPressed: () => Navigator.pop(context), child: const Text('Compris'))],
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    MiseAJour.echec.removeListener(_echecMiseAJour);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

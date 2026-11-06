@@ -2833,6 +2833,12 @@ void main() {
       expect(e.audaceDuMois, 2);
     });
   });
+
+  test('R35 une mise à jour refusée par Android est expliquée en clair', () {
+    expect(MiseAJour.raisonEnClair(5, ''), contains('Désinstalle Aura une fois'));
+    expect(MiseAJour.raisonEnClair(3, ''), contains('annulée'));
+    expect(MiseAJour.raisonEnClair(1, 'INSTALL_FAILED_X'), contains('INSTALL_FAILED_X'));
+  });
 }
 
 class _SourceFixe implements SourceFilms {
