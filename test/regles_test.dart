@@ -12,6 +12,7 @@ import 'package:aura/services/apres_seance.dart';
 import 'package:aura/services/deck.dart';
 import 'package:aura/services/festival.dart';
 import 'package:aura/services/partage.dart';
+import 'package:aura/services/veille.dart';
 import 'package:aura/services/sons.dart';
 import 'package:aura/services/aura.dart';
 import 'package:aura/services/avis_du_jeu.dart';
@@ -2625,6 +2626,44 @@ void main() {
       expect(e['points'], [1, 1]);
       expect(e['souffles'], [1]);
       expect(PartieSoiree.appliquer(e, 'inconnu', {'type': 'soutenir', 'joueur': 0}), isNull, reason: 'il faut être dans le public');
+    });
+  });
+
+  group('R54 Les nouvelles des amis', () {
+    test('R54 une nouvelle : le détail ; plusieurs : le compte ; rien : pas de notification', () {
+      expect(Veille.message(propositions: const [], cadeaux: const [], crasses: const [], pseudos: const {}), isNull);
+      final une = Veille.message(
+        propositions: [
+          {'de_nom': 'Léa', 'film': {'titre': 'Parasite'}, 'mot': 'Tu vas adorer.'},
+        ],
+        cadeaux: const [],
+        crasses: const [],
+        pseudos: const {},
+      )!;
+      expect(une.$1, 'Léa te propose « Parasite »');
+      expect(une.$2, contains('Tu vas adorer.'));
+      final trois = Veille.message(
+        propositions: [
+          {'de_nom': 'Léa', 'film': {'titre': 'Parasite'}},
+        ],
+        cadeaux: [
+          {'de': 'u-max'},
+        ],
+        crasses: [
+          {'de': 'u-zoe'},
+        ],
+        pseudos: const {'u-max': 'Max', 'u-zoe': 'Zoé'},
+      )!;
+      expect(trois.$1, '3 nouvelles de tes amis');
+      expect(trois.$2, contains('Un cadeau cacheté de Max'));
+      expect(trois.$2, contains('Zoé t\'a fait une crasse !'));
+    });
+
+    test('R54 coupable dans les Réglages', () async {
+      final e = await _etat();
+      expect(e.avisAmis, isTrue);
+      await e.changerAvisAmis(false);
+      expect((await _etatDepuis(e)).avisAmis, isFalse);
     });
   });
 }

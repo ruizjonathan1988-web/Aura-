@@ -123,6 +123,26 @@ abstract final class Rappels {
     } catch (_) {}
   }
 
+  /// Une nouvelle d'un ami (R54), tout de suite.
+  static Future<void> nouvelleDesAmis(String titre, String texte) async {
+    if (!_pret) return;
+    try {
+      await _plugin.show(
+        20,
+        titre,
+        texte,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'nouvelles_amis',
+            'Nouvelles des amis',
+            channelDescription: 'Un film proposé, un cadeau offert, une crasse : ce que tes amis viennent de faire.',
+            importance: Importance.defaultImportance,
+          ),
+        ),
+      );
+    } catch (_) {}
+  }
+
   static Future<void> annuler() async {
     if (!_pret) return;
     try {

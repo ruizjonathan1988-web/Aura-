@@ -209,6 +209,16 @@ class _ReglagesEcranState extends State<ReglagesEcran> {
                         Text('Au fil des séances, Pop présente une règle à la fois : les niveaux à la 3e séance, les pouvoirs à la 5e, les coups de théâtre à la 7e, les crasses à la 9e.',
                             style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
                         const SizedBox(height: 14),
+                        Text('NOUVELLES DES AMIS', style: AuraTexte.titre(16)),
+                        const SizedBox(height: 10),
+                        Wrap(spacing: 8, runSpacing: 8, children: [
+                          Pastille(libelle: 'Oui, préviens-moi', choisie: etat.avisAmis, onTap: () => etat.changerAvisAmis(true)),
+                          Pastille(libelle: 'Non merci', choisie: !etat.avisAmis, onTap: () => etat.changerAvisAmis(false)),
+                        ]),
+                        const SizedBox(height: 6),
+                        Text('Quand un ami te propose un film, t\'offre un cadeau ou te fait une crasse, même appli fermée (vérifié environ toutes les heures).',
+                            style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
+                        const SizedBox(height: 14),
                         Text('LE TON DE POP', style: AuraTexte.titre(16)),
                         const SizedBox(height: 10),
                         Wrap(spacing: 8, runSpacing: 8, children: [
