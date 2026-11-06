@@ -32,6 +32,7 @@ import 'deck.dart';
 import 'festival.dart';
 import 'partage.dart';
 import 'sons.dart';
+import 'veille.dart';
 import 'tirage.dart';
 
 enum ModeJeu { demo, vjod }
@@ -866,6 +867,14 @@ class EtatJeu extends ChangeNotifier {
         niveauImpose: niveauImpose,
         sisyphe: sisypheActif,
       );
+
+  /// Les nouvelles des amis (R54), par défaut oui.
+  bool get avisAmis => _prefs.getBool(Veille.cleActive) ?? true;
+
+  Future<void> changerAvisAmis(bool v) async {
+    await _prefs.setBool(Veille.cleActive, v);
+    notifyListeners();
+  }
 
   // Le ton de Pop et les sons.
 

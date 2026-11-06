@@ -8,6 +8,7 @@ import 'services/etat.dart';
 import 'services/ligues.dart';
 import 'services/mesures.dart';
 import 'services/rappels.dart';
+import 'services/veille.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,7 @@ Future<void> main() async {
     }
   }
   await Rappels.initialiser();
+  Veille.demarrer();
   final etat = await EtatJeu.ouvrir(ligues: ligues);
   Rappels.surReponse = (film, note) => etat.repondreRappel(film, note);
   final reponse = Rappels.enAttente;

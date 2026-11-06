@@ -1,12 +1,14 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/modeles.dart';
 import 'aura.dart';
 import 'ligues.dart';
 import 'sources.dart';
+import 'veille.dart';
 
 /// L'aura côté serveur (R47, R48) : relier le joueur à sa maison Jellyfin,
 /// trouver à qui proposer, proposer, et dire ce qui a été vu ou aimé.
@@ -35,6 +37,7 @@ class ServiceAura {
       maison = id;
       personne = '$id:${c.utilisateurId}';
       await _db.from('joueurs').update({'maison': maison, 'personne': personne}).eq('id', ligues.monId!);
+      await (await SharedPreferences.getInstance()).setString(Veille.clePersonne, personne!);
     } catch (_) {
       // Hors ligne : on réessaiera à la prochaine ouverture.
     }
