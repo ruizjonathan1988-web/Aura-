@@ -63,6 +63,10 @@ CarteDefi _carte(String id, {TypeCarte type = TypeCarte.retro, int cases = 3, in
       bulleDePop: '',
     );
 
+/// Pour les tests qui comptent l'audace au point près : le joueur n'est pas
+/// derrière Pop, donc pas de Vent dans le dos (R41).
+final Map<String, Object> _devantPop = {'pop_decalage_${EtatJeu.moisDe(DateTime.now())}': -60};
+
 Future<EtatJeu> _etat([Map<String, Object> valeurs = const {}]) async {
   SharedPreferences.setMockInitialValues(valeurs);
   return EtatJeu(await SharedPreferences.getInstance());
@@ -1633,7 +1637,7 @@ void main() {
 
     test('R38 l\'audace du mois : le niveau de chaque billet, doublé à 9 et 10', () async {
       expect([for (var n = 1; n <= 10; n++) Niveau.audace(n)], [1, 2, 3, 4, 5, 6, 7, 8, 18, 20]);
-      final e = await _etat();
+      final e = await _etat(_devantPop);
       await e.validerSeance(carte('a', 5), pronostic: 4);
       await e.validerSeance(carte('b', 10), pronostic: 4);
       await e.validerSeance(_carte('c'), pronostic: 4);
@@ -1704,7 +1708,7 @@ void main() {
     });
 
     test('R39 l\'audace recharge : un 10 réussi donne une charge de plus', () async {
-      final e = await _etat({'profil': 'degustateur'});
+      final e = await _etat({..._devantPop, 'profil': 'degustateur'});
       await e.validerSeance(carte('a', cases: Niveau.cases(10), niveau: 10), pronostic: 3);
       expect(e.audaceDuMois, 20);
       expect(e.chargesPouvoir, 2);
@@ -1853,7 +1857,7 @@ void main() {
       expect(e.niveauImpose, isNull);
       await e.repondreCrasse(Crasse.volDAudace, Reponse.encaissee);
       expect(e.audaceDuMois, 0, reason: 'jamais d\'audace négative');
-      final f = await _etat();
+      final f = await _etat(_devantPop);
       await f.validerSeance(carte('a', cases: Niveau.cases(10), niveau: 10), pronostic: 3);
       await f.repondreCrasse(Crasse.volDAudace, Reponse.encaissee);
       expect(f.audaceDuMois, 15);
@@ -1862,7 +1866,7 @@ void main() {
     });
 
     test('R40 parer coûte une charge, renvoyer une fois par mois, et le voleur touche ses points', () async {
-      final e = await _etat();
+      final e = await _etat(_devantPop);
       expect(await e.repondreCrasse(Crasse.popcorn, Reponse.paree), isTrue);
       expect(e.chargesPouvoir, 0);
       expect(await e.repondreCrasse(Crasse.popcorn, Reponse.paree), isFalse);
