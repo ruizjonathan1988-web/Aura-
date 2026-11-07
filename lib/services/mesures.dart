@@ -19,8 +19,10 @@ class ServiceMesures {
   bool _envoi = false;
 
   /// Ajoute un événement à la file, puis tente l'envoi.
+  /// Un type que le serveur refuse est ignoré : un seul suffisait à faire
+  /// échouer tout l'envoi, et la file restait bloquée pour toujours.
   Future<void> noter(String type, [Map<String, Object?> donnees = const {}]) async {
-    assert(types.contains(type));
+    if (!types.contains(type)) return;
     final e = jsonEncode({'type': type, 'donnees': donnees, 'cree_le': DateTime.now().toUtc().toIso8601String()});
     await _prefs.setStringList(_cle, ajouter(enAttente(_prefs), e));
     envoyer();
@@ -47,6 +49,22 @@ class ServiceMesures {
     return f.length > maxEnAttente ? f.sublist(f.length - maxEnAttente) : f;
   }
 
+  /// Ce qui peut partir : les événements lisibles d'un type prévu. Les
+  /// autres (restés d'une version qui en envoyait d'autres) sont jetés.
+  static List<String> envoyables(List<String> file) => [
+        for (final e in file)
+          if (_typeDe(e) case final t? when types.contains(t)) e,
+      ];
+
+  static String? _typeDe(String e) {
+    try {
+      final j = jsonDecode(e);
+      return j is Map && j['type'] is String ? j['type'] as String : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> envoyer() async {
     if (_envoi) return;
     _envoi = true;
@@ -54,7 +72,8 @@ class ServiceMesures {
       if (_client.auth.currentUser == null) await _client.auth.signInAnonymously();
       final file = enAttente(_prefs);
       if (file.isEmpty) return;
-      await _client.from('evenements').insert(file.map((e) => jsonDecode(e) as Map<String, dynamic>).toList());
+      final bons = envoyables(file);
+      if (bons.isNotEmpty) await _client.from('evenements').insert(bons.map((e) => jsonDecode(e) as Map<String, dynamic>).toList());
       // On ne retire que ce qui est parti (d'autres ont pu arriver entre-temps).
       final actuel = enAttente(_prefs);
       final partis = file.length < actuel.length ? file.length : actuel.length;

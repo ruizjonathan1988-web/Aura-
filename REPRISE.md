@@ -257,6 +257,11 @@ Validés par Jon : Bingo du film (R55), Casse de la Cinémathèque en fin de moi
 
 Après recherches (Wordle, Dixit, Mario Kart, Wingspan, Pokémon TCG Pocket, Balatro, Marvel Snap, Jackbox, Duolingo), Jon a validé et tout est fait : Deck d'atouts (R49), Festival de la semaine (R50), Pop insolent et sons (R51), Défi de la semaine (pas par jour, à la demande de Jon) et soirée à partager (R52), Le Pitch et le public de la Soirée jeu (R53), nouvelles des amis appli fermée sans Firebase (R54). Écartés et pourquoi : la Cinémathèque (doublon du Deck), une Super-carte de rattrapage (Aura en a déjà trois), les réactions en emoji (bruit sans notifications). À vérifier par Jon sur la box et le téléphone : sons, notifications de fond (Android peut les retarder), Pitch à plusieurs téléphones.
 
+## 7 novembre au soir : chasse aux bugs
+
+- **Mesures bloquées depuis R49** (trouvé dans les journaux Supabase : 5 refus `evenements_type_check`) : l'ouverture d'un booster envoyait le type `booster`, que la table refuse ; tout l'envoi échouait et la file restait bloquée, donc plus aucune mesure n'arrivait de ces appareils. Corrigé : le type `booster` n'est plus envoyé, `noter` ignore un type inconnu, et `envoyer` jette ce qui ne peut pas partir (les files bloquées se débloquent toutes seules).
+- Conseils de sécurité Supabase : rien de neuf, les avertissements viennent des comptes anonymes (voulus) et des fonctions `security definer` des migrations.
+
 ## 7 novembre : Aura épurée
 
 Jon trouvait qu'il y avait trop de choses (« Bosse vraiment l'ux. Y a-t-il trop de choses ? »). Validé en trois étapes, avec ses consignes : garder le nom « Duel du canapé », garder le côté cacheté des films proposés, et faire des films proposés une vraie partie de l'expérience (une liste par personne et une liste que tout le monde voit).

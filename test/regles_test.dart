@@ -654,6 +654,16 @@ void main() {
     test('R17 seuls des événements prévus partent, sans titre de film', () {
       expect(ServiceMesures.types, {'ouverture', 'carte_jouee', 'billet', 'plan_du_jour', 'duel', 'bluff'});
     });
+
+    test('R17 un événement que le serveur refuse ne bloque plus la file', () {
+      final file = [
+        jsonEncode({'type': 'billet', 'donnees': {}}),
+        jsonEncode({'type': 'booster', 'donnees': {'nouveaux': 2}}),
+        'pas du json',
+        jsonEncode({'type': 'ouverture'}),
+      ];
+      expect([for (final e in ServiceMesures.envoyables(file)) jsonDecode(e)['type']], ['billet', 'ouverture']);
+    });
   });
 
   group('R18 Les amis donnent des raisons de revenir', () {
