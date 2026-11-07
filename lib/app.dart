@@ -186,6 +186,8 @@ class _CoquilleState extends State<Coquille> with WidgetsBindingObserver {
                       duration: animationsReduites(context) ? Duration.zero : const Duration(milliseconds: 220),
                       switchInCurve: Curves.easeOutCubic,
                       switchOutCurve: Curves.easeInCubic,
+                      // En haut, sur toute la place : un onglet court ne doit pas flotter au milieu.
+                      layoutBuilder: (actuel, anciens) => Stack(fit: StackFit.expand, alignment: Alignment.topCenter, children: [...anciens, if (actuel != null) actuel]),
                       transitionBuilder: (enfant, a) => FadeTransition(
                         opacity: a,
                         child: SlideTransition(position: Tween(begin: const Offset(0, .02), end: Offset.zero).animate(a), child: enfant),

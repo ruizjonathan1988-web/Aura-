@@ -649,16 +649,17 @@ class EtatJeu extends ChangeNotifier {
       if (coup) 'Case $position : Coup de théâtre !',
     ]);
     final nouveaux = await _majCollection();
+    // Les événements d'abord, les commentaires ensuite (deux phrases au plus).
     _direPop([
-      if (pouvoir) Pouvoirs.phrase(pp, agi: pouvoirAgi),
-      if (note != null) Pop.surPronostic(pronostic: pronostic, note: note, graine: billets.length),
-      if (effetDeck.declenches.isNotEmpty) Deck.phraseDePop(effetDeck.declenches, graine: billets.length),
-      if (popRecule) '${festival.nom} : je recule d\'une case. Je l\'avais bien cherché.',
-      if (coup) 'Case Coup de théâtre ! Va voir le plateau.',
-      if (malus > 0) 'Pop-corn renversé : une case de moins, merci qui ?',
-      if (vent) 'Tu étais derrière moi : ${Retournements.ventDansLeDos} points d\'audace pour toi. Profites-en, ça ne durera pas.',
-      if (pariGagne) 'Zut, j\'ai perdu mon pari : je recule de ${Pop.recul} cases. Mais je reviendrai.',
       for (final id in nouveaux) 'Nouvel exploit pour ta collection : ${Collection.nomDe(id)} !',
+      if (coup) 'Case Coup de théâtre ! Va voir le plateau.',
+      if (pariGagne) 'Zut, j\'ai perdu mon pari : je recule de ${Pop.recul} cases. Mais je reviendrai.',
+      if (popRecule) '${festival.nom} : je recule d\'une case. Je l\'avais bien cherché.',
+      if (malus > 0) 'Pop-corn renversé : une case de moins, merci qui ?',
+      if (pouvoir) Pouvoirs.phrase(pp, agi: pouvoirAgi),
+      if (effetDeck.declenches.isNotEmpty) Deck.phraseDePop(effetDeck.declenches, graine: billets.length),
+      if (note != null) Pop.surPronostic(pronostic: pronostic, note: note, graine: billets.length),
+      if (vent) 'Tu étais derrière moi : ${Retournements.ventDansLeDos} points d\'audace pour toi. Profites-en, ça ne durera pas.',
     ]);
     await _prefs.setInt('position', position);
     await _prefs.setString(
@@ -684,8 +685,10 @@ class EtatJeu extends ChangeNotifier {
     return cases;
   }
 
+  /// Pop dit une ou deux choses à la fois, les plus importantes d'abord :
+  /// un long paragraphe ne se lit pas (le reste est dans le journal).
   void _direPop(List<String> phrases) {
-    final m = phrases.join(' ');
+    final m = phrases.where((p) => p.isNotEmpty).take(2).join('\n\n');
     motDePop = m.isEmpty ? null : m;
   }
 

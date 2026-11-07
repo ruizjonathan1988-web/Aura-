@@ -457,10 +457,10 @@ class CarteDefiVue extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(carte.defi, maxLines: 2, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(15, poids: FontWeight.w900).copyWith(height: 1.15)),
+                  Text(carte.defi, maxLines: 3, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(13.5, poids: FontWeight.w900).copyWith(height: 1.12)),
                   const SizedBox(height: 3),
                   Expanded(
-                    child: Text(carte.indice, maxLines: 3, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(11.5, poids: FontWeight.w700, couleur: AuraCouleurs.texteDoux)),
+                    child: Text(carte.indice, maxLines: 2, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(11.5, poids: FontWeight.w700, couleur: AuraCouleurs.texteDoux)),
                   ),
                 ],
               ),
@@ -544,9 +544,13 @@ class _MainDeCartesState extends State<MainDeCartes> {
       onFocusChange: (v) => setState(() => _focus = v),
       child: LayoutBuilder(builder: (context, c) {
         final centre = c.maxWidth / 2 - CarteDefiVue.largeur / 2;
+        // Sur un téléphone, l'éventail se resserre pour rester dans l'écran.
+        final etroit = c.maxWidth < 560;
+        final ecart = etroit ? 62.0 : (n > 3 ? 70.0 : 88.0);
+        final angle = etroit ? 0.1 : 0.2;
         final ordre = List.generate(n, (i) => i)..sort((a, b) => (a == widget.choisie ? 1 : 0) - (b == widget.choisie ? 1 : 0));
         return SizedBox(
-          height: 300,
+          height: 336,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -555,15 +559,16 @@ class _MainDeCartesState extends State<MainDeCartes> {
                   key: ValueKey(i),
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeOutBack,
-                  left: centre + (i - (n - 1) / 2) * (n > 3 ? 70 : 88),
-                  top: (i == widget.choisie ? 0 : 34) + ((i - (n - 1) / 2).abs() * 6),
+                  left: centre + (i - (n - 1) / 2) * ecart,
+                  // Une marge en haut : les coins des cartes inclinées ne passent plus sous l'en-tête.
+                  top: 36 + (i == widget.choisie ? 0 : 34) + ((i - (n - 1) / 2).abs() * 6),
                   child: Entree(
                     delai: Duration(milliseconds: 140 * i),
                     depuis: const Offset(0, -220),
                     child: GestureDetector(
                     onTap: () => i == widget.choisie ? widget.onJouer() : widget.onChoisir(i),
                     child: Transform.rotate(
-                      angle: (i - (n - 1) / 2) * 0.2,
+                      angle: (i - (n - 1) / 2) * angle,
                       alignment: const Alignment(0, 1.2),
                       child: Semantics(
                         button: true,

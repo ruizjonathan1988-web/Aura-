@@ -143,7 +143,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
       child: Center(
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: _etape == _Etape.envie && estTele(context) ? 1180 : 560),
+          constraints: BoxConstraints(maxWidth: (_etape == _Etape.envie || _etape == _Etape.cartes) && estTele(context) ? 1180 : 560),
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
             child: KeyedSubtree(
@@ -407,6 +407,54 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
   }
 
   Widget _main() {
+    // Sur la télé, tout tient dans l'écran : l'éventail à gauche, le reste à droite.
+    if (estTele(context)) {
+      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(
+          child: MainDeCartes(
+            cartes: _cartes,
+            choisie: _choisie,
+            onChoisir: (i) => setState(() {
+              _choisie = i;
+              _avisDePop = null;
+            }),
+            onJouer: () => setState(() => _etape = _Etape.pronostic),
+          ),
+        ),
+        const SizedBox(width: 24),
+        SizedBox(
+          width: 440,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const TitreCartoon('Choisis ta carte !', taille: 34),
+            const SizedBox(height: 4),
+            Text('${_emotion.libelle} · ${_duree.libelle}. Gauche et droite pour choisir, OK pour jouer.', style: AuraTexte.corps(14)),
+            const SizedBox(height: 8),
+            PopQuiParle(texte: _avisDePop ?? _carte.bulleDePop, taille: 60),
+            const SizedBox(height: 8),
+            Panneau(child: Text('${_carte.joker} Tous les films proposés sont notés 3 étoiles ou plus.', style: AuraTexte.corps(13))),
+            if (PorteeEtat.of(context).relanceDispo) ...[
+              const SizedBox(height: 10),
+              AuraBouton(
+                libelle: 'Joker Relance (1 par mois)',
+                icone: Icons.autorenew_rounded,
+                principal: false,
+                onPressed: () async {
+                  final etat = PorteeEtat.lire(context);
+                  await etat.utiliserRelance();
+                  await _tirer(etat);
+                },
+              ),
+            ],
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(child: AuraBouton(libelle: 'Changer d\'envie', principal: false, onPressed: () => setState(() => _etape = _Etape.envie))),
+              const SizedBox(width: 10),
+              Expanded(child: AuraBouton(libelle: 'Jouer cette carte !', onPressed: () => setState(() => _etape = _Etape.pronostic))),
+            ]),
+          ]),
+        ),
+      ]);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
