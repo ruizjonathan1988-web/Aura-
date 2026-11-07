@@ -66,6 +66,7 @@ class Proposition {
     this.aime = false,
     this.note,
     required this.creeLe,
+    this.ouvrirLe,
   });
 
   final String id;
@@ -86,6 +87,13 @@ class Proposition {
   final bool aime;
   final int? note;
   final DateTime creeLe;
+
+  /// Un film cacheté (R60) : le titre reste caché chez celui qui le reçoit
+  /// jusqu'à ce jour-là. Rangé dans « film » pour ne pas toucher à la table.
+  final DateTime? ouvrirLe;
+
+  /// Encore cacheté ce jour-là.
+  bool cachetee(DateTime maintenant) => ouvrirLe != null && DateTime(maintenant.year, maintenant.month, maintenant.day).isBefore(ouvrirLe!);
 
   /// Qui gagne l'aura : la personne (tous ses appareils), sinon le joueur.
   String get auteur => dePersonne ?? de;
@@ -120,6 +128,7 @@ class Proposition {
       aime: j['aime'] == true,
       note: (j['note'] as num?)?.toInt(),
       creeLe: DateTime.tryParse('${j['cree_le']}') ?? DateTime.now(),
+      ouvrirLe: film['ouvrir_le'] == null ? null : DateTime.tryParse('${film['ouvrir_le']}'),
     );
   }
 
@@ -138,6 +147,7 @@ class Proposition {
     String? jellyfin,
     bool serie = false,
     String? mot,
+    DateTime? ouvrirLe,
   }) =>
       {
         if (dePersonne != null) 'de_personne': dePersonne,
@@ -154,6 +164,7 @@ class Proposition {
           if (tmdb != null) 'tmdb': tmdb,
           if (jellyfin != null) 'jellyfin': jellyfin,
           'type': serie ? 'series' : 'movie',
+          if (ouvrirLe != null) 'ouvrir_le': '${ouvrirLe.year.toString().padLeft(4, '0')}-${ouvrirLe.month.toString().padLeft(2, '0')}-${ouvrirLe.day.toString().padLeft(2, '0')}',
         },
         if (mot != null && mot.trim().isNotEmpty) 'mot': mot.trim(),
       };

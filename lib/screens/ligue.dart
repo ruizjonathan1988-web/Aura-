@@ -9,7 +9,6 @@ import '../services/etat.dart';
 import '../services/ligues.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
-import 'cadeaux.dart';
 import 'aura.dart';
 import 'relais.dart';
 
@@ -106,8 +105,6 @@ class _LigueEcranState extends State<LigueEcran> {
         couleur: AuraCouleurs.violet,
         onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RelaisEcran(ligues: service, ligue: ligue))),
       ),
-      const SizedBox(height: 16),
-      CadeauxVue(key: ValueKey('cadeaux${ligue.id}'), service: service, ligue: ligue),
       const SizedBox(height: 16),
       _FigurineDoree(service: service),
       Panneau(
