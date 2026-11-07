@@ -6,6 +6,7 @@ import '../models/modeles.dart';
 import '../theme/aura_theme.dart';
 import 'aura_widgets.dart';
 import '../services/sons.dart';
+import '../services/affiches.dart';
 
 /// Vrai si l'appareil demande moins d'animations (réglages d'accessibilité) :
 /// toutes les animations d'Aura sont alors coupées.
@@ -196,6 +197,35 @@ class AfficheIllustree extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: Stack(fit: StackFit.expand, children: [
           CustomPaint(painter: _Affiche(type.couleur, type.couleurClaire, film.titre.hashCode)),
+          // La vraie image du film, en fondu par-dessus l'illustration, avec un
+          // voile sombre pour que le titre reste lisible.
+          FutureBuilder<String?>(
+            future: Affiches.fond(film),
+            builder: (context, snap) => snap.data == null
+                ? const SizedBox.shrink()
+                : Stack(fit: StackFit.expand, children: [
+                    Image.network(
+                      snap.data!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      frameBuilder: (context, enfant, image, synchro) => AnimatedOpacity(
+                        opacity: image == null ? 0 : 1,
+                        duration: const Duration(milliseconds: 450),
+                        child: enfant,
+                      ),
+                    ),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0x22000000), Color(0x11000000), Color(0xCC000000)],
+                          stops: [0, .45, 1],
+                        ),
+                      ),
+                    ),
+                  ]),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -229,7 +259,11 @@ class AfficheIllustree extends StatelessWidget {
                         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                           TitreCartoon(film.titre, taille: film.titre.length > 24 ? 26 : 36, inclinaison: -0.03),
                           const SizedBox(height: 6),
-                          Text(film.infos, maxLines: 2, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(13, poids: FontWeight.w900)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(color: const Color(0x99000000), borderRadius: BorderRadius.circular(8)),
+                            child: Text(film.infos, maxLines: 2, overflow: TextOverflow.ellipsis, style: AuraTexte.corps(13, poids: FontWeight.w900, couleur: AuraCouleurs.creme)),
+                          ),
                         ]),
                       ),
                     ),
