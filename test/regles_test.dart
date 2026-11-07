@@ -1329,8 +1329,9 @@ void main() {
         return http.Response.bytes(utf8.encode(reponse), 200);
       });
       final films = await SourceTmdb('cle', client: client, hasard: Random(1)).catalogue(emotion: Emotion.frissonner, duree: Duree.courte);
-      expect(appels, hasLength(4), reason: 'R63 : deux pages populaires, deux de classiques');
-      expect({for (final a in appels) '${a.queryParameters['sort_by']}${a.queryParameters['page']}'}, hasLength(4), reason: 'quatre pages différentes');
+      expect(appels, hasLength(5), reason: 'R63 : deux pages populaires, deux de classiques ; R64 : une page d\'un pays');
+      final sansPays = appels.where((a) => !a.queryParameters.containsKey('with_origin_country')).toList();
+      expect({for (final a in sansPays) '${a.queryParameters['sort_by']}${a.queryParameters['page']}'}, hasLength(4), reason: 'quatre pages différentes');
       final q = appels.first.queryParameters;
       expect(q['vote_average.gte'], '6');
       expect(int.parse(q['vote_count.gte']!), greaterThanOrEqualTo(150));
@@ -1341,6 +1342,7 @@ void main() {
       expect(films.map((f) => f.titre), unorderedEquals(['Fight Club', 'Pulp Fiction']));
       final fc = films.firstWhere((f) => f.tmdbId == 550);
       expect(fc.source, SourceFilm.catalogueVjod);
+      expect(fc.pays, hasLength(1), reason: 'R64 : vu sur la page du pays');
       expect(fc.annee, 1999);
       expect(fc.genres, ['Drama', 'Thriller']);
       expect(Tirage.assezBon(fc), isTrue);
@@ -1360,6 +1362,35 @@ void main() {
       expect(tout.map((f) => f.id), ['jf1', 'tmdb:680']);
       final enPanne = await SourceToutVjod(serveur, _SourceEnPanne()).catalogue();
       expect(enPanne.map((f) => f.id), ['jf1']);
+    });
+
+    test('R64 la carte Voyage pioche aussi hors du serveur : une page TMDB d\'un pays tiré au hasard', () async {
+      final appels = <Uri>[];
+      final client = MockClient((r) async {
+        appels.add(r.url);
+        final pays = r.url.queryParameters['with_origin_country'];
+        final res = pays == null
+            ? jsonDecode(reponse)
+            : {
+                'results': [
+                  {'id': 4935, 'title': 'Le Château ambulant', 'release_date': '2004-09-09', 'vote_average': 8.4, 'vote_count': 9000, 'genre_ids': [16, 14]},
+                ],
+              };
+        return http.Response.bytes(utf8.encode(jsonEncode(res)), 200);
+      });
+      final films = await SourceTmdb('cle', client: client, hasard: Random(3)).catalogue();
+      final voyage = appels.singleWhere((a) => a.queryParameters.containsKey('with_origin_country'));
+      final code = voyage.queryParameters['with_origin_country']!;
+      expect(SourceTmdb.paysDuVoyage, contains(code));
+      expect(int.parse(voyage.queryParameters['vote_count.gte']!), SourceTmdb.votesMinimumVoyage);
+      final chateau = films.singleWhere((f) => f.tmdbId == 4935);
+      expect(chateau.pays, [SourceTmdb.paysDuVoyage[code]]);
+      expect(Traduction.pays(chateau.pays.single), isNot(chateau.pays.single), reason: 'le nom se traduit en français');
+      final carte = Tirage(hasard: Random(1)).tirer(catalogue: [chateau], emotion: Emotion.evader, duree: Duree.soiree, profil: Profil.fidele, paysVus: const {'France'});
+      expect(carte.single.type, TypeCarte.voyage);
+      appels.clear();
+      await SourceTmdb('cle', client: client).catalogue(auHasard: false);
+      expect(appels.any((a) => a.queryParameters.containsKey('with_origin_country')), isFalse, reason: 'Plan du jour et Affiche : rien ne change');
     });
 
     test('R63 une grande bibliothèque ne noie pas le reste du cinéma', () {

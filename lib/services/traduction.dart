@@ -56,6 +56,18 @@ abstract final class Traduction {
     'poland': 'Pologne',
     'ireland': 'Irlande',
     'taiwan': 'Taïwan',
+    'finland': 'Finlande',
+    'iceland': 'Islande',
+    'netherlands': 'Pays-Bas',
+    'austria': 'Autriche',
+    'portugal': 'Portugal',
+    'greece': 'Grèce',
+    'turkey': 'Turquie',
+    'thailand': 'Thaïlande',
+    'chile': 'Chili',
+    'colombia': 'Colombie',
+    'morocco': 'Maroc',
+    'senegal': 'Sénégal',
   };
 
   /// « Crime » devient « policier ».
