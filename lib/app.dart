@@ -224,6 +224,29 @@ class _EnTete extends StatelessWidget {
   Widget build(BuildContext context) {
     final etat = PorteeEtat.of(context);
     final ligues = etat.ligues;
+    final pilule = Touchable(
+        etiquette: 'Ensemble : tu es case $position sur 30${etat.audaceDuMois > 0 ? ', ${etat.audaceDuMois} d\'audace ce mois' : ''}',
+        onTap: onLigue,
+        builder: (context, focus, appui) => Container(
+          padding: const EdgeInsets.fromLTRB(4, 2, 11, 2),
+          decoration: BoxDecoration(
+            color: AuraCouleurs.creme,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(width: 3),
+            boxShadow: _ombres(focus, appui),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Figurine.profil(etat.profil, hauteur: 36),
+            Transform.translate(offset: const Offset(-9, 0), child: const Figurine.pop(hauteur: 36)),
+            Text('$position/30', style: AuraTexte.corps(14, poids: FontWeight.w900)),
+            if (etat.audaceDuMois > 0) ...[
+              const SizedBox(width: 6),
+              const Icon(Icons.bolt_rounded, size: 18, color: AuraCouleurs.noir),
+              Text('${etat.audaceDuMois}', style: AuraTexte.corps(14, poids: FontWeight.w900)),
+            ],
+          ]),
+        ),
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
       child: Row(
@@ -244,30 +267,11 @@ class _EnTete extends StatelessWidget {
               ),
             ],
           ),
-          if (onglets != null) ...[const SizedBox(width: 24), Expanded(child: onglets!)] else const Spacer(),
-          Touchable(
-            etiquette: 'Ensemble : tu es case $position sur 30${etat.audaceDuMois > 0 ? ', ${etat.audaceDuMois} d\'audace ce mois' : ''}',
-            onTap: onLigue,
-            builder: (context, focus, appui) => Container(
-              padding: const EdgeInsets.fromLTRB(4, 2, 11, 2),
-              decoration: BoxDecoration(
-                color: AuraCouleurs.creme,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(width: 3),
-                boxShadow: _ombres(focus, appui),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Figurine.profil(etat.profil, hauteur: 36),
-                Transform.translate(offset: const Offset(-9, 0), child: const Figurine.pop(hauteur: 36)),
-                Text('$position/30', style: AuraTexte.corps(14, poids: FontWeight.w900)),
-                if (etat.audaceDuMois > 0) ...[
-                  const SizedBox(width: 6),
-                  const Icon(Icons.bolt_rounded, size: 18, color: AuraCouleurs.noir),
-                  Text('${etat.audaceDuMois}', style: AuraTexte.corps(14, poids: FontWeight.w900)),
-                ],
-              ]),
-            ),
-          ),
+          if (onglets != null) ...[const SizedBox(width: 24), Expanded(child: onglets!), pilule]
+          // Sur le téléphone, la pastille rétrécit au besoin : la case, Pop et
+          // l'audace tiennent toujours.
+          else
+            Expanded(child: Align(alignment: Alignment.centerRight, child: FittedBox(fit: BoxFit.scaleDown, child: pilule))),
           if (onMiseAJour != null) ...[
             const SizedBox(width: 8),
             Touchable(
