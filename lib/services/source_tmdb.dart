@@ -73,18 +73,29 @@ class SourceTmdb implements SourceFilms {
   @override
   Future<List<Film>> catalogue({Emotion? emotion, Duree? duree, Epoque? epoque, bool auHasard = true}) async {
     if (cle.isEmpty) return const [];
-    // Deux pages : des films populaires et des grands classiques. Sans hasard
-    // (Plan du jour, Affiche), toujours les mêmes pages.
+    // Quatre pages, demandées ensemble : deux de films populaires, deux de
+    // grands classiques (R63 : assez de films pour peser face à la
+    // bibliothèque). Sans hasard (Plan du jour, Affiche), toujours les mêmes.
     // Une seule décennie : moins de films, donc des pages moins lointaines.
     final etroit = epoque != null && epoque != Epoque.toutes;
+    List<int> deuxPages(int max) {
+      if (!auHasard) return [1, 2];
+      final a = 1 + _hasard.nextInt(max);
+      var b = 1 + _hasard.nextInt(max - 1);
+      if (b >= a) b++;
+      return [a, b];
+    }
     final pages = [
-      parametres(emotion: emotion, duree: duree, epoque: epoque, page: auHasard ? 1 + _hasard.nextInt(etroit ? 2 : 5) : 1),
-      parametres(emotion: emotion, duree: duree, epoque: epoque, page: auHasard ? 1 + _hasard.nextInt(etroit ? 2 : 3) : 1, classiques: true),
+      for (final n in deuxPages(etroit ? 3 : 6)) parametres(emotion: emotion, duree: duree, epoque: epoque, page: n),
+      for (final n in deuxPages(etroit ? 2 : 4)) parametres(emotion: emotion, duree: duree, epoque: epoque, page: n, classiques: true),
     ];
     final films = <String, Film>{};
-    for (final p in pages) {
-      final rep = await _client.get(Uri.https('api.themoviedb.org', '/3/discover/movie', {'api_key': cle, ...p}));
-      if (rep.statusCode != 200) continue;
+    final reponses = await Future.wait([
+      for (final p in pages)
+        _client.get(Uri.https('api.themoviedb.org', '/3/discover/movie', {'api_key': cle, ...p})).then<http.Response?>((r) => r).catchError((_) => null),
+    ]);
+    for (final rep in reponses) {
+      if (rep == null || rep.statusCode != 200) continue;
       final json = jsonDecode(utf8.decode(rep.bodyBytes)) as Map<String, dynamic>;
       for (final r in (json['results'] as List? ?? const []).cast<Map<String, dynamic>>()) {
         final f = filmDepuisTmdb(r);
@@ -121,10 +132,23 @@ class SourceTmdb implements SourceFilms {
 /// n'apparaît qu'une fois, en version serveur (lecture directe, « vu »
 /// détecté). Si TMDB ne répond pas, la bibliothèque suffit.
 class SourceToutVjod implements SourceFilms {
-  SourceToutVjod(this.serveur, this.reste);
+  SourceToutVjod(this.serveur, this.reste, {Random? hasard}) : _hasard = hasard ?? Random();
 
   final SourceFilms serveur;
   final SourceFilms reste;
+  final Random _hasard;
+
+  /// R63 : au tirage, la bibliothèque ne pèse pas plus que le reste du
+  /// cinéma. Une grande bibliothèque (des centaines de films) noyait les
+  /// quelques dizaines de films de TMDB : on n'en garde qu'autant que de
+  /// films d'ailleurs, et au moins [minimumServeur].
+  static const minimumServeur = 30;
+
+  static List<Film> equilibrer(List<Film> chez, List<Film> ailleurs, Random hasard) {
+    final garde = max(minimumServeur, ailleurs.length);
+    if (ailleurs.isEmpty || chez.length <= garde) return [...chez, ...ailleurs];
+    return [...(List.of(chez)..shuffle(hasard)).take(garde), ...ailleurs];
+  }
 
   @override
   String get nom => 'ta bibliothèque et tout le cinéma de VJOD';
@@ -136,6 +160,8 @@ class SourceToutVjod implements SourceFilms {
       reste.catalogue(emotion: emotion, duree: duree, epoque: epoque, auHasard: auHasard).catchError((_) => <Film>[]),
     ).wait;
     final surLeServeur = {for (final f in chez) if (f.tmdbId != null) f.tmdbId!};
-    return [...chez, ...ailleurs.where((f) => !surLeServeur.contains(f.tmdbId))];
+    final autres = ailleurs.where((f) => !surLeServeur.contains(f.tmdbId)).toList();
+    // Sans hasard (Plan du jour, Affiche), tout reste, dans le même ordre.
+    return auHasard ? equilibrer(chez, autres, _hasard) : [...chez, ...autres];
   }
 }
