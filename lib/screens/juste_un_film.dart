@@ -168,7 +168,7 @@ class _JusteUnFilmEcranState extends State<JusteUnFilmEcran> {
   }
 
   Widget _idee(int i, Film f) {
-    final etoiles = f.etoiles == null ? null : '${f.etoiles!.toStringAsFixed(1).replaceAll('.', ',')} ★';
+    final etoiles = f.etoiles == null ? null : f.etoiles!.toStringAsFixed(1).replaceAll('.', ',');
     final genres = f.genres.take(3).map(Traduction.genre).join(', ');
     return Container(
       key: ValueKey(f.id),
@@ -185,7 +185,12 @@ class _JusteUnFilmEcranState extends State<JusteUnFilmEcran> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
                 decoration: BoxDecoration(color: AuraCouleurs.jaune, borderRadius: BorderRadius.circular(999), border: Border.all(width: 2.5)),
-                child: Text(etoiles, style: AuraTexte.titre(15)),
+                // L'étoile en icône : la police Anton n'a pas le caractère ★.
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text(etoiles, style: AuraTexte.titre(15)),
+                  const SizedBox(width: 3),
+                  const Icon(Icons.star_rounded, size: 16),
+                ]),
               ),
             ],
           ]),
