@@ -15,6 +15,7 @@ import '../widgets/animations.dart';
 import '../widgets/aura_widgets.dart';
 import '../widgets/ou_le_voir.dart';
 import '../services/bingo.dart';
+import 'duel.dart';
 
 CarteDefi _carteDepuis(Map<String, dynamic> c) => CarteDefi(
       type: TypeCarte.values.firstWhere((t) => t.name == c['type'], orElse: () => TypeCarte.envie),
@@ -889,26 +890,57 @@ class _SoireeManetteEcranState extends State<SoireeManetteEcran> {
   }
 }
 
-/// La pastille d'accès à la Soirée jeu, dans Ce soir : sur la télé, on ouvre
-/// le plateau ; sur le téléphone, on rejoint avec le code.
-class AccesSoiree extends StatelessWidget {
-  const AccesSoiree({super.key, required this.ligues});
-  final ServiceLigues ligues;
+/// La Soirée jeu (R59) : une seule porte pour jouer à plusieurs. Sur la
+/// télé, avec les téléphones (2 à 4 joueurs et le public) ou le Duel du
+/// canapé à une seule télécommande ; sur le téléphone, rejoindre la partie
+/// affichée sur la télé.
+class ChoixSoireeEcran extends StatelessWidget {
+  const ChoixSoireeEcran({super.key, required this.ligues});
+  final ServiceLigues? ligues;
 
   @override
   Widget build(BuildContext context) {
     final tele = estTele(context);
     final etat = PorteeEtat.of(context);
-    return ChoixLarge(
-      libelle: tele
-          ? 'SOIRÉE JEU · De 2 à 4 joueurs : la télé devient le plateau, vos téléphones les manettes, chacun joue ses cartes en secret.'
-          : 'SOIRÉE JEU · Rejoindre la partie affichée sur la télé, avec son code.',
-      couleur: AuraCouleurs.violet,
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => tele
-            ? SoireeTeleEcran(service: ServiceSoiree(ligues.client))
-            : SoireeManetteEcran(service: ServiceSoiree(ligues.client), pseudo: ligues.pseudo ?? etat.profil.nom.replaceFirst(RegExp(r"^(Le |L')"), '')),
-      )),
+    final l = ligues;
+    void ouvrir(Widget ecran) => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => ecran));
+    return Scaffold(
+      body: FondTrame(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const EnTeteRetour(titre: 'Soirée jeu'),
+                  const SizedBox(height: 14),
+                  const PopQuiParle(texte: 'On joue comment ce soir ? Celui qui gagne choisit le film. Et je compte les points, évidemment.'),
+                  const SizedBox(height: 16),
+                  if (l != null)
+                    ChoixLarge(
+                      autofocus: true,
+                      couleur: AuraCouleurs.violet,
+                      libelle: tele
+                          ? 'AVEC VOS TÉLÉPHONES · De 2 à 4 joueurs, et le public. La télé est le plateau, chacun joue en secret. Le Pitch, le quiz, puis le Bingo pendant le film.'
+                          : 'REJOINDRE LA PARTIE · Celle qui est affichée sur la télé, avec son code de 4 lettres.',
+                      onTap: () => ouvrir(tele
+                          ? SoireeTeleEcran(service: ServiceSoiree(l.client))
+                          : SoireeManetteEcran(service: ServiceSoiree(l.client), pseudo: l.pseudo ?? etat.profil.nom.replaceFirst(RegExp(r"^(Le |L')"), ''))),
+                    ),
+                  const SizedBox(height: 10),
+                  ChoixLarge(
+                    autofocus: l == null,
+                    couleur: AuraCouleurs.rose,
+                    libelle: 'LE DUEL DU CANAPÉ · À deux, une seule télécommande : chacun pose ses cartes, on élimine à tour de rôle, et le quiz désigne qui choisit le film.',
+                    onTap: () => ouvrir(const DuelEcran()),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

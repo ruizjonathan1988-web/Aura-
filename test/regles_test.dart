@@ -1972,17 +1972,19 @@ void main() {
     CarteDefi carte(String id) => CarteDefi(type: TypeCarte.envie, defi: 'Défi', indice: '', cases: 1, joker: '', film: _film(id), bulleDePop: '');
     final neuf = <String, Object>{'tout_ouvert': false};
 
-    test('R42 les règles s\'ouvrent à la 3e, 5e, 7e et 9e séance, une à la fois', () {
-      expect([for (final e in Etape.values) e.seances], [3, 5, 7, 9]);
+    test('R42 les règles s\'ouvrent de la 2e à la 9e séance, une à la fois', () {
+      expect([for (final e in Etape.values) e.seances], [2, 3, 4, 5, 6, 7, 9]);
       expect(Deblocage.ouvert(Etape.niveaux, seances: 2), isFalse);
       expect(Deblocage.ouvert(Etape.niveaux, seances: 3), isTrue);
       expect(Deblocage.ouvert(Etape.crasses, seances: 0, toutOuvert: true), isTrue);
-      expect(Deblocage.prochaine(seances: 0), Etape.niveaux);
-      expect(Deblocage.prochaine(seances: 5), Etape.coups);
+      expect(Deblocage.prochaine(seances: 0), Etape.deck);
+      expect(Deblocage.prochaine(seances: 5), Etape.casse);
+      expect(Deblocage.ouvert(Etape.deck, seances: 1), isFalse, reason: 'le premier soir, juste ses cartes');
+      expect(Deblocage.ouvert(Etape.casse, seances: 6), isTrue);
       expect(Deblocage.prochaine(seances: 9), isNull);
-      expect(Deblocage.aAnnoncer(seances: 6, annoncees: {}), Etape.niveaux, reason: 'la plus ancienne d\'abord');
-      expect(Deblocage.aAnnoncer(seances: 6, annoncees: {'niveaux'}), Etape.pouvoirs);
-      expect(Deblocage.aAnnoncer(seances: 6, annoncees: {'niveaux', 'pouvoirs'}), isNull);
+      expect(Deblocage.aAnnoncer(seances: 6, annoncees: {}), Etape.deck, reason: 'la plus ancienne d\'abord');
+      expect(Deblocage.aAnnoncer(seances: 6, annoncees: {'deck', 'niveaux', 'festival'}), Etape.pouvoirs);
+      expect(Deblocage.aAnnoncer(seances: 6, annoncees: {'deck', 'niveaux', 'festival', 'pouvoirs', 'casse'}), isNull);
       expect(Deblocage.aAnnoncer(seances: 9, annoncees: {}, toutOuvert: true), isNull);
     });
 
@@ -1998,6 +2000,8 @@ void main() {
       expect(e.position, 4);
       expect(e.coupEnAttente, isNull, reason: 'les coups de théâtre ne sont pas encore ouverts');
       expect(e.ouvert(Etape.niveaux), isTrue);
+      expect(e.nouveaute, Etape.deck, reason: 'le deck s\'est ouvert à la 2e séance');
+      await e.nouveauteVue(Etape.deck);
       expect(e.nouveaute, Etape.niveaux);
       await e.nouveauteVue(Etape.niveaux);
       expect(e.nouveaute, isNull);
@@ -2005,9 +2009,19 @@ void main() {
       expect(await e.armerPouvoir(), isTrue, reason: '« Je connais déjà le jeu » ouvre tout');
     });
 
+    test('R42 avant leur étape, pas de booster, de festival, de défi de la semaine ni de Casse', () async {
+      SharedPreferences.setMockInitialValues({});
+      final e = EtatJeu(await SharedPreferences.getInstance());
+      expect(e.ouvert(Etape.deck), isFalse);
+      expect(e.boostersDispo(), 0);
+      expect(e.festivalDe(DateTime(2026, 11, 10)), isNull);
+      expect(e.defiSemaineDe(DateTime(2026, 11, 10)), isNull);
+      expect(e.ouvert(Etape.casse), isFalse);
+    });
+
     test('R42 Ce soir pour toi : deux lignes, la plus urgente d\'abord, puis la prochaine règle', () {
       final debut = CeSoirPourToi.lignes(const Situation(seances: 1, position: 2, pop: 5, casesRestantes: 3));
-      expect(debut, ['Pop a 3 cases d\'avance : une séance ce soir te rapproche.', 'Encore 2 séances avant la prochaine règle : « Tu te mets combien ? ».']);
+      expect(debut, ['Pop a 3 cases d\'avance : une séance ce soir te rapproche.', 'Encore 1 séance avant la prochaine règle : « Ton deck d\'atouts ».']);
       final chargee = CeSoirPourToi.lignes(const Situation(seances: 12, position: 9, pop: 5, casesRestantes: 3, coupEnAttente: 14, pouvoirCharge: true, nomPouvoir: 'Slow'));
       expect(chargee, hasLength(2));
       expect(chargee.first, contains('case 14'));
@@ -2015,7 +2029,7 @@ void main() {
       final cachee = CeSoirPourToi.lignes(const Situation(seances: 3, position: 5, pop: 5, casesRestantes: 0, pouvoirCharge: true, nomPouvoir: 'Slow'));
       expect(cachee.first, contains('Plafond du jour'));
       expect(cachee.any((l) => l.contains('Slow')), isFalse, reason: 'les pouvoirs ne sont pas encore ouverts');
-      expect(cachee.last, contains('Ton pouvoir'));
+      expect(cachee.last, contains('Le Festival de la semaine'));
     });
   });
 
@@ -2740,7 +2754,7 @@ void main() {
       expect(Casse.revelation(DateTime(2026, 11, 30, 17)), isFalse);
       expect(Casse.revelation(DateTime(2026, 11, 30, 18)), isTrue);
       expect(Casse.enCours(DateTime(2027, 2, 22)), isTrue, reason: 'février aussi : les 7 derniers jours');
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({'tout_ouvert': true});
       final e = EtatJeu(await SharedPreferences.getInstance());
       expect(e.defiSemaineDe(DateTime(2026, 11, 26)), isNull);
       expect(e.defiSemaineDe(DateTime(2026, 11, 10)), isNotNull);

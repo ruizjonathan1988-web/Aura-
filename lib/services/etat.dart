@@ -559,7 +559,7 @@ class EtatJeu extends ChangeNotifier {
       avant: billets,
       dureeMinutes: film?.dureeMinutes ?? dureeMinutes,
     );
-    final effetDeck = ceMois ? Deck.effets(deck, atouts, contexte) : (cases: 0, audace: 0, declenches: const <Atout>[]);
+    final effetDeck = ceMois && ouvert(Etape.deck) ? Deck.effets(deck, atouts, contexte) : (cases: 0, audace: 0, declenches: const <Atout>[]);
     // Le Festival de la semaine (R50).
     final festival = festivalDe(date);
     final enFete = ceMois && festival != null && festival.condition(contexte);
@@ -602,7 +602,7 @@ class EtatJeu extends ChangeNotifier {
     if (vent) await _ajouterAudace(Retournements.ventDansLeDos);
     if (audaceDeck > 0) await _ajouterAudace(audaceDeck);
     // Le Casse (R56) : les serrures que ce film ouvre.
-    if (ceMois && Casse.enCours(date)) {
+    if (ceMois && Casse.enCours(date) && ouvert(Etape.casse)) {
       final serrures = Casse.serrures(date);
       final ok = casseOuvertes(date);
       for (var i = 0; i < serrures.length; i++) {
@@ -1542,8 +1542,9 @@ class EtatJeu extends ChangeNotifier {
     final force = _prefs.getString('defi_semaine');
     if (force == 'aucun') return null;
     if (force != null) return DefisSemaine.parId(force);
+    if (!ouvert(Etape.festival)) return null;
     // La dernière semaine du mois, place au Casse (R56).
-    if (Casse.enCours(d)) return null;
+    if (Casse.enCours(d) && ouvert(Etape.casse)) return null;
     return DefisSemaine.de(d);
   }
 
@@ -1566,7 +1567,7 @@ class EtatJeu extends ChangeNotifier {
     final force = _prefs.getString('festival');
     if (force == 'aucun') return null;
     if (force != null) return Festivals.parId(force);
-    return ouvert(Etape.niveaux) ? Festivals.de(d) : null;
+    return ouvert(Etape.festival) ? Festivals.de(d) : null;
   }
 
   /// Le Bingo du film (R55) : ses points deviennent de l'audace (5 au plus),
@@ -1610,8 +1611,9 @@ class EtatJeu extends ChangeNotifier {
   DateTime? get _dernierBooster => DateTime.tryParse(_prefs.getString('booster_don') ?? '');
 
   /// Les boosters à ouvrir aujourd'hui (au plus deux en réserve).
-  int boostersDispo([DateTime? aujourdhui]) =>
-      Deck.disponibles(reserve: _prefs.getInt('booster_reserve') ?? 0, dernierDon: _dernierBooster, aujourdhui: aujourdhui ?? DateTime.now());
+  int boostersDispo([DateTime? aujourdhui]) => !ouvert(Etape.deck)
+      ? 0
+      : Deck.disponibles(reserve: _prefs.getInt('booster_reserve') ?? 0, dernierDon: _dernierBooster, aujourdhui: aujourdhui ?? DateTime.now());
 
   /// Ouvre un booster : trois atouts, ajoutés à la collection. Les nouveaux
   /// vont dans le deck s'il reste de la place. Une série complète donne son

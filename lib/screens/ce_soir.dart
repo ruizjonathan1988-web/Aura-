@@ -5,7 +5,6 @@ import '../models/modeles.dart';
 import '../services/etat.dart';
 import '../services/ligues.dart';
 import '../services/niveau.dart';
-import '../services/plan_du_jour.dart';
 import '../services/pouvoirs.dart';
 import '../services/sources.dart';
 import '../services/tirage.dart';
@@ -18,11 +17,8 @@ import '../services/apres_seance.dart';
 import '../services/cadeaux.dart';
 import '../services/collection.dart';
 import '../services/deblocage.dart';
-import 'campagnes.dart';
-import 'duel.dart';
 import 'generique.dart';
 import 'juste_un_film.dart';
-import 'plan_du_jour.dart';
 import 'reglages.dart';
 import 'soiree.dart';
 import 'deck.dart';
@@ -190,7 +186,7 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         ),
       _CourseEtSerie(etat: etat),
       _LaSemaine(etat: etat),
-      if (Casse.enCours(DateTime.now()))
+      if (Casse.enCours(DateTime.now()) && etat.ouvert(Etape.casse))
         ChoixLarge(
           libelle: 'LE CASSE DE LA CINÉMATHÈQUE · Quatre serrures, le trophée de Pop, et peut-être une Taupe parmi vous. Fin le ${Casse.dernierJour(DateTime.now())} à 18 h.',
           couleur: AuraCouleurs.jaune,
@@ -202,7 +198,6 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           couleur: AuraCouleurs.violet,
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DeckEcran())),
         ),
-      _CartePlanDuJour(resultat: etat.planDuJour),
     ];
     final principal = <Widget>[
       if (etat.bonRetour == null && etat.billets.isNotEmpty)
@@ -303,16 +298,11 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
     ];
     final bas = <Widget>[
       _PendantCeTemps(etat: etat),
+      // Une seule entrée pour jouer à plusieurs (R59).
       ChoixLarge(
-        libelle: 'LES CAMPAGNES · Des listes de films à voir absolument, à terminer film après film.',
+        libelle: 'SOIRÉE JEU · À plusieurs sur la télé : avec vos téléphones, ou le Duel du canapé à une seule télécommande.',
         couleur: AuraCouleurs.violet,
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CampagnesEcran())),
-      ),
-      if (etat.ligues != null) AccesSoiree(ligues: etat.ligues!),
-      ChoixLarge(
-        libelle: 'LE DUEL DU CANAPÉ · À deux sur la télé : chacun pose ses cartes, on élimine à tour de rôle, et le quiz désigne qui choisit le film.',
-        couleur: AuraCouleurs.rose,
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DuelEcran())),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChoixSoireeEcran(ligues: etat.ligues))),
       ),
       if (etat.mode == ModeJeu.demo)
         ChoixLarge(
@@ -637,72 +627,6 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [Text(a, style: AuraTexte.corps(12, poids: FontWeight.w900)), Text(b, style: AuraTexte.titre(24))],
       );
-}
-
-/// L'accès au Plan du jour, en haut de Ce soir.
-class _CartePlanDuJour extends StatelessWidget {
-  const _CartePlanDuJour({required this.resultat});
-  final ResultatPlan? resultat;
-
-  @override
-  Widget build(BuildContext context) {
-    final r = resultat;
-    final cases = [
-      for (var i = 0; i < 3; i++)
-        r == null
-            ? [AuraCouleurs.vert, AuraCouleurs.jaune, AuraCouleurs.creme][i]
-            : i < r.indices - 1
-                ? AuraCouleurs.jaune
-                : i == r.indices - 1
-                    ? (r.trouve ? AuraCouleurs.vert : AuraCouleurs.caseRouge)
-                    : AuraCouleurs.creme,
-    ];
-    return Touchable(
-      etiquette: 'Le Plan du jour',
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanDuJourEcran())),
-      builder: (context, focus, appui) => AnimatedContainer(
-        duration: const Duration(milliseconds: 80),
-        transform: Matrix4.translationValues(appui ? 3 : 0, appui ? 3 : 0, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: AuraTrait.panneau(ombre: appui ? 0 : 4).copyWith(
-          boxShadow: [
-            if (focus) const BoxShadow(color: AuraCouleurs.jaune, spreadRadius: 5),
-            if (!appui) const BoxShadow(color: AuraCouleurs.noir, offset: Offset(4, 4)),
-          ],
-        ),
-        child: Row(children: [
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            for (final c in cases)
-              Container(
-                width: 14,
-                height: 14,
-                margin: const EdgeInsets.only(right: 3),
-                decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3), border: Border.all(width: 1.5)),
-              ),
-          ]),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('LE PLAN DU JOUR', style: AuraTexte.titre(16)),
-              Text(
-                r == null
-                    ? 'Un film à deviner, 3 indices, 1 essai'
-                    : r.trouve
-                        ? 'Trouvé au ${r.indices == 1 ? '1er' : '${r.indices}e'} indice. À demain !'
-                        : 'Raté pour aujourd\'hui. Revanche demain !',
-                style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux),
-              ),
-            ]),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(color: AuraCouleurs.jaune, borderRadius: BorderRadius.circular(10), border: Border.all(width: 2.5)),
-            child: Text(r == null ? 'JOUER' : 'PARTAGER', style: AuraTexte.titre(15)),
-          ),
-        ]),
-      ),
-    );
-  }
 }
 
 /// Un billet créé tout seul : il ne manque que la note, en un geste.
@@ -1139,9 +1063,9 @@ class _Aujourdhui extends StatelessWidget {
       ('Course contre Pop', Icons.flag_rounded, AuraCouleurs.creme, () => _feuille(context, _CourseEtSerie(etat: etat))),
       if (festival != null || defi != null)
         (festival != null ? 'Festival : ${festival.nom}' : 'Défi de la semaine', Icons.celebration_rounded, AuraCouleurs.rose, () => _feuille(context, _LaSemaine(etat: etat))),
-      (Casse.enCours(maintenant) ? 'Le Casse !' : 'Le Casse', Icons.lock_rounded, Casse.enCours(maintenant) ? AuraCouleurs.jaune : AuraCouleurs.creme,
-          () => _ouvrir(context, const CasseEcran())),
-      ('Plan du jour', Icons.calendar_today_rounded, AuraCouleurs.creme, () => _feuille(context, _CartePlanDuJour(resultat: etat.planDuJour))),
+      if (etat.ouvert(Etape.casse))
+        (Casse.enCours(maintenant) ? 'Le Casse !' : 'Le Casse', Icons.lock_rounded, Casse.enCours(maintenant) ? AuraCouleurs.jaune : AuraCouleurs.creme,
+            () => _ouvrir(context, const CasseEcran())),
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Text('AUJOURD\'HUI', style: AuraTexte.titre(18, couleur: AuraCouleurs.creme)),

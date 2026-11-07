@@ -150,24 +150,14 @@ void main() {
         await _patienter(t, 2);
       });
 
-      testWidgets('Plan du jour, Duel et Réglages s\'ouvrent sans souci', (t) async {
+      testWidgets('La Soirée jeu ouvre le Duel du canapé sans souci', (t) async {
         _taille(t, taille, densite);
         final etat = await _etat({'accueil_fait': true});
         await t.pumpWidget(AuraApp(etat: etat));
         await _patienter(t);
         await _toucher(t, find.text('ENTRER DANS LA SALLE'));
-        // Sur le téléphone, le Plan du jour est rangé dans une pastille.
-        final pastille = find.text('Plan du jour').evaluate().isNotEmpty;
-        if (pastille) await _toucher(t, find.text('Plan du jour'));
-        await _toucher(t, find.text('LE PLAN DU JOUR'));
-        await _patienter(t, 2);
-        expect(find.text('LE PLAN DU JOUR'), findsWidgets);
-        t.state<NavigatorState>(find.byType(Navigator).first).pop();
+        await _toucher(t, find.textContaining('SOIRÉE JEU'));
         await _patienter(t, 1);
-        if (pastille) {
-          t.state<NavigatorState>(find.byType(Navigator).first).pop();
-          await _patienter(t, 1);
-        }
         await _toucher(t, find.textContaining('LE DUEL DU CANAPÉ'));
         await _toucher(t, find.text('C\'EST PARTI'));
         await _patienter(t, 1);

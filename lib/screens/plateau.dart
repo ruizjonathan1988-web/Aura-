@@ -5,6 +5,7 @@ import '../models/modeles.dart';
 import '../services/apres_seance.dart';
 import '../services/carte_genres.dart';
 import '../services/coups.dart';
+import '../services/deblocage.dart';
 import '../services/etat.dart';
 import '../services/pop.dart';
 import '../services/retournements.dart';
@@ -257,7 +258,7 @@ class PlateauEcran extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 10),
-              AuraBouton(
+              if (etat.ouvert(Etape.deck)) AuraBouton(
                 libelle: etat.boostersDispo() > 0 ? 'Mon deck · un booster t\'attend !' : 'Mon deck d\'atouts',
                 icone: Icons.style_rounded,
                 principal: etat.boostersDispo() > 0,
