@@ -206,7 +206,7 @@ class _ReglagesEcranState extends State<ReglagesEcran> {
                           Pastille(libelle: 'Je connais déjà le jeu : tout ouvrir', choisie: etat.toutOuvert, onTap: () => etat.changerToutOuvert(true)),
                         ]),
                         const SizedBox(height: 10),
-                        Text('Au fil des séances, Pop présente une règle à la fois : les niveaux à la 3e séance, les pouvoirs à la 5e, les coups de théâtre à la 7e, les crasses à la 9e.',
+                        Text('Au fil des séances, Pop présente une règle à la fois : le deck à la 2e séance, les niveaux à la 3e, le Festival à la 4e, les pouvoirs à la 5e, le Casse à la 6e, les coups de théâtre à la 7e, les crasses à la 9e.',
                             style: AuraTexte.corps(13, couleur: AuraCouleurs.texteDoux)),
                         const SizedBox(height: 14),
                         Text('NOUVELLES DES AMIS', style: AuraTexte.titre(16)),

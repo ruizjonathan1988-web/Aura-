@@ -627,8 +627,11 @@ class ChoixLarge extends StatelessWidget {
 
 /// La rangée de titre des écrans ouverts par-dessus : bouton Retour et titre.
 class EnTeteRetour extends StatelessWidget {
-  const EnTeteRetour({super.key, required this.titre});
+  const EnTeteRetour({super.key, required this.titre, this.regle});
   final String titre;
+
+  /// La règle complète, derrière un bouton « ? » (R62).
+  final String? regle;
 
   @override
   Widget build(BuildContext context) {
@@ -650,9 +653,67 @@ class EnTeteRetour extends StatelessWidget {
       ),
       const SizedBox(width: 14),
       Expanded(child: TitreCartoon(titre, taille: 38)),
+      if (regle != null) BoutonRegle(titre: titre, regle: regle!),
     ]);
   }
 }
+
+/// Le bouton « ? » (R62) : l'écran reste court, la règle complète s'ouvre
+/// dans un panneau quand on la demande.
+class BoutonRegle extends StatelessWidget {
+  const BoutonRegle({super.key, required this.titre, required this.regle});
+  final String titre;
+  final String regle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Touchable(
+      etiquette: 'La règle : $titre',
+      onTap: () => montrerRegle(context, titre, regle),
+      builder: (context, focus, appui) => Container(
+        width: 48,
+        height: 48,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AuraCouleurs.jaune,
+          shape: BoxShape.circle,
+          border: Border.all(width: 3),
+          boxShadow: _ombres(focus: focus, appui: appui, ombre: 3),
+        ),
+        child: Text('?', style: AuraTexte.titre(24)),
+      ),
+    );
+  }
+}
+
+/// Ouvre la règle dans un panneau du bas, fermé d'un geste ou par Retour.
+Future<void> montrerRegle(BuildContext context, String titre, String regle) => showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AuraCouleurs.creme,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        side: BorderSide(width: 3),
+      ),
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                Text('LA RÈGLE · ${titre.toUpperCase()}', style: AuraTexte.titre(20)),
+                const SizedBox(height: 10),
+                for (final p in regle.split('\n'))
+                  Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(p, style: AuraTexte.corps(16, poids: FontWeight.w700))),
+                const SizedBox(height: 6),
+                AuraBouton(libelle: 'Compris', autofocus: true, onPressed: () => Navigator.of(context).pop()),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
 
 /// Un champ de texte au style du jeu. Réservé au téléphone : sur la télé,
 /// on ne tape rien.

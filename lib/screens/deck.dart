@@ -66,11 +66,16 @@ class _DeckEcranState extends State<DeckEcran> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 860),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  const EnTeteRetour(titre: 'Mon deck'),
+                  EnTeteRetour(
+                    titre: 'Mon deck',
+                    regle: 'Un booster gratuit par jour, avec trois atouts. Pose tes atouts dans ton deck : 3 places, et une 4e à ${Deck.grandeCollection} atouts différents.\n'
+                        'Quand le film que tu valides remplit le défi d\'un atout posé, il te rapporte de l\'audace ; les plus rares, une case.\n'
+                        'Le deck donne une case au plus par film, et le plafond de 3 cases par jour tient toujours.',
+                  ),
                   const SizedBox(height: 14),
                   PopQuiParle(
                     texte: collection.isEmpty
-                        ? 'Un booster gratuit par jour, trois atouts dedans. Pose-les dans ton deck : quand ton film remplit leur défi, ils te rapportent de l\'audace, et les plus rares une case.'
+                        ? 'Un booster gratuit par jour. Pose tes atouts : quand ton film remplit leur défi, ça rapporte.'
                         : 'Ton deck : ${deck.length} atout${deck.length > 1 ? 's' : ''} sur ${etat.emplacements}. Moi, je n\'ai pas besoin d\'atouts. J\'ai du talent.',
                   ),
                   const SizedBox(height: 16),
@@ -116,7 +121,7 @@ class _DeckEcranState extends State<DeckEcran> {
                   Text('TON DECK · ${deck.length}/${etat.emplacements}', style: AuraTexte.titre(18)),
                   const SizedBox(height: 4),
                   Text(
-                    'Touche un atout pour le poser ou le retirer. Une 4e place s\'ouvre à ${Deck.grandeCollection} atouts différents. Le deck donne une case au plus par film, et le plafond de 3 cases par jour tient toujours.',
+                    'Touche un atout pour le poser ou le retirer.',
                     style: AuraTexte.corps(13, couleur: AuraCouleurs.creme),
                   ),
                   const SizedBox(height: 8),

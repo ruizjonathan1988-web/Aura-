@@ -83,7 +83,12 @@ class _RelaisEcranState extends State<RelaisEcran> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 700),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  const EnTeteRetour(titre: 'Le Relais'),
+                  const EnTeteRetour(
+                    titre: 'Le Relais',
+                    regle: 'Un membre lance le relais avec un film qu\'il a vu. Le suivant a 48 heures pour poser un film vu depuis, qui a quelqu\'un en commun avec le précédent.\n'
+                        'Acteur en commun : +1. Réalisateur : +2. Compositeur : +3. Le lien le plus fort compte.\n'
+                        'Jamais deux fois de suite la même personne. Délai dépassé : le relais casse, et un nouveau peut partir. Chaque relais passé rapporte 2 d\'audace.',
+                  ),
                   const SizedBox(height: 14),
                   FutureBuilder<(List<Classe>, List<Chaine>)>(
                     future: _donnees,
@@ -116,7 +121,7 @@ class _RelaisEcranState extends State<RelaisEcran> {
     final aMoi = enCours == null || enCours.porteur == moi;
     final blocs = <Widget>[
       const PopQuiParle(
-        texte: 'Un film, puis un autre qui a quelqu\'un en commun : acteur +1, réalisateur +2, compositeur +3. 48 heures chacun. Et si vous repassez deux fois par la même personne, je coupe.',
+        texte: 'Un film, puis un autre qui a quelqu\'un en commun. 48 heures chacun. Battez le record.',
       ),
       Panneau(
         couleur: AuraCouleurs.jaune,

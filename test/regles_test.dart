@@ -2901,6 +2901,18 @@ void main() {
     expect(FilmsProposes.mur(toutes, (p) => false, maintenant).first.titre, 'Film cacheté');
   });
 
+  testWidgets('R62 la règle complète reste derrière le bouton « ? »', (t) async {
+    await t.pumpWidget(const MaterialApp(home: Scaffold(body: EnTeteRetour(titre: 'Le Relais', regle: 'Première phrase.\nSeconde phrase.'))));
+    expect(find.text('Première phrase.'), findsNothing);
+    await t.tap(find.text('?'));
+    await t.pumpAndSettle();
+    expect(find.text('Première phrase.'), findsOneWidget);
+    expect(find.text('Seconde phrase.'), findsOneWidget);
+    await t.tap(find.text('COMPRIS'));
+    await t.pumpAndSettle();
+    expect(find.text('Première phrase.'), findsNothing);
+  });
+
   testWidgets('R59 une seule porte Soirée jeu ; sans serveur, le Duel du canapé seul', (t) async {
     final e = await _etat();
     await t.pumpWidget(MaterialApp(home: PorteeEtat(etat: e, child: const ChoixSoireeEcran(ligues: null))));
