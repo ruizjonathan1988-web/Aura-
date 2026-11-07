@@ -71,7 +71,7 @@ class ServiceAura {
         ];
       });
 
-  Future<void> proposer(Destinataire d, Film f, {String? mot}) => _proteger(() async {
+  Future<void> proposer(Destinataire d, Film f, {String? mot, DateTime? ouvrirLe}) => _proteger(() async {
         await _db.from('propositions').insert(Proposition.nouvelle(
           dePersonne: personne,
           deNom: ligues.pseudo ?? '?',
@@ -85,6 +85,7 @@ class ServiceAura {
           tmdb: f.tmdbId,
           jellyfin: f.source == SourceFilm.jellyfin ? f.id : null,
           mot: mot,
+          ouvrirLe: ouvrirLe,
         ));
       });
 

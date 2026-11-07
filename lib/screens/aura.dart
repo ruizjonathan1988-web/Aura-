@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app.dart';
 import '../models/modeles.dart';
 import '../services/aura.dart';
+import '../services/cadeaux.dart';
 import '../services/etat.dart';
 import '../services/ligues.dart';
 import '../services/service_aura.dart';
@@ -36,6 +37,7 @@ class _AuraEcranState extends State<AuraEcran> {
   Destinataire? _pour;
   Film? _film;
   String? _mot;
+  DateTime? _ouvrirLe;
   bool _envoi = false;
   String? _message;
 
@@ -128,6 +130,12 @@ class _AuraEcranState extends State<AuraEcran> {
   Widget _contenu(List<Proposition> toutes, List<Destinataire> destinataires) {
     final recues = toutes.where((p) => _aura.pourMoi(p) && p.note == null && !(p.vu && p.aime)).toList();
     final faites = toutes.where(_aura.deMoi).toList();
+    // L'exploit « Fin limier » : une de mes propositions a été aimée.
+    final etat = PorteeEtat.lire(context);
+    if (faites.any((p) => p.aimee) && !etat.collection.contains('flair')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => etat.ajouterExploit('flair'));
+    }
+    final maintenant = DateTime.now();
     final classement = Aura.classement(toutes);
     final moi = _aura.moi;
     final rang = classement.indexWhere((c) => c.qui == moi || (widget.ligues.monId != null && c.qui == widget.ligues.monId));
@@ -152,7 +160,7 @@ class _AuraEcranState extends State<AuraEcran> {
       ),
       if (recues.isNotEmpty) ...[
         Text('ON TE PROPOSE', style: AuraTexte.titre(18)),
-        for (final (i, p) in recues.indexed) _Recue(p: p, autofocus: i == 0, film: _filmDe(p), envoi: _envoi, noter: (n) => _faire(() => _aura.marquer(p, aime: n >= 4, note: n), 'Merci ! ${p.deNom} le saura.')),
+        for (final (i, p) in recues.indexed) _Recue(p: p, maintenant: maintenant, autofocus: i == 0, film: _filmDe(p), envoi: _envoi, noter: (n) => _faire(() => _aura.marquer(p, aime: n >= 4, note: n), 'Merci ! ${p.deNom} le saura.')),
       ],
       if (!_proposer)
         AuraBouton(
@@ -190,7 +198,7 @@ class _AuraEcranState extends State<AuraEcran> {
             const SizedBox(height: 6),
             for (final p in faites.take(12))
               Text(
-                '${p.titre} à ${p.pourNom} : ${p.aimee ? 'aimé !' : p.vu ? 'vu' : 'pas encore vu'}',
+                '${p.titre} à ${p.pourNom} : ${p.cachetee(maintenant) ? 'cacheté, ${Cadeaux.quand(p.ouvrirLe!, maintenant)}' : p.aimee ? 'aimé !' : p.vu ? 'vu' : 'pas encore vu'}',
                 style: AuraTexte.corps(14, poids: FontWeight.w700),
               ),
           ]),
@@ -248,6 +256,15 @@ class _AuraEcranState extends State<AuraEcran> {
           for (final m in motsAura) Pastille(libelle: m ?? 'Sans mot', choisie: _mot == m, onTap: () => setState(() => _mot = m)),
         ]),
         const SizedBox(height: 12),
+        Text('CACHETÉ ?', style: AuraTexte.titre(15)),
+        Text('Le titre reste caché jusqu\'au jour choisi : la surprise s\'ouvre ce soir-là.', style: AuraTexte.corps(13, poids: FontWeight.w700)),
+        const SizedBox(height: 6),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          Pastille(libelle: 'Non, tout de suite', choisie: _ouvrirLe == null, onTap: () => setState(() => _ouvrirLe = null)),
+          for (final (nom, date) in Cadeaux.dates(DateTime.now()).skip(1))
+            Pastille(libelle: nom, choisie: _ouvrirLe == date, onTap: () => setState(() => _ouvrirLe = date)),
+        ]),
+        const SizedBox(height: 12),
         AuraBouton(
           libelle: _envoi ? 'Envoi…' : 'Proposer',
           onPressed: _envoi || _pour == null || _film == null
@@ -255,13 +272,18 @@ class _AuraEcranState extends State<AuraEcran> {
               : () {
                   final d = _pour!;
                   final f = _film!;
+                  final quand = _ouvrirLe;
                   _faire(() async {
-                    await _aura.proposer(d, f, mot: _mot);
+                    await _aura.proposer(d, f, mot: _mot, ouvrirLe: quand);
                     _proposer = false;
                     _pour = null;
                     _film = null;
                     _mot = null;
-                  }, 'Proposé à ${d.nom} ! Ton aura grandira s\'il le regarde.');
+                    _ouvrirLe = null;
+                  },
+                      quand == null
+                          ? 'Proposé à ${d.nom} ! Ton aura grandira s\'il le regarde.'
+                          : 'Cacheté pour ${d.nom}, ${Cadeaux.quand(quand, DateTime.now())}. Chut.');
                 },
         ),
         const SizedBox(height: 8),
@@ -272,9 +294,10 @@ class _AuraEcranState extends State<AuraEcran> {
 }
 
 class _Recue extends StatelessWidget {
-  const _Recue({required this.p, required this.film, required this.noter, required this.envoi, this.autofocus = false});
+  const _Recue({required this.p, required this.maintenant, required this.film, required this.noter, required this.envoi, this.autofocus = false});
 
   final Proposition p;
+  final DateTime maintenant;
   final Film film;
   final void Function(int) noter;
   final bool envoi;
@@ -282,11 +305,30 @@ class _Recue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (p.cachetee(maintenant)) {
+      // Cacheté (R60) : qui l'envoie et quand l'ouvrir, jamais le titre.
+      return Panneau(
+        couleur: AuraCouleurs.violet,
+        inclinaison: -0.01,
+        child: Row(children: [
+          const Icon(Icons.lock_rounded, size: 44),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('UN FILM CACHETÉ DE ${p.deNom.toUpperCase()}', style: AuraTexte.titre(16)),
+              Text('${Cadeaux.quand(p.ouvrirLe!, maintenant)[0].toUpperCase()}${Cadeaux.quand(p.ouvrirLe!, maintenant).substring(1)}. Pas avant.', style: AuraTexte.corps(15, poids: FontWeight.w900)),
+              if (p.mot != null) Text('« ${p.mot} »', style: AuraTexte.corps(14, poids: FontWeight.w700)),
+            ]),
+          ),
+        ]),
+      );
+    }
+    final ouvertAujourdhui = p.ouvrirLe != null && !p.cachetee(maintenant) && maintenant.difference(p.ouvrirLe!).inDays < 1;
     return Panneau(
       couleur: AuraCouleurs.rose,
       inclinaison: 0.01,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('${p.deNom.toUpperCase()} TE PROPOSE', style: AuraTexte.titre(14)),
+        Text(ouvertAujourdhui ? 'LE FILM CACHETÉ DE ${p.deNom.toUpperCase()} S\'OUVRE !' : '${p.deNom.toUpperCase()} TE PROPOSE', style: AuraTexte.titre(14)),
         Text('${p.titre}${p.annee != null ? ' (${p.annee})' : ''}', style: AuraTexte.titre(26)),
         if (p.mot != null) Text('« ${p.mot} »', style: AuraTexte.corps(15, poids: FontWeight.w900)),
         const SizedBox(height: 8),

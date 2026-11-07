@@ -2856,6 +2856,18 @@ void main() {
     expect(MiseAJour.raisonEnClair(1, 'INSTALL_FAILED_X'), contains('INSTALL_FAILED_X'));
   });
 
+  test('R60 un film proposé peut être cacheté : titre caché jusqu\'au jour choisi, puis ouvert', () {
+    final corps = Proposition.nouvelle(deNom: 'Jon', pourJoueur: 'u2', pourNom: 'Léa', titre: 'Matrix', tmdb: 603, ouvrirLe: DateTime(2026, 11, 13));
+    expect((corps['film'] as Map)['ouvrir_le'], '2026-11-13');
+    final p = Proposition.depuisJson({...corps, 'id': 'p1', 'de': 'u1', 'cree_le': '2026-11-11T18:00:00Z'})!;
+    expect(p.cachetee(DateTime(2026, 11, 12, 23)), isTrue);
+    expect(p.cachetee(DateTime(2026, 11, 13, 0, 1)), isFalse, reason: 'il s\'ouvre le jour prévu');
+    final libre = Proposition.depuisJson({...Proposition.nouvelle(deNom: 'Jon', pourNom: 'Léa', titre: 'Coco'), 'id': 'p2', 'de': 'u1'})!;
+    expect(libre.ouvrirLe, isNull);
+    expect(libre.cachetee(DateTime(2026, 11, 12)), isFalse);
+    expect(Proposition.nouvelle(deNom: 'Jon', pourNom: 'Léa', titre: 'Coco')['film'], isNot(contains('ouvrir_le')));
+  });
+
   testWidgets('R59 une seule porte Soirée jeu ; sans serveur, le Duel du canapé seul', (t) async {
     final e = await _etat();
     await t.pumpWidget(MaterialApp(home: PorteeEtat(etat: e, child: const ChoixSoireeEcran(ligues: null))));

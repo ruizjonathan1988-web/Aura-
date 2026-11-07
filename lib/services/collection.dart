@@ -50,7 +50,7 @@ abstract final class Collection {
     Exploit('finale', 'Jusqu\'à la finale', 'Atteindre la case 30 en un mois.', Icons.flag_circle_rounded),
     Exploit('champion', 'Champion de saison', 'Finir un mois devant Pop.', Icons.workspace_premium_rounded),
     Exploit('campagne', 'Campagne bouclée', 'Terminer une campagne de films.', Icons.military_tech_rounded),
-    Exploit('flair', 'Fin limier', 'Offrir un Cadeau cacheté qui plaît.', Icons.redeem_rounded),
+    Exploit('flair', 'Fin limier', 'Proposer un film que l\'autre a aimé.', Icons.redeem_rounded),
     Exploit('audace', 'Coup d\'audace', 'Aller au bout d\'un film en t\'étant mis 10.', Icons.whatshot_rounded),
     Exploit('casse', 'Le casse du siècle', 'Braquer le coffre de Pop à la fin du mois.', Icons.lock_open_rounded),
     Exploit('serie_plateau', 'Toute l\'équipe', 'Compléter la série d\'atouts « Sur le plateau ».', Icons.movie_creation_rounded),
