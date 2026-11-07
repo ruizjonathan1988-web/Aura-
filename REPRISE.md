@@ -251,7 +251,7 @@ Faits avec l'accord de Jon : sur le téléphone, Ce soir montre l'action d'abord
 
 ## Nuit du 6 novembre : les inédits
 
-Validés par Jon : Bingo du film (R55), Casse de la Cinémathèque en fin de mois avec rotation Défi/Casse (R56), Relais (R57). **Jon doit lancer `supabase/migrations/0009_casse_et_relais.sql`** (sinon le Casse se joue en solo et le Relais affiche qu'il n'est pas installé). Rôle « Guetteur » du Casse abandonné : il aurait éventé la Taupe en solo.
+Validés par Jon : Bingo du film (R55), Casse de la Cinémathèque en fin de mois avec rotation Défi/Casse (R56), Relais (R57). Migration `0009_casse_et_relais.sql` lancée par Jon le 7 novembre à 18 h 55 (éditeur SQL de Supabase) ; vérifiée : `casse_ouvertures`, `casse_votes` et `relais` existent, avec RLS et leurs règles. Rôle « Guetteur » du Casse abandonné : il aurait éventé la Taupe en solo.
 
 ## Soirée du 6 novembre : le programme « très fun »
 
