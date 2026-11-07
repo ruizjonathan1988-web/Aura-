@@ -1329,7 +1329,8 @@ void main() {
         return http.Response.bytes(utf8.encode(reponse), 200);
       });
       final films = await SourceTmdb('cle', client: client, hasard: Random(1)).catalogue(emotion: Emotion.frissonner, duree: Duree.courte);
-      expect(appels, hasLength(2));
+      expect(appels, hasLength(4), reason: 'R63 : deux pages populaires, deux de classiques');
+      expect({for (final a in appels) '${a.queryParameters['sort_by']}${a.queryParameters['page']}'}, hasLength(4), reason: 'quatre pages différentes');
       final q = appels.first.queryParameters;
       expect(q['vote_average.gte'], '6');
       expect(int.parse(q['vote_count.gte']!), greaterThanOrEqualTo(150));
@@ -1359,6 +1360,17 @@ void main() {
       expect(tout.map((f) => f.id), ['jf1', 'tmdb:680']);
       final enPanne = await SourceToutVjod(serveur, _SourceEnPanne()).catalogue();
       expect(enPanne.map((f) => f.id), ['jf1']);
+    });
+
+    test('R63 une grande bibliothèque ne noie pas le reste du cinéma', () {
+      final chez = [for (var i = 0; i < 500; i++) Film(id: 'jf$i', titre: 'Film $i', note: 7, source: SourceFilm.jellyfin)];
+      final ailleurs = [for (var i = 0; i < 60; i++) Film(id: 'tmdb:$i', titre: 'Autre $i', tmdbId: i, note: 7, source: SourceFilm.catalogueVjod)];
+      final mix = SourceToutVjod.equilibrer(chez, ailleurs, Random(2));
+      expect(mix.where((f) => f.source == SourceFilm.jellyfin), hasLength(60));
+      expect(mix.where((f) => f.source == SourceFilm.catalogueVjod), hasLength(60));
+      final petite = SourceToutVjod.equilibrer(chez.take(20).toList(), ailleurs, Random(2));
+      expect(petite, hasLength(80), reason: 'une petite bibliothèque reste entière');
+      expect(SourceToutVjod.equilibrer(chez, const [], Random(2)), hasLength(500), reason: 'TMDB en panne : toute la bibliothèque');
     });
 
     test('R33 « Lancer dans VJOD » ouvre la fiche du titre quand il n\'est pas sur le serveur', () {
