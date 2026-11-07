@@ -1167,7 +1167,7 @@ class _Aujourdhui extends StatelessWidget {
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(icone, size: 18),
                 const SizedBox(width: 6),
-                Text(libelle, style: AuraTexte.corps(14, poids: FontWeight.w900)),
+                Flexible(child: Text(libelle, style: AuraTexte.corps(14, poids: FontWeight.w900))),
               ]),
             ),
           ),
