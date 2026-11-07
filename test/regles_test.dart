@@ -55,6 +55,8 @@ import 'package:aura/services/tirage.dart';
 import 'package:aura/services/traduction.dart';
 import 'package:aura/services/vjod_lien.dart';
 import 'package:aura/screens/plateau.dart';
+import 'package:aura/screens/soiree.dart';
+import 'package:aura/app.dart';
 import 'package:aura/widgets/animations.dart';
 import 'package:aura/widgets/aura_widgets.dart';
 import 'package:aura/widgets/ou_le_voir.dart';
@@ -2852,6 +2854,17 @@ void main() {
     expect(MiseAJour.raisonEnClair(5, ''), contains('Désinstalle Aura une fois'));
     expect(MiseAJour.raisonEnClair(3, ''), contains('annulée'));
     expect(MiseAJour.raisonEnClair(1, 'INSTALL_FAILED_X'), contains('INSTALL_FAILED_X'));
+  });
+
+  testWidgets('R59 une seule porte Soirée jeu ; sans serveur, le Duel du canapé seul', (t) async {
+    final e = await _etat();
+    await t.pumpWidget(MaterialApp(home: PorteeEtat(etat: e, child: const ChoixSoireeEcran(ligues: null))));
+    await t.pump(const Duration(milliseconds: 500));
+    expect(find.textContaining('LE DUEL DU CANAPÉ'), findsOneWidget);
+    expect(find.textContaining('AVEC VOS TÉLÉPHONES'), findsNothing);
+    expect(find.textContaining('REJOINDRE LA PARTIE'), findsNothing);
+    await t.pumpWidget(const SizedBox());
+    await t.pump(const Duration(seconds: 2));
   });
 }
 
