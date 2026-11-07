@@ -2,10 +2,16 @@
 /// sur le plateau. Les règles s'ouvrent ensuite séance après séance, et Pop
 /// présente chacune au moment où elle arrive.
 enum Etape {
+  deck(2, 'Ton deck d\'atouts',
+      'Chaque jour, un booster gratuit de trois atouts. Pose-les dans ton deck : quand ton film remplit leur défi, ils rapportent de l\'audace, et les plus rares une case.'),
   niveaux(3, 'Tu te mets combien ?',
       'Avant chaque tirage, tu annonces un niveau de 1 à 10. Plus tu vises haut, plus les films sont pointus et plus ça rapporte. Ton audace du mois s\'additionne.'),
+  festival(4, 'Le Festival de la semaine',
+      'Chaque lundi, j\'annonce une règle folle pour la semaine, et un défi à relever. La même pour tout le monde : comparez-vous.'),
   pouvoirs(5, 'Ton pouvoir',
       'Ta figurine a un pouvoir. Arme-le dans Ce soir : il agit au prochain tirage ou à la prochaine séance. Une charge par semaine, plus une tous les 20 points d\'audace.'),
+  casse(6, 'Le Casse de la Cinémathèque',
+      'La dernière semaine de chaque mois, braque mon coffre : quatre serrures, un film chacune. Et méfie-toi : il y a peut-être une Taupe dans l\'équipe.'),
   coups(7, 'Coups de théâtre',
       'Les cases 4, 14 et 24 cachent un coup du sort, et deux Jokers arrivent : Volte-face quand tu es derrière moi, et le pari de Sisyphe en début de mois.'),
   crasses(9, 'Les crasses',

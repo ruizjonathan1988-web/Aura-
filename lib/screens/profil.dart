@@ -7,6 +7,7 @@ import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
 import 'premier_soir.dart';
 import 'reglages.dart';
+import 'campagnes.dart';
 
 /// « Quel spectateur es-tu ? » : ta figurine, ton pouvoir, ton contrat.
 class ProfilEcran extends StatelessWidget {
@@ -148,6 +149,13 @@ class ProfilEcran extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 22),
+              AuraBouton(
+                libelle: 'Les campagnes de films',
+                icone: Icons.military_tech_rounded,
+                principal: false,
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CampagnesEcran())),
+              ),
+              const SizedBox(height: 12),
               AuraBouton(
                 libelle: 'Refaire le test',
                 principal: false,
