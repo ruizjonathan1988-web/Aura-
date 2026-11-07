@@ -99,10 +99,17 @@ class PlateauEcran extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TitreCartoon('Le plateau de ${_mois[maintenant.month - 1]}', taille: 38),
+              Row(children: [
+                Expanded(child: TitreCartoon('Le plateau de ${_mois[maintenant.month - 1]}', taille: 38)),
+                const BoutonRegle(
+                  titre: 'Le plateau',
+                  regle: 'Pas de dé : on avance en regardant des films, 3 cases par jour au maximum. Chaque carte dit combien de cases elle rapporte.\n'
+                      'Pop avance d\'une case par jour, et triche un peu. Arrive à la case 30 avant lui.\n'
+                      'Au fil des séances, de nouvelles règles s\'ouvrent une à une : Pop les présente quand elles arrivent.',
+                ),
+              ]),
               const SizedBox(height: 8),
-              Text('Pas de dé : on avance en regardant des films, 3 cases par jour au maximum. Pop avance d\'une case par jour et triche un peu. À toi de le dépasser !',
-                  style: AuraTexte.corps(15)),
+              Text('On avance en regardant des films. Dépasse Pop !', style: AuraTexte.corps(15)),
               if (etat.serie > 0) ...[
                 const SizedBox(height: 10),
                 Panneau(

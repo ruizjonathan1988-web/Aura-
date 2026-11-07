@@ -127,7 +127,13 @@ class _CasseEcranState extends State<CasseEcran> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 760),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  const EnTeteRetour(titre: 'Le Casse'),
+                  EnTeteRetour(
+                    titre: 'Le Casse',
+                    regle: 'La dernière semaine de chaque mois, on braque le coffre de Pop. Chacun reçoit ses serrures, le Perceur la plus dure. Un film qui remplit le défi d\'une serrure l\'ouvre.\n'
+                        'Dès trois joueurs, l\'un de vous est la Taupe : il peut ouvrir pour de faux. Votez pour la démasquer.\n'
+                        'Coffre vidé : ${Casse.audaceReussite} d\'audace, Pop recule de ${Casse.recul} cases, et l\'exploit « Le casse du siècle ».\n'
+                        'En solo, Bobine et Pellicule font l\'équipe… et l\'un des deux te trahit.',
+                  ),
                   const SizedBox(height: 14),
                   if (!Casse.enCours(maintenant))
                     _Apercu(maintenant: maintenant)
@@ -262,19 +268,6 @@ class _Apercu extends StatelessWidget {
             ),
           ]),
         ),
-      Panneau(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('COMMENT ÇA MARCHE', style: AuraTexte.titre(16)),
-          const SizedBox(height: 4),
-          Text(
-            'Chacun reçoit ses serrures, le Perceur la plus dure. Un film qui remplit le défi l\'ouvre, pendant la semaine du casse. '
-            'Dès trois, l\'un de vous est la Taupe et peut ouvrir pour de faux : votez pour la démasquer. '
-            'Coffre vidé : ${Casse.audaceReussite} d\'audace, Pop recule de ${Casse.recul} cases et l\'exploit « Le casse du siècle ». '
-            'En solo, Bobine et Pellicule font l\'équipe… et l\'un des deux te trahit.',
-            style: AuraTexte.corps(14),
-          ),
-        ]),
-      ),
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       for (final (i, b) in blocs.indexed) ...[if (i > 0) const SizedBox(height: 12), b],

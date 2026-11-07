@@ -98,11 +98,14 @@ class _AuraEcranState extends State<AuraEcran> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 700),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  const EnTeteRetour(titre: 'L\'aura'),
-                  const SizedBox(height: 14),
-                  const PopQuiParle(
-                    texte: 'Propose des films à la maison et à tes amis. +1 quand ils le regardent, +2 quand ils l\'aiment, +3 de plus quand plusieurs l\'aiment. Moi, j\'ai une aura naturelle.',
+                  const EnTeteRetour(
+                    titre: 'L\'aura',
+                    regle: 'Propose des films et des séries à la maison (les profils de ton serveur VJOD) et à tes amis de ligue, depuis Aura ou depuis VJOD.\n'
+                        'Ton aura grandit : +1 quand on regarde ce que tu as proposé, +2 quand on l\'aime (un cœur, ou une note de 4 ou 5), et +3 de plus quand plusieurs personnes aiment le même film.\n'
+                        'Un film peut être cacheté jusqu\'à un jour choisi : l\'autre voit qui l\'envoie et quand l\'ouvrir, jamais le titre avant.',
                   ),
+                  const SizedBox(height: 14),
+                  const PopQuiParle(texte: 'Propose des films. Plus ils plaisent, plus ton aura grandit. La mienne est naturelle.'),
                   const SizedBox(height: 16),
                   FutureBuilder<(List<Proposition>, List<Destinataire>)>(
                     future: _donnees,

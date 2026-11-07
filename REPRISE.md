@@ -108,6 +108,7 @@ Chaque règle est protégée par des tests `Rn` dans `test/regles_test.dart` (le
 | R59 Une seule porte pour jouer à plusieurs | Dans Ce soir, une seule entrée « Soirée jeu » ouvre un choix : avec vos téléphones (sur la télé : le plateau ; sur le téléphone : rejoindre avec le code), ou le Duel du canapé à une seule télécommande ; sans serveur, le Duel seul | `ChoixSoireeEcran` |
 | R60 Le film cacheté | Dans l'aura, « Proposer » peut cacheter le film jusqu'à demain, vendredi, samedi ou dimanche (`Cadeaux.dates`) ; la date est rangée dans `film.ouvrir_le` (pas de migration) ; chez le destinataire, seuls l'envoyeur, le jour et le mot s'affichent jusque-là, puis « le film cacheté s'ouvre ! » ; VJOD (4.38) cache aussi le titre ; remplace l'ancien Cadeau cacheté de l'onglet Ligue et le Flair (l'exploit « Fin limier » vient d'une proposition aimée) | `Proposition.ouvrirLe/cachetee`, `AuraEcran` |
 | R61 Les films proposés | En tête de l'onglet Ensemble : « Pour moi » (cachetés d'abord avec leur jour, puis à voir, puis vus) et « Le mur de tout le monde » (tout ce qui circule dans la maison et les ligues, du plus récent au plus ancien ; un cacheté garde son titre caché sauf pour qui l'a envoyé) ; 6 lignes, puis « Tout voir » ; « Proposer un film » ; l'aura du joueur en titre ; lisible grâce aux règles de lecture de `0008` (maison et ligues), sans migration | `FilmsProposes`, `FilmsProposesVue` |
+| R62 La règle derrière « ? » | Les écrans restent courts : une phrase de Pop ; la règle complète s'ouvre avec le bouton « ? » (en-tête des écrans Aura, Deck, Relais, Casse ; titre du Plateau), dans un panneau du bas, fermé par « Compris » | `BoutonRegle`, `montrerRegle`, `EnTeteRetour.regle` |
 
 Tests d'écrans (`test/ecrans_test.dart`) : l'appli est ouverte comme par un joueur, sur un téléphone (390 × 844) et sur une télé (960 × 540) ; ouverture, premier soir complet, tous les onglets, une soirée complète (tirage, carte, billet, plateau), la Soirée jeu jusqu'au Duel. Un débordement ou un plantage fait échouer la CI. Possible parce que les polices sont embarquées (`assets/polices`, licence OFL) au lieu d'être téléchargées.
 
@@ -261,7 +262,7 @@ Jon trouvait qu'il y avait trop de choses (« Bosse vraiment l'ux. Y a-t-il trop
 - **Épure 1** (fait) : déblocage plus progressif (R42), Plan du jour retiré de l'interface (le service et ses tests R6 restent, l'écran est supprimé), Campagnes déplacées dans Profil, Soirée jeu et Duel réunis derrière une seule entrée (R59).
 - **Épure 1 bis** (fait côté Aura, R60 ; VJOD 4.38 à suivre) : proposer un film cacheté jusqu'à une date depuis « Proposer » (Aura), titre caché chez le destinataire jusque-là ; retirer CadeauxVue et Flair (l'exploit « flair » passe aux propositions aimées) ; VJOD 4.38 cache aussi le titre dans son tiroir.
 - **Épure 2** (fait, R61) : onglets Ce soir / Ma saison / La semaine / Ensemble ; Ensemble = films proposés (« pour moi », cachetés compris, et un mur commun maison + ligues), classement, jeux ; audace dans l'en-tête.
-- **Épure 3** : les règles derrière un bouton « ? », textes raccourcis.
+- **Épure 3** (fait, R62) : les règles derrière un bouton « ? », textes raccourcis.
 
 ## Prochaines étapes, dans l'ordre
 
