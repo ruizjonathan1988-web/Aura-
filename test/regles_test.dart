@@ -20,6 +20,7 @@ import 'package:aura/services/sons.dart';
 import 'package:aura/services/aura.dart';
 import 'package:aura/services/avis_du_jeu.dart';
 import 'package:aura/services/cadeaux.dart';
+import 'package:aura/services/films_proposes.dart';
 import 'package:aura/services/campagnes.dart';
 import 'package:aura/services/carte_genres.dart';
 import 'package:aura/services/collection.dart';
@@ -2866,6 +2867,38 @@ void main() {
     expect(libre.ouvrirLe, isNull);
     expect(libre.cachetee(DateTime(2026, 11, 12)), isFalse);
     expect(Proposition.nouvelle(deNom: 'Jon', pourNom: 'Léa', titre: 'Coco')['film'], isNot(contains('ouvrir_le')));
+  });
+
+  test('R61 les films proposés : ma liste (cachetés d\'abord, puis à voir, puis vus) et le mur de tout le monde', () {
+    final maintenant = DateTime(2026, 11, 11, 20);
+    Proposition prop(String id, String de, String pour, String titre, {String? vu, bool aime = false, String? ouvrir, String cree = '2026-11-10T18:00:00Z'}) =>
+        Proposition.depuisJson({
+          'id': id,
+          'de': de,
+          'de_nom': de,
+          'pour_joueur': pour,
+          'pour_nom': pour,
+          'film_cle': 'tmdb:$id',
+          'film': {'titre': titre, if (ouvrir != null) 'ouvrir_le': ouvrir},
+          if (vu != null) 'vu_le': vu,
+          'aime': aime,
+          'cree_le': cree,
+        })!;
+    final toutes = [
+      prop('1', 'lea', 'moi', 'Coco', vu: '2026-11-10T21:00:00Z', cree: '2026-11-10T20:00:00Z'),
+      prop('2', 'max', 'moi', 'Matrix', cree: '2026-11-09T18:00:00Z'),
+      prop('3', 'lea', 'moi', 'Alien', ouvrir: '2026-11-13', cree: '2026-11-08T18:00:00Z'),
+      prop('4', 'moi', 'max', 'Heat', ouvrir: '2026-11-14', cree: '2026-11-11T10:00:00Z'),
+      prop('5', 'lea', 'max', 'Up', aime: true, vu: '2026-11-10T22:00:00Z', cree: '2026-11-07T18:00:00Z'),
+    ];
+    final miens = FilmsProposes.pourMoi(toutes, (p) => p.pourJoueur == 'moi', maintenant);
+    expect([for (final l in miens) l.titre], ['Film cacheté', 'Matrix', 'Coco']);
+    expect(miens.first.etat, 'à ouvrir vendredi');
+    expect(miens[1].etat, 'à voir');
+    final mur = FilmsProposes.mur(toutes, (p) => p.de == 'moi', maintenant);
+    expect([for (final l in mur) l.titre], ['Heat', 'Coco', 'Matrix', 'Film cacheté', 'Up'], reason: 'mon cacheté garde son titre pour moi, pas celui de Léa');
+    expect(mur.last.etat, 'aimé !');
+    expect(FilmsProposes.mur(toutes, (p) => false, maintenant).first.titre, 'Film cacheté');
   });
 
   testWidgets('R59 une seule porte Soirée jeu ; sans serveur, le Duel du canapé seul', (t) async {

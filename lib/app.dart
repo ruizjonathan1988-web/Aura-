@@ -70,9 +70,9 @@ class _DepartState extends State<_Depart> {
 
 enum Onglet {
   ceSoir('Ce soir', Icons.style_rounded),
-  plateau('Plateau', Icons.flag_rounded),
-  semaine('Semaine', Icons.local_movies_rounded),
-  ligue('Ligue', Icons.emoji_events_rounded),
+  plateau('Ma saison', Icons.flag_rounded),
+  semaine('La semaine', Icons.local_movies_rounded),
+  ligue('Ensemble', Icons.groups_rounded),
   profil('Profil', Icons.face_rounded);
 
   const Onglet(this.libelle, this.icone);
@@ -224,6 +224,29 @@ class _EnTete extends StatelessWidget {
   Widget build(BuildContext context) {
     final etat = PorteeEtat.of(context);
     final ligues = etat.ligues;
+    final pilule = Touchable(
+        etiquette: 'Ensemble : tu es case $position sur 30${etat.audaceDuMois > 0 ? ', ${etat.audaceDuMois} d\'audace ce mois' : ''}',
+        onTap: onLigue,
+        builder: (context, focus, appui) => Container(
+          padding: const EdgeInsets.fromLTRB(4, 2, 11, 2),
+          decoration: BoxDecoration(
+            color: AuraCouleurs.creme,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(width: 3),
+            boxShadow: _ombres(focus, appui),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Figurine.profil(etat.profil, hauteur: 36),
+            Transform.translate(offset: const Offset(-9, 0), child: const Figurine.pop(hauteur: 36)),
+            Text('$position/30', style: AuraTexte.corps(14, poids: FontWeight.w900)),
+            if (etat.audaceDuMois > 0) ...[
+              const SizedBox(width: 6),
+              const Icon(Icons.bolt_rounded, size: 18, color: AuraCouleurs.noir),
+              Text('${etat.audaceDuMois}', style: AuraTexte.corps(14, poids: FontWeight.w900)),
+            ],
+          ]),
+        ),
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
       child: Row(
@@ -244,25 +267,11 @@ class _EnTete extends StatelessWidget {
               ),
             ],
           ),
-          if (onglets != null) ...[const SizedBox(width: 24), Expanded(child: onglets!)] else const Spacer(),
-          Touchable(
-            etiquette: 'Voir la ligue : tu es case $position sur 30',
-            onTap: onLigue,
-            builder: (context, focus, appui) => Container(
-              padding: const EdgeInsets.fromLTRB(4, 2, 11, 2),
-              decoration: BoxDecoration(
-                color: AuraCouleurs.creme,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(width: 3),
-                boxShadow: _ombres(focus, appui),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Figurine.profil(etat.profil, hauteur: 36),
-                Transform.translate(offset: const Offset(-9, 0), child: const Figurine.pop(hauteur: 36)),
-                Text('$position/30', style: AuraTexte.corps(14, poids: FontWeight.w900)),
-              ]),
-            ),
-          ),
+          if (onglets != null) ...[const SizedBox(width: 24), Expanded(child: onglets!), pilule]
+          // Sur le téléphone, la pastille rétrécit au besoin : la case, Pop et
+          // l'audace tiennent toujours.
+          else
+            Expanded(child: Align(alignment: Alignment.centerRight, child: FittedBox(fit: BoxFit.scaleDown, child: pilule))),
           if (onMiseAJour != null) ...[
             const SizedBox(width: 8),
             Touchable(
@@ -345,7 +354,7 @@ class _Onglets extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (!compact) Icon(o.icone, size: 20, color: AuraCouleurs.noir),
-                      Text(o.libelle.toUpperCase(), style: AuraTexte.titre(compact ? 17 : 14)),
+                      FittedBox(fit: BoxFit.scaleDown, child: Text(o.libelle.toUpperCase(), maxLines: 1, style: AuraTexte.titre(compact ? 17 : 14))),
                     ],
                   ),
                 ),

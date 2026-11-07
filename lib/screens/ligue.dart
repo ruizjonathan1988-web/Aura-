@@ -9,7 +9,7 @@ import '../services/etat.dart';
 import '../services/ligues.dart';
 import '../theme/aura_theme.dart';
 import '../widgets/aura_widgets.dart';
-import 'aura.dart';
+import 'films_proposes.dart';
 import 'relais.dart';
 
 /// La ligue entre amis : inscription par pseudo, création ou rejointe par
@@ -75,7 +75,7 @@ class _LigueEcranState extends State<LigueEcran> {
             }),
           ),
         const SizedBox(height: 16),
-        _EntreeAura(service: service),
+        FilmsProposesVue(service: service),
         const SizedBox(height: 16),
         _DuelPop(etat: etat),
       ]);
@@ -90,6 +90,8 @@ class _LigueEcranState extends State<LigueEcran> {
         ]),
       ],
       const SizedBox(height: 16),
+      FilmsProposesVue(service: service),
+      const SizedBox(height: 16),
       _Classement(key: ValueKey(ligue.id), service: service, ligue: ligue, positionLocale: etat.position),
       const SizedBox(height: 16),
       _FilDeLaLigue(key: ValueKey('fil${ligue.id}${etat.billets.length}'), service: service, ligue: ligue),
@@ -98,8 +100,6 @@ class _LigueEcranState extends State<LigueEcran> {
         _Crasses(key: ValueKey('crasses${ligue.id}'), etat: etat, service: service, ligue: ligue),
       ],
       const SizedBox(height: 16),
-      _EntreeAura(service: service),
-      const SizedBox(height: 12),
       ChoixLarge(
         libelle: 'LE RELAIS · Un film, puis un autre qui a quelqu\'un en commun. 48 heures chacun. Battez le record de la ligue.',
         couleur: AuraCouleurs.violet,
@@ -672,14 +672,3 @@ class _FigurineDoreeState extends State<_FigurineDoree> {
 
 
 /// L'entrée de l'aura (R48) : proposer des films à la maison et aux amis.
-class _EntreeAura extends StatelessWidget {
-  const _EntreeAura({required this.service});
-  final ServiceLigues service;
-
-  @override
-  Widget build(BuildContext context) => ChoixLarge(
-        libelle: 'L\'AURA · Propose des films à la maison et à tes amis : ton aura grandit quand ils les regardent et les aiment.',
-        couleur: AuraCouleurs.jaune,
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AuraEcran(ligues: service))),
-      );
-}

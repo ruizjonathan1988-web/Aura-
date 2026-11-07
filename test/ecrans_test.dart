@@ -52,7 +52,7 @@ void main() {
         expect(find.text('BIENVENUE DANS AURA !'), findsWidgets);
         await _toucher(t, find.text('PASSER, JE CONNAIS LE JEU'));
         expect(etat.accueilFait, isTrue);
-        for (final onglet in ['PLATEAU', 'SEMAINE', 'LIGUE', 'CE SOIR']) {
+        for (final onglet in ['MA SAISON', 'LA SEMAINE', 'ENSEMBLE', 'CE SOIR']) {
           await _toucher(t, find.text(onglet));
           expect(t.takeException(), isNull, reason: onglet);
         }

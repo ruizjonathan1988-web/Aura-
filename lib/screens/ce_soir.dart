@@ -817,7 +817,7 @@ class _PendantCeTempsState extends State<_PendantCeTemps> {
         const SizedBox(height: 8),
         const PopQuiParle(
           taille: 56,
-          texte: 'Pour l\'instant, il n\'y a que toi et moi. Invite tes amis depuis l\'onglet Ligue : vous gagnerez chacun une figurine dorée.',
+          texte: 'Pour l\'instant, il n\'y a que toi et moi. Invite tes amis depuis l\'onglet Ensemble : vous gagnerez chacun une figurine dorée.',
         ),
       ]);
     }

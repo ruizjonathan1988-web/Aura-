@@ -108,9 +108,9 @@ void main() {
       await _photo(t, '${appareil}_05_carte_revelee');
       await _toucher(t, 'C\'EST PARTI, JE LE REGARDE');
       await _photo(t, '${appareil}_06_billet');
-      for (final (i, onglet) in ['PLATEAU', 'SEMAINE', 'LIGUE'].indexed) {
+      for (final (i, onglet) in ['MA SAISON', 'LA SEMAINE', 'ENSEMBLE'].indexed) {
         await _toucher(t, onglet);
-        await _photo(t, '${appareil}_0${7 + i}_${onglet.toLowerCase()}');
+        await _photo(t, '${appareil}_0${7 + i}_${onglet.toLowerCase().replaceAll(' ', '_')}');
       }
       await _toucher(t, 'CE SOIR');
       await _ouvrir(t, const DeckEcran());
