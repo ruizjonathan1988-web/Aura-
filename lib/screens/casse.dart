@@ -130,7 +130,7 @@ class _CasseEcranState extends State<CasseEcran> {
                   const EnTeteRetour(titre: 'Le Casse'),
                   const SizedBox(height: 14),
                   if (!Casse.enCours(maintenant))
-                    PopQuiParle(texte: 'Mon coffre est fermé à double tour. Le prochain casse, c\'est la dernière semaine du mois, à partir du ${Casse.dernierJour(maintenant) - Casse.jours + 1}. Je serai prêt.')
+                    _Apercu(maintenant: maintenant)
                   else
                     FutureBuilder<_Vue>(
                       future: _vue,
@@ -218,6 +218,63 @@ class _CasseEcranState extends State<CasseEcran> {
       else
         Text('Le coffre s\'ouvre le ${Casse.dernierJour(maintenant)} à 18 h. Jusque-là, chaque film compte.', style: AuraTexte.corps(14, poids: FontWeight.w900, couleur: AuraCouleurs.creme)),
       if (_message != null) Panneau(couleur: AuraCouleurs.jaune, child: Text(_message!, style: AuraTexte.corps(14, poids: FontWeight.w900))),
+    ];
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      for (final (i, b) in blocs.indexed) ...[if (i > 0) const SizedBox(height: 12), b],
+    ]);
+  }
+}
+
+
+/// Hors de la dernière semaine : de quoi préparer le coup. Le compte à
+/// rebours, les règles, et les quatre serrures du mois, déjà connues.
+class _Apercu extends StatelessWidget {
+  const _Apercu({required this.maintenant});
+  final DateTime maintenant;
+
+  @override
+  Widget build(BuildContext context) {
+    final debut = Casse.dernierJour(maintenant) - Casse.jours + 1;
+    final jours = debut - maintenant.day;
+    final serrures = Casse.serrures(maintenant);
+    final blocs = <Widget>[
+      PopQuiParle(texte: 'Mon coffre est fermé à double tour. Vous croyez que je ne vous vois pas préparer vos plans ? Rendez-vous le $debut.'),
+      Panneau(
+        couleur: AuraCouleurs.jaune,
+        inclinaison: -0.012,
+        child: Row(children: [
+          Text('J-$jours', style: AuraTexte.titre(54)),
+          const SizedBox(width: 14),
+          Expanded(child: Text('Le casse commence le $debut et le coffre s\'ouvre le ${Casse.dernierJour(maintenant)} à 18 h.', style: AuraTexte.corps(15, poids: FontWeight.w900))),
+        ]),
+      ),
+      Text('LES QUATRE SERRURES DE CE MOIS', style: AuraTexte.titre(18, couleur: AuraCouleurs.creme)),
+      for (final (i, s) in serrures.indexed)
+        Panneau(
+          child: Row(children: [
+            const Icon(Icons.lock_rounded, size: 30),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (i == 0) Text('LA SERRURE DU PERCEUR', style: AuraTexte.corps(12, poids: FontWeight.w900)),
+                Text(s.texte, style: AuraTexte.corps(16, poids: FontWeight.w900)),
+              ]),
+            ),
+          ]),
+        ),
+      Panneau(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('COMMENT ÇA MARCHE', style: AuraTexte.titre(16)),
+          const SizedBox(height: 4),
+          Text(
+            'Chacun reçoit ses serrures, le Perceur la plus dure. Un film qui remplit le défi l\'ouvre, pendant la semaine du casse. '
+            'Dès trois, l\'un de vous est la Taupe et peut ouvrir pour de faux : votez pour la démasquer. '
+            'Coffre vidé : ${Casse.audaceReussite} d\'audace, Pop recule de ${Casse.recul} cases et l\'exploit « Le casse du siècle ». '
+            'En solo, Bobine et Pellicule font l\'équipe… et l\'un des deux te trahit.',
+            style: AuraTexte.corps(14),
+          ),
+        ]),
+      ),
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       for (final (i, b) in blocs.indexed) ...[if (i > 0) const SizedBox(height: 12), b],

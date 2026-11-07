@@ -241,7 +241,7 @@ Choix validés par Jon le 6 novembre (questions posées, réponses données) :
 
 Les écrans sont maintenant dessinés par la CI (`captures/captures_test.dart`, vraies polices) et publiés sur la branche `captures-ecrans` : `git clone --depth 1 --branch captures-ecrans` pour les relire. Corrigé : onglets courts qui flottaient au milieu, éventail de cartes hors écran (téléphone) et sous l'en-tête (télé : maintenant deux colonnes), défis coupés, étoile absente de la police, Pop limité à deux phrases. Sons refaits (synthèse : `tap`, `pop`, `carte`, `tampon`, `fanfare`, `boing`, `booster`), son et vibration à l'appui, OK de la télécommande qui enfonce, zoom au focus, transitions d'écran et d'onglet. Mise à jour : récepteur `Relance` et échecs expliqués.
 
-Proposés à Jon, en attente de son accord : Ce soir plus clair (l'action « Envie de quoi ce soir ? » en premier, le reste en pastilles compactes) ; vraies affiches (TMDB) au lieu des ronds sur la carte révélée ; aperçu du Casse hors de la dernière semaine ; « Ta série » en double (Ce soir et Plateau).
+Faits avec l'accord de Jon : sur le téléphone, Ce soir montre l'action d'abord et le reste en pastilles « Aujourd'hui » qui ouvrent un panneau ou un écran ; la carte révélée prend la vraie image du film (TMDB, `lib/services/affiches.dart`) avec un voile sombre, l'illustration reste en secours ; le Casse montre hors de sa semaine un compte à rebours, les règles et les quatre serrures du mois ; « Ta série » n'est plus que sur le Plateau.
 
 ## Nuit du 6 novembre : les inédits
 

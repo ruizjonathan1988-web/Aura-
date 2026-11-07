@@ -321,7 +321,8 @@ class _CeSoirEcranState extends State<CeSoirEcran> {
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReglagesEcran())),
         ),
     ];
-    if (!estTele(context)) return _colonne([...alerte, ...haut, ...principal, ...bas]);
+    // Sur le téléphone, l'action d'abord ; le reste en pastilles qui s'ouvrent.
+    if (!estTele(context)) return _colonne([...alerte, ...principal, _Aujourdhui(etat: etat), ...bas]);
     // Sur la télé : le jeu à gauche, le reste à droite.
     return _colonne([
       ...alerte,
@@ -809,8 +810,8 @@ class _Etoiles extends StatelessWidget {
   }
 }
 
-/// Deux encarts en haut de Ce soir : la course contre Pop (qui mène ?) et
-/// la série en semaines.
+/// La course contre Pop (qui mène ?), en haut de Ce soir sur la télé et
+/// dans la pastille « Course » sur le téléphone.
 class _CourseEtSerie extends StatelessWidget {
   const _CourseEtSerie({required this.etat});
   final EtatJeu etat;
@@ -858,22 +859,8 @@ class _CourseEtSerie extends StatelessWidget {
         }),
       ]),
     );
-    final serie = Panneau(
-      couleur: AuraCouleurs.jaune,
-      inclinaison: 0.012,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('TA SÉRIE', style: AuraTexte.titre(15)),
-        const SizedBox(height: 4),
-        Text(etat.serie > 0 ? '${etat.serie}' : '0', style: AuraTexte.titre(40)),
-        Text(etat.serie > 1 ? 'semaines de cinéma' : (etat.serie == 1 ? 'semaine de cinéma' : 'Lance-la ce soir !'), style: AuraTexte.corps(12, poids: FontWeight.w900)),
-      ]),
-    );
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Expanded(flex: 3, child: course),
-      const SizedBox(width: 10),
-      Expanded(flex: 2, child: serie),
-    ]);
+    // La série est sur le Plateau : ici, seulement la course.
+    return course;
   }
 }
 
@@ -1109,5 +1096,82 @@ class _LaSemaine extends StatelessWidget {
           ),
       ]),
     );
+  }
+}
+
+
+/// « Aujourd'hui » : tout ce qui n'est pas le tirage, en pastilles. Chacune
+/// ouvre son panneau en bas de l'écran, ou l'écran qui va avec.
+class _Aujourdhui extends StatelessWidget {
+  const _Aujourdhui({required this.etat});
+  final EtatJeu etat;
+
+  static Future<void> _feuille(BuildContext context, Widget contenu) => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (c) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(c).size.height * .8),
+              child: SingleChildScrollView(child: contenu),
+            ),
+          ),
+        ),
+      );
+
+  void _ouvrir(BuildContext context, Widget ecran) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ecran));
+
+  @override
+  Widget build(BuildContext context) {
+    final maintenant = DateTime.now();
+    final generique = etat.generiqueAVoir;
+    final festival = etat.festivalDe(maintenant);
+    final defi = etat.defiSemaineDe(maintenant);
+    final puces = <(String, IconData, Color, VoidCallback)>[
+      if (etat.defiApres != null)
+        ('Défi d\'après-séance !', Icons.quiz_rounded, AuraCouleurs.vert,
+            () => _feuille(context, _DefiApresVue(key: ValueKey(etat.defiApres!.date), etat: etat, billet: etat.defiApres!))),
+      if (generique != null) ('Le générique du mois', Icons.movie_creation_rounded, AuraCouleurs.ambre, () => _ouvrir(context, GeneriqueEcran(mois: generique))),
+      if (etat.billets.isNotEmpty && etat.boostersDispo() > 0) ('Ton booster', Icons.style_rounded, AuraCouleurs.violet, () => _ouvrir(context, const DeckEcran())),
+      ('Pour toi', Icons.lightbulb_rounded, AuraCouleurs.creme, () => _feuille(context, _PourToi(etat: etat))),
+      ('Course contre Pop', Icons.flag_rounded, AuraCouleurs.creme, () => _feuille(context, _CourseEtSerie(etat: etat))),
+      if (festival != null || defi != null)
+        (festival != null ? 'Festival : ${festival.nom}' : 'Défi de la semaine', Icons.celebration_rounded, AuraCouleurs.rose, () => _feuille(context, _LaSemaine(etat: etat))),
+      (Casse.enCours(maintenant) ? 'Le Casse !' : 'Le Casse', Icons.lock_rounded, Casse.enCours(maintenant) ? AuraCouleurs.jaune : AuraCouleurs.creme,
+          () => _ouvrir(context, const CasseEcran())),
+      ('Plan du jour', Icons.calendar_today_rounded, AuraCouleurs.creme, () => _feuille(context, _CartePlanDuJour(resultat: etat.planDuJour))),
+    ];
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text('AUJOURD\'HUI', style: AuraTexte.titre(18, couleur: AuraCouleurs.creme)),
+      const SizedBox(height: 8),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final (libelle, icone, couleur, action) in puces)
+          Touchable(
+            etiquette: libelle,
+            onTap: action,
+            builder: (context, focus, appui) => AnimatedContainer(
+              duration: const Duration(milliseconds: 80),
+              transform: Matrix4.translationValues(appui ? 2 : 0, appui ? 2 : 0, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: couleur,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(width: 2.5),
+                boxShadow: [
+                  if (focus) const BoxShadow(color: AuraCouleurs.jaune, spreadRadius: 4),
+                  if (!appui) const BoxShadow(color: AuraCouleurs.noir, offset: Offset(2, 2)),
+                ],
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(icone, size: 18),
+                const SizedBox(width: 6),
+                Flexible(child: Text(libelle, style: AuraTexte.corps(14, poids: FontWeight.w900))),
+              ]),
+            ),
+          ),
+      ]),
+    ]);
   }
 }

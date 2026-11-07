@@ -65,7 +65,7 @@ void main() {
         await t.pumpWidget(AuraApp(etat: etat));
         await _patienter(t);
         await _toucher(t, find.text('ENTRER DANS LA SALLE'));
-        expect(find.text('CE SOIR POUR TOI'), findsOneWidget);
+        expect(find.text('CE SOIR POUR TOI').evaluate().isNotEmpty || find.text('Pour toi').evaluate().isNotEmpty, isTrue);
         expect(find.text('TU TE METS COMBIEN ?'), findsOneWidget);
         await _toucher(t, find.descendant(of: find.byType(Pastille), matching: find.text('7')));
         await _toucher(t, find.text('TIRER MES 3 CARTES'));
@@ -156,11 +156,18 @@ void main() {
         await t.pumpWidget(AuraApp(etat: etat));
         await _patienter(t);
         await _toucher(t, find.text('ENTRER DANS LA SALLE'));
+        // Sur le téléphone, le Plan du jour est rangé dans une pastille.
+        final pastille = find.text('Plan du jour').evaluate().isNotEmpty;
+        if (pastille) await _toucher(t, find.text('Plan du jour'));
         await _toucher(t, find.text('LE PLAN DU JOUR'));
         await _patienter(t, 2);
         expect(find.text('LE PLAN DU JOUR'), findsWidgets);
         t.state<NavigatorState>(find.byType(Navigator).first).pop();
         await _patienter(t, 1);
+        if (pastille) {
+          t.state<NavigatorState>(find.byType(Navigator).first).pop();
+          await _patienter(t, 1);
+        }
         await _toucher(t, find.textContaining('LE DUEL DU CANAPÉ'));
         await _toucher(t, find.text('C\'EST PARTI'));
         await _patienter(t, 1);
