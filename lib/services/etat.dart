@@ -1645,7 +1645,6 @@ class EtatJeu extends ChangeNotifier {
     for (final s in completes) {
       await ajouterExploit(s.exploit);
     }
-    _mesurer('booster', {'nouveaux': nouveaux.length});
     notifyListeners();
     return (cartes: cartes, nouveaux: nouveaux, series: completes);
   }
