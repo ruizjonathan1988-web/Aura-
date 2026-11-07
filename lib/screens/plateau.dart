@@ -109,7 +109,7 @@ class PlateauEcran extends StatelessWidget {
                 ),
               ]),
               const SizedBox(height: 8),
-              Text('On avance en regardant des films. Dépasse Pop !', style: AuraTexte.corps(15)),
+              Text('On avance en regardant des films. Dépasse Pop\u00a0!', style: AuraTexte.corps(15)),
               if (etat.serie > 0) ...[
                 const SizedBox(height: 10),
                 Panneau(
