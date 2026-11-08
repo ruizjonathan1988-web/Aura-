@@ -82,14 +82,20 @@ jobs:
 
       - name: APK (télé et téléphone)
         run: |
-          # Toujours la même signature, pour que chaque version s'installe par-dessus la précédente.
-          mkdir -p ~/.android && cp tool/signature.keystore ~/.android/debug.keystore
+          # Signature fixe (tool/signature.keystore), branchée par tool/configurer_android.py.
           flutter build apk --release \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
             --dart-define=VJOD_SERVEUR=${{ secrets.VJOD_SERVEUR }} \
             --dart-define=TMDB_CLE=${{ secrets.TMDB_CLE }}
           cp build/app/outputs/flutter-apk/app-release.apk aura.apk
+          # L'APK doit porter la clé d'Aura, sinon les mises à jour échouent sur les appareils.
+          attendue=$(keytool -exportcert -alias androiddebugkey -keystore tool/signature.keystore -storepass android | sha256sum | cut -d' ' -f1)
+          signeur=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          obtenue=$("$signeur" verify --print-certs aura.apk | grep -m1 'SHA-256' | awk '{print $NF}')
+          echo "Clé attendue : $attendue"
+          echo "Clé de l'APK : $obtenue"
+          [ "$attendue" = "$obtenue" ] || { echo "L'APK n'est pas signé avec la clé d'Aura."; exit 1; }
 
       - name: Version web
         run: flutter build web --release --base-href "/${{ github.event.repository.name }}/" --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} --dart-define=VJOD_SERVEUR=${{ secrets.VJOD_SERVEUR }} --dart-define=TMDB_CLE=${{ secrets.TMDB_CLE }}
