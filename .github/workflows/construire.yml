@@ -70,11 +70,13 @@ jobs:
           mkdir -p ~/.android && cp tool/signature.keystore ~/.android/debug.keystore
           flutter build apk --release \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
+            --dart-define=VJOD_SERVEUR=${{ secrets.VJOD_SERVEUR }} \
+            --dart-define=TMDB_CLE=${{ secrets.TMDB_CLE }}
           cp build/app/outputs/flutter-apk/app-release.apk aura.apk
 
       - name: Version web
-        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/" --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} --dart-define=VJOD_SERVEUR=${{ secrets.VJOD_SERVEUR }} --dart-define=TMDB_CLE=${{ secrets.TMDB_CLE }}
 
       - uses: actions/upload-artifact@v4
         with:
