@@ -116,3 +116,28 @@ if activites:
     print(f"Mise à jour automatique branchée : {dossier}")
 else:
     sys.exit("MainActivity introuvable : la mise à jour automatique ne serait pas branchée.")
+
+# Version web : le nom d'Aura, ses couleurs et l'icône de Pop à la place de
+# ce que `flutter create` met par défaut (« aura », « A new Flutter project »).
+web = Path("web")
+if web.is_dir():
+    import json
+    import shutil
+    description = "Aura, le jeu de société du cinéma. Un jeu VJOD."
+    index = web / "index.html"
+    h = index.read_text(encoding="utf-8")
+    h = re.sub(r"<title>.*?</title>", "<title>Aura</title>", h, flags=re.S)
+    h = re.sub(r'(<meta name="description" content=")[^"]*(")', rf"\g<1>{description}\g<2>", h)
+    h = re.sub(r'(<meta name="apple-mobile-web-app-title" content=")[^"]*(")', r"\g<1>Aura\g<2>", h)
+    h = h.replace('<html>', '<html lang="fr">', 1)
+    index.write_text(h, encoding="utf-8")
+    manifeste = web / "manifest.json"
+    m = json.loads(manifeste.read_text(encoding="utf-8"))
+    m.update({"name": "Aura", "short_name": "Aura", "description": description,
+              "background_color": "#E5261F", "theme_color": "#E5261F", "lang": "fr"})
+    manifeste.write_text(json.dumps(m, ensure_ascii=False, indent=4), encoding="utf-8")
+    icones = Path(__file__).resolve().parent / "icones-web"
+    for nom in ("Icon-192.png", "Icon-512.png", "Icon-maskable-192.png", "Icon-maskable-512.png"):
+        shutil.copy(icones / nom, web / "icons" / nom)
+    shutil.copy(icones / "favicon.png", web / "favicon.png")
+    print("Version web nommée Aura")
