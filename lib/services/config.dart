@@ -18,15 +18,15 @@ abstract final class Config {
 
   /// L'adresse du serveur VJOD (Jellyfin) proposée par défaut aux joueurs,
   /// pour qu'ils n'aient qu'à se connecter avec leur identifiant VJOD ou un
-  /// code Quick Connect. Remplaçable à la compilation (VJOD_SERVEUR).
-  static const _serveurCompile = String.fromEnvironment('VJOD_SERVEUR');
-  static const serveurVjod = _serveurCompile != '' ? _serveurCompile : 'https://ava88.zen.usbx.me/jellyfin';
+  /// code Quick Connect. Elle n'est pas écrite ici (le code est public) : la
+  /// CI la donne depuis le secret GitHub VJOD_SERVEUR. Vide sans lui.
+  static const serveurVjod = String.fromEnvironment('VJOD_SERVEUR');
 
-  /// Clé d'API TMDB (v3) de Jon, pour savoir où voir chaque film en France
-  /// (données JustWatch). Comme toute clé embarquée dans une appli, elle est
-  /// lisible dans l'APK ; TMDB demande un accord pour un usage commercial.
-  static const _tmdbCompilee = String.fromEnvironment('TMDB_CLE');
-  static const tmdbCle = _tmdbCompilee != '' ? _tmdbCompilee : '023cad9ee7899502258706fa4e93c19d';
+  /// Clé d'API TMDB (v3), pour les affiches, tout le cinéma et savoir où voir
+  /// chaque film en France (données JustWatch). Pas écrite ici (le code est
+  /// public) : la CI la donne depuis le secret GitHub TMDB_CLE. Vide sans lui,
+  /// et alors Aura se contente de la bibliothèque et de sa sélection.
+  static const tmdbCle = String.fromEnvironment('TMDB_CLE');
 
   static bool get serveur => supabaseUrl.isNotEmpty && supabaseCle.isNotEmpty;
 }

@@ -485,15 +485,17 @@ void main() {
       expect(recue.headers['Authorization'], contains('Token="jeton42"'));
     });
 
-    test('R13 le serveur VJOD de Jon est pré-rempli, chemin /jellyfin compris', () async {
-      expect(Config.serveurVjod, 'https://ava88.zen.usbx.me/jellyfin');
+    test('R13 le serveur VJOD pré-rempli vient de la construction, chemin /jellyfin compris', () async {
+      // L'adresse n'est plus écrite dans le code public : la CI la donne
+      // (secret VJOD_SERVEUR). Sans elle, rien n'est pré-rempli.
+      expect(Config.serveurVjod.isEmpty || Config.serveurVjod.startsWith('https://'), isTrue);
       late Uri appel;
       final client = MockClient((r) async {
         appel = r.url;
         return http.Response(reponse, 200);
       });
-      await ConnexionVjod(adresse: Config.serveurVjod, appareil: 'a', client: client).avecIdentifiants('jon', 'x');
-      expect(appel.toString(), 'https://ava88.zen.usbx.me/jellyfin/Users/AuthenticateByName');
+      await ConnexionVjod(adresse: 'https://tv.maison.example/jellyfin', appareil: 'a', client: client).avecIdentifiants('jon', 'x');
+      expect(appel.toString(), 'https://tv.maison.example/jellyfin/Users/AuthenticateByName');
     });
 
     test('R13 un mauvais mot de passe donne un message clair', () async {
