@@ -35,6 +35,7 @@ import 'relais.dart' show Relais;
 import 'partage.dart';
 import 'sons.dart';
 import 'veille.dart';
+import 'vus_et_demandes.dart';
 import 'tirage.dart';
 
 enum ModeJeu { demo, vjod }
@@ -378,8 +379,19 @@ class EtatJeu extends ChangeNotifier {
             ? SourceJellyfin(connexion)
             : SourceToutVjod(SourceJellyfin(connexion), SourceAvecMaTv(SourceTmdb(Config.tmdbCle), _maTvPour(connexion))))
         : SourceDemo();
+    // R65, R66 : ni un film vu sur Jellyfin, ni un film déjà demandé.
+    final SourceFilms filtree = mode == ModeJeu.vjod && connexion.complete
+        ? SourceSansVusNiDemandes(base, _vusPour(connexion))
+        : base;
     final vus = historique;
-    return vus.isEmpty ? base : SourceAvecHistorique(base, vus);
+    return vus.isEmpty ? filtree : SourceAvecHistorique(filtree, vus);
+  }
+
+  VusEtDemandes? _vusEtDemandes;
+  VusEtDemandes _vusPour(ConnexionJellyfin c) {
+    final v = _vusEtDemandes;
+    if (v != null && v.connexion.adresse == c.adresse && v.connexion.jeton == c.jeton) return v;
+    return _vusEtDemandes = VusEtDemandes(c);
   }
 
   // Ma TV garde ses réponses le temps de la session, tant que la connexion
