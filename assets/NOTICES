@@ -1407,6 +1407,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 --------------------------------------------------------------------------------
+aura
+
+Aura — le jeu de société du cinéma
+Copyright © 2026 ruizjonathan1988-web (Jon). Tous droits réservés.
+
+Ce dépôt est public pour que les applications puissent être téléchargées et
+mises à jour. Sa publication ne donne aucune licence.
+
+Sauf accord écrit de l'auteur, il est interdit de copier, modifier, adapter,
+traduire, distribuer, publier, vendre ou réutiliser tout ou partie de ce code,
+des textes, des règles du jeu, des illustrations, des sons et de la marque
+« Aura », dans quelque but que ce soit. Seuls sont permis la consultation du
+dépôt et l'installation des applications publiées par l'auteur, pour un usage
+personnel.
+
+Les œuvres de tiers incluses gardent leur propre licence : les polices Anton
+et Nunito (SIL Open Font License, voir assets/polices/LICENCES.txt) et les
+bibliothèques listées dans pubspec.yaml. Les données de films viennent de TMDB
+et de JustWatch, selon leurs conditions.
+
+Le droit français s'applique (Code de la propriété intellectuelle).
+
+--------------------------------------------------------------------------------
 benchmark
 
 Copyright 2016 Ismael Jimenez Martinez. All rights reserved.
