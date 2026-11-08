@@ -98,6 +98,42 @@ for nom in ("build.gradle.kts", "build.gradle"):
         g += "\ndependencies {\n    " + dep + "\n}\n"
         gradle.write_text(g, encoding="utf-8")
         print(f"Désucrage activé : {gradle}")
+    # Signature fixe : la version publiée est signée avec tool/signature.keystore,
+    # toujours la même clé, pour que chaque mise à jour s'installe par-dessus la
+    # précédente. (Copier la clé comme clé de débogage ne suffisait pas : Gradle
+    # en créait une neuve à chaque construction.)
+    if "signingConfigs.getByName(\"aura\")" not in g and "signingConfigs.aura" not in g:
+        if kts:
+            bloc = (
+                "signingConfigs {\n"
+                "        create(\"aura\") {\n"
+                "            storeFile = rootProject.file(\"../tool/signature.keystore\")\n"
+                "            storePassword = \"android\"\n"
+                "            keyAlias = \"androiddebugkey\"\n"
+                "            keyPassword = \"android\"\n"
+                "        }\n"
+                "    }\n\n    buildTypes {"
+            )
+            nouveau, n = re.subn(r"buildTypes\s*\{", bloc, g, count=1)
+            nouveau, m = re.subn(r'signingConfig\s*=\s*signingConfigs\.getByName\("debug"\)',
+                                 'signingConfig = signingConfigs.getByName("aura")', nouveau, count=1)
+        else:
+            bloc = (
+                "signingConfigs {\n"
+                "        aura {\n"
+                "            storeFile rootProject.file('../tool/signature.keystore')\n"
+                "            storePassword 'android'\n"
+                "            keyAlias 'androiddebugkey'\n"
+                "            keyPassword 'android'\n"
+                "        }\n"
+                "    }\n\n    buildTypes {"
+            )
+            nouveau, n = re.subn(r"buildTypes\s*\{", bloc, g, count=1)
+            nouveau, m = re.subn(r"signingConfig\s+signingConfigs\.debug", "signingConfig signingConfigs.aura", nouveau, count=1)
+        if not (n and m):
+            sys.exit(f"Signature fixe impossible à brancher dans {gradle} : les mises à jour ne s'installeraient pas.")
+        gradle.write_text(nouveau, encoding="utf-8")
+        print(f"Signature fixe branchée : {gradle}")
 
 # Mise à jour automatique : l'activité principale et l'installeur, dans le
 # paquet que `flutter create` a choisi.
