@@ -15,6 +15,7 @@ import 'package:aura/services/deck.dart';
 import 'package:aura/services/festival.dart';
 import 'package:aura/services/partage.dart';
 import 'package:aura/services/relais.dart';
+import 'package:aura/services/recherche_films.dart';
 import 'package:aura/services/veille.dart';
 import 'package:aura/services/vus_et_demandes.dart';
 import 'package:aura/services/sons.dart';
@@ -1468,6 +1469,31 @@ void main() {
       final connus = await VusEtDemandes(connexion, client: MockClient((_) async => http.Response('', 500))).lire();
       expect(connus.vus, isEmpty);
       expect(connus.demandes, isEmpty);
+    });
+
+    test('R67 chercher le film à proposer : la bibliothèque d\'abord, puis tout le cinéma, sans doublon', () async {
+      const connexion = ConnexionJellyfin(adresse: 'https://srv/jellyfin', utilisateurId: 'u1', jeton: 'j');
+      final client = MockClient((r) async {
+        if (r.url.host == 'api.themoviedb.org') {
+          expect(r.url.path, '/3/search/movie');
+          expect(r.url.queryParameters['query'], 'matrix');
+          return http.Response.bytes(utf8.encode(jsonEncode({
+            'results': [
+              {'id': 603, 'title': 'Matrix', 'release_date': '1999-03-31', 'vote_average': 8.2, 'vote_count': 26000},
+              {'id': 604, 'title': 'Matrix Reloaded', 'release_date': '2003-05-15', 'vote_average': 7.0, 'vote_count': 12000},
+            ],
+          })), 200);
+        }
+        expect(r.url.queryParameters['SearchTerm'], 'matrix');
+        return http.Response(jsonEncode({
+          'Items': [
+            {'Id': 'jf603', 'Name': 'Matrix', 'ProductionYear': 1999, 'CommunityRating': 8.2, 'ProviderIds': {'Tmdb': '603'}},
+          ],
+        }), 200);
+      });
+      expect(RechercheFilms.aChercher(' m '), isNull, reason: 'une lettre ne suffit pas');
+      final films = await RechercheFilms(connexion: connexion, cleTmdb: 'cle', client: client).chercher(' matrix ');
+      expect(films.map((f) => f.id), ['jf603', 'tmdb:604'], reason: 'Matrix une seule fois, en version serveur');
     });
 
     test('R63 une grande bibliothèque ne noie pas le reste du cinéma', () {
