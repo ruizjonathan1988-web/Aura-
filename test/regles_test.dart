@@ -16,6 +16,7 @@ import 'package:aura/services/festival.dart';
 import 'package:aura/services/partage.dart';
 import 'package:aura/services/relais.dart';
 import 'package:aura/services/veille.dart';
+import 'package:aura/services/vus_et_demandes.dart';
 import 'package:aura/services/sons.dart';
 import 'package:aura/services/aura.dart';
 import 'package:aura/services/avis_du_jeu.dart';
@@ -1403,6 +1404,70 @@ void main() {
       appels.clear();
       await SourceTmdb('cle', client: client).catalogue(auHasard: false);
       expect(appels.any((a) => a.queryParameters.containsKey('with_origin_country')), isFalse, reason: 'Plan du jour et Affiche : rien ne change');
+    });
+
+    test('R65 un film vu sur Jellyfin n\'est jamais tiré, même venu de tout le cinéma', () async {
+      const connexion = ConnexionJellyfin(adresse: 'https://srv/jellyfin', utilisateurId: 'u1', jeton: 'j');
+      final client = MockClient((r) async {
+        if (r.url.path.endsWith('/Users/u1/Items')) {
+          expect(r.url.queryParameters['IsPlayed'], 'true');
+          return http.Response(jsonEncode({'Items': [{'ProviderIds': {'Tmdb': '603'}}, {'ProviderIds': {}}]}), 200);
+        }
+        return http.Response('', 404);
+      });
+      final connus = await VusEtDemandes(connexion, client: client).lire();
+      expect(connus.vus, {603});
+      final films = VusEtDemandes.appliquer(
+        const [
+          Film(id: 'tmdb:603', titre: 'Matrix', tmdbId: 603, note: 8, source: SourceFilm.catalogueVjod),
+          Film(id: 'tmdb:604', titre: 'Matrix Reloaded', tmdbId: 604, note: 7, source: SourceFilm.catalogueVjod),
+        ],
+        connus.vus,
+        connus.demandes,
+      );
+      expect(films.first.dejaVu, isTrue, reason: 'vu sur le serveur, même tiré de TMDB');
+      expect(films.last.dejaVu, isFalse);
+      expect(films.where((f) => !f.dejaVu).map((f) => f.tmdbId), [604], reason: 'le tirage écarte les films vus');
+    });
+
+    test('R66 un film déjà demandé n\'est pas tiré : il arrive de toute façon', () async {
+      const connexion = ConnexionJellyfin(adresse: 'https://srv/jellyfin', utilisateurId: 'u1', jeton: 'j');
+      String emballe(Object j) => jsonEncode({'FileContents': base64Encode(utf8.encode(jsonEncode(j)))});
+      final client = MockClient((r) async {
+        if (r.url.path.endsWith('/Moonfin/Seerr/Api/auth/me')) return http.Response(emballe({'id': 7}), 200);
+        if (r.url.path.endsWith('/Moonfin/Seerr/Api/request')) {
+          expect(r.url.queryParameters['requestedBy'], '7');
+          return http.Response(
+            emballe({
+              'results': [
+                {'type': 'movie', 'status': 2, 'media': {'tmdbId': 155}},
+                {'type': 'movie', 'status': 3, 'media': {'tmdbId': 156}},
+                {'type': 'tv', 'status': 2, 'media': {'tmdbId': 1399}},
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response('', 404);
+      });
+      final connus = await VusEtDemandes(connexion, client: client).lire();
+      expect(connus.demandes, {155}, reason: 'les refusées et les séries ne comptent pas');
+      final films = VusEtDemandes.appliquer(
+        const [
+          Film(id: 'tmdb:155', titre: 'The Dark Knight', tmdbId: 155, source: SourceFilm.catalogueVjod),
+          Film(id: 'tmdb:156', titre: 'Autre', tmdbId: 156, source: SourceFilm.catalogueVjod),
+        ],
+        connus.vus,
+        connus.demandes,
+      );
+      expect(films.map((f) => f.tmdbId), [156]);
+    });
+
+    test('R65 R66 serveur muet : le tirage continue comme avant', () async {
+      const connexion = ConnexionJellyfin(adresse: 'https://srv/jellyfin', utilisateurId: 'u1', jeton: 'j');
+      final connus = await VusEtDemandes(connexion, client: MockClient((_) async => http.Response('', 500))).lire();
+      expect(connus.vus, isEmpty);
+      expect(connus.demandes, isEmpty);
     });
 
     test('R63 une grande bibliothèque ne noie pas le reste du cinéma', () {
