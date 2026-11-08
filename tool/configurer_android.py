@@ -136,7 +136,7 @@ if web.is_dir():
     m.update({"name": "Aura", "short_name": "Aura", "description": description,
               "background_color": "#E5261F", "theme_color": "#E5261F", "lang": "fr"})
     manifeste.write_text(json.dumps(m, ensure_ascii=False, indent=4), encoding="utf-8")
-    icones = Path(__file__).resolve().parent / "web"
+    icones = Path(__file__).resolve().parent / "icones-web"
     for nom in ("Icon-192.png", "Icon-512.png", "Icon-maskable-192.png", "Icon-maskable-512.png"):
         shutil.copy(icones / nom, web / "icons" / nom)
     shutil.copy(icones / "favicon.png", web / "favicon.png")
