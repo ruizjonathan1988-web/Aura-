@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,8 +7,10 @@ import '../app.dart';
 import '../models/modeles.dart';
 import '../services/aura.dart';
 import '../services/cadeaux.dart';
+import '../services/config.dart';
 import '../services/etat.dart';
 import '../services/ligues.dart';
+import '../services/recherche_films.dart';
 import '../services/service_aura.dart';
 import '../services/tirage.dart';
 import '../services/vjod_lien.dart';
@@ -40,6 +43,45 @@ class _AuraEcranState extends State<AuraEcran> {
   DateTime? _ouvrirLe;
   bool _envoi = false;
   String? _message;
+
+  // R67 : chercher le film à proposer.
+  final _recherche = TextEditingController();
+  Timer? _attente;
+  String? _cherche;
+  Future<List<Film>>? _trouves;
+
+  @override
+  void initState() {
+    super.initState();
+    _recherche.addListener(_auTexte);
+  }
+
+  @override
+  void dispose() {
+    _attente?.cancel();
+    _recherche.dispose();
+    super.dispose();
+  }
+
+  void _auTexte() {
+    _attente?.cancel();
+    final q = RechercheFilms.aChercher(_recherche.text);
+    if (q == _cherche) return;
+    _attente = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      final etat = PorteeEtat.lire(context);
+      setState(() {
+        _cherche = q;
+        _film = null;
+        _trouves = q == null
+            ? null
+            : RechercheFilms(
+                connexion: etat.mode == ModeJeu.vjod && etat.connexion.complete ? etat.connexion : null,
+                cleTmdb: Config.tmdbCle,
+              ).chercher(q);
+      });
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -230,9 +272,18 @@ class _AuraEcranState extends State<AuraEcran> {
         const SizedBox(height: 12),
         Text('QUEL FILM ?', style: AuraTexte.titre(15)),
         const SizedBox(height: 6),
+        ChampAura(controleur: _recherche, indication: 'Chercher un film…'),
+        const SizedBox(height: 6),
+        if (_cherche != null)
+          Text('Ce que j\'ai trouvé :', style: AuraTexte.corps(13, poids: FontWeight.w900))
+        else
+          Text('Ou une de mes idées :', style: AuraTexte.corps(13, poids: FontWeight.w900)),
+        const SizedBox(height: 6),
         FutureBuilder<List<Film>>(
-          future: _idees,
+          future: _cherche != null ? _trouves : _idees,
           builder: (context, snap) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (_cherche != null && snap.connectionState == ConnectionState.done && (snap.data ?? const []).isEmpty)
+              Text('Aucun film à ce nom.', style: AuraTexte.corps(14)),
             for (final f in snap.data ?? const <Film>[])
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
@@ -244,14 +295,15 @@ class _AuraEcranState extends State<AuraEcran> {
               ),
           ]),
         ),
-        AuraBouton(
-          libelle: 'D\'autres idées',
-          principal: false,
-          onPressed: () => setState(() {
-            _film = null;
-            _idees = _choix();
-          }),
-        ),
+        if (_cherche == null)
+          AuraBouton(
+            libelle: 'D\'autres idées',
+            principal: false,
+            onPressed: () => setState(() {
+              _film = null;
+              _idees = _choix();
+            }),
+          ),
         const SizedBox(height: 12),
         Text('UN MOT ?', style: AuraTexte.titre(15)),
         const SizedBox(height: 6),
